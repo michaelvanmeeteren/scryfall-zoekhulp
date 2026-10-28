@@ -171,6 +171,25 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .settings label { display: grid; gap: 4px; font-size: 13.5px; font-weight: 600; }
 .settings input { padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-weight: 400; font-family: var(--mono); font-size: 14px; }
 .settings a { color: var(--accent); }
+/* commander, deck and result filters */
+.cmdr { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 13.5px; }
+.cmdrlabel { font-weight: 600; }
+.cmdrform { display: flex; gap: 6px; }
+.cmdrform input { width: 190px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.settings textarea { width: 100%; font-family: var(--mono); font-size: 12.5px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 8px; }
+.deckrow { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; }
+.filterbar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-bottom: 10px; font-size: 13px; }
+.filterbar .group { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.filterbar .group > span { color: var(--muted); margin-right: 2px; }
+.filterbar button.f { padding: 3px 9px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); font-size: 12.5px; }
+.filterbar button.f[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.filterbar label { display: inline-flex; gap: 5px; align-items: center; color: var(--muted); }
+.tile.owned .card img { opacity: 0.5; }
+.ownedbadge { position: absolute; top: 6px; left: 6px; padding: 2px 8px; border-radius: 99px; background: var(--fg); color: var(--bg); font-size: 11.5px; font-weight: 700; pointer-events: none; }
+.grid.hideowned .tile.owned { display: none; }
+html.mobile .filterbar button.f { padding: 7px 12px; font-size: 14px; }
+html.mobile .cmdrform input { width: 100%; font-size: 16px; }
+html.mobile .cmdrform { flex: 1 1 100%; }
 .listhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .linkbtn { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; font-size: inherit; }
 .mobilebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 22; display: flex; gap: 10px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -4px 14px rgb(0 0 0 / 0.1); }
@@ -231,6 +250,20 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
   <button id="opensettings" class="btn small gear" type="button" aria-label="Settings">⚙ Settings</button>
 </header>
 
+<dialog id="deckdialog" class="settings" aria-labelledby="decktitle">
+  <form method="dialog" id="deckform">
+    <h2 id="decktitle">Import your deck</h2>
+    <p class="hint">Paste your deck list, for example from Moxfield: <i>Export → Copy for MTGO</i> or <i>Copy plain text</i>.
+      One card per line, like <code>1 Sol Ring (C21) 263</code> or <code>Sol Ring</code>. Results then mark the cards you already have.</p>
+    <textarea id="decktext" rows="10" spellcheck="false" aria-label="Deck list"></textarea>
+    <div class="listactions">
+      <button class="btn primary" type="submit" value="save">Save deck</button>
+      <button id="removedeck" class="btn" type="button">Remove deck</button>
+      <button class="btn" type="submit" value="cancel" formnovalidate>Cancel</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="settings" class="settings" aria-labelledby="settingstitle">
   <form method="dialog" id="settingsform">
     <h2 id="settingstitle">Settings</h2>
@@ -257,6 +290,16 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
       </form>
       <p class="hint">Type in plain English (or Dutch, when Claude translates), or start with <code>/s</code> or <code>!</code> to use Scryfall syntax directly. Searches are always limited to Commander-legal paper cards.</p>
       <p id="nokey" class="hint" hidden>Using the built-in translator. <button class="linkbtn" type="button" data-opensettings>Enter the access code</button> for better translations by Claude.</p>
+      <div class="cmdr">
+        <span class="cmdrlabel">Commander</span>
+        <span id="cmdrchip" class="chip" hidden></span>
+        <button id="cmdrclear" class="linkbtn" type="button" hidden>remove</button>
+        <form id="cmdrform" class="cmdrform">
+          <input id="cmdrinput" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. Atraxa" aria-label="Commander name">
+          <button class="btn small" type="submit">Set</button>
+        </form>
+        <span id="cmdrnote" class="hint"></span>
+      </div>
 
       <div id="querybar" class="querybar" hidden>
         <div class="queryrow">
@@ -304,6 +347,7 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
           </label>
         </div>
       </div>
+      <div id="filterbar" class="filterbar" hidden></div>
       <div id="message"></div>
       <nav id="pagertop" class="pager" aria-label="Pages"></nav>
       <div id="grid" class="grid"></div>
@@ -319,6 +363,10 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
       <button id="closelist" class="btn small closelist" type="button">Close</button>
     </div>
     <div id="totals" class="totals"></div>
+    <div class="deckrow">
+      <span id="deckinfo" class="hint"></span>
+      <button id="importdeck" class="btn small" type="button">Import deck</button>
+    </div>
     <p id="emptylist" class="emptylist">Click a card to add it, click it again to take it out. Basic lands and cards that allow more copies get a counter with −.</p>
     <ul id="listitems"></ul>
     <div class="exportopts" role="radiogroup" aria-label="Export format">
@@ -377,7 +425,12 @@ const state = {
   history: store.get("history", []),
   order: store.get("order", "edhrec"),
   size: store.get("size", 50),
-  search: null   // { query, full, order, size, total, cache: Map(apiPage -> cards), page }
+  search: null,  // { query, full, order, size, total, cache: Map(apiPage -> cards), page }
+  commander: store.get("commander", null),        // { name, colors } chosen as the starting point
+  deck: new Set(store.get("deck", [])),            // lower-case card names of the imported deck
+  hideOwned: store.get("hideowned", false),
+  filters: { types: new Set(), mv: new Set(), price: "" },   // filter buttons beside the results
+  previous: null   // { zin, query } of the last search, so Claude can handle follow-up questions
 };
 const settings = { code: store.get("code", "") };
 // Earlier versions kept an Anthropic API key and a model choice in the browser; neither is used any more.
@@ -576,7 +629,7 @@ async function translateWithClaude(zin) {
     res = await fetch(WORKER_URL + "/translate", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ zin, code: settings.code })
+      body: JSON.stringify({ zin, code: settings.code, commander: state.commander, previous: state.previous })
     });
   } catch {
     throw new Error("Can't reach the translator. Check your internet connection.");
@@ -677,6 +730,7 @@ function renderRecent(searches) {
     b.addEventListener("click", () => {
       $("zin").value = s.zin;
       showQuery(s.query, "From Recent searches.");
+      state.previous = { zin: s.zin, query: s.query };
       runSearch(s.query);
       if (isMobile) $("count").scrollIntoView({ block: "start" });
     });
@@ -724,7 +778,157 @@ function withFilters(query) {
   let extra = "";
   if (!/(^|[\s(-])(f|format|legal|banned|restricted):/i.test(query)) extra += " f:commander";
   if (!/(^|[\s(-])game:/i.test(query)) extra += " game:paper";
+  // the chosen commander's colors, unless the query sets colors itself or looks for commanders
+  if (state.commander && !/(^|[\s(-])(id|identity|ci)(:|<|>|=)/i.test(query) && !/is:commander/i.test(query)) {
+    extra += " id<=" + (state.commander.colors || "c");
+  }
+  const f = filterTerms();
+  if (f) extra += " " + f;
   return { full: query.trim() + extra, extra: extra.trim() };
+}
+
+// ---------- filter buttons beside the results ----------
+const FILTER_TYPES = ["Creature", "Instant", "Sorcery", "Artifact", "Enchantment", "Land", "Planeswalker"];
+// a Map, because an object would put the number-like keys "2"…"5" before "0–1"
+const FILTER_MV = new Map([["0–1", "mv<=1"], ["2", "mv=2"], ["3", "mv=3"], ["4", "mv=4"], ["5", "mv=5"], ["6+", "mv>=6"]]);
+const FILTER_PRICE = { "< €1": "eur<1", "< €5": "eur<5" };
+
+function filterTerms() {
+  const f = state.filters;
+  const or = terms => terms.length > 1 ? `(${terms.join(" OR ")})` : terms[0];
+  const parts = [];
+  if (f.types.size) parts.push(or([...f.types].map(t => "t:" + t.toLowerCase())));
+  if (f.mv.size) parts.push(or([...FILTER_MV.keys()].filter(k => f.mv.has(k)).map(k => FILTER_MV.get(k))));
+  if (f.price) parts.push(FILTER_PRICE[f.price]);
+  return parts.join(" ");
+}
+
+function resetFilters() {
+  state.filters = { types: new Set(), mv: new Set(), price: "" };
+  renderFilterbar();
+}
+
+function renderFilterbar() {
+  const bar = $("filterbar");
+  bar.replaceChildren();
+  bar.hidden = !state.search;
+  const f = state.filters;
+  const button = (label, pressed, onClick) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "f";
+    b.textContent = label;
+    b.setAttribute("aria-pressed", String(pressed));
+    b.addEventListener("click", () => { onClick(); renderFilterbar(); if (state.search) runSearch(state.search.query); });
+    return b;
+  };
+  const group = (title, items) => {
+    const g = document.createElement("span");
+    g.className = "group";
+    const t = document.createElement("span");
+    t.textContent = title;
+    g.append(t, ...items);
+    bar.append(g);
+  };
+  const toggle = (set, key) => () => set.has(key) ? set.delete(key) : set.add(key);
+  group("Type", FILTER_TYPES.map(t => button(t, f.types.has(t), toggle(f.types, t))));
+  group("Mana value", [...FILTER_MV.keys()].map(k => button(k, f.mv.has(k), toggle(f.mv, k))));
+  group("Price", Object.keys(FILTER_PRICE).map(k => button(k, f.price === k, () => { f.price = f.price === k ? "" : k; })));
+  if (state.deck.size) {
+    const label = document.createElement("label");
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = state.hideOwned;
+    box.addEventListener("change", () => { state.hideOwned = box.checked; store.set("hideowned", state.hideOwned); applyHideOwned(); });
+    label.append(box, "Hide cards in my deck");
+    bar.append(label);
+  }
+  if (filterTerms()) {
+    const clear = document.createElement("button");
+    clear.type = "button";
+    clear.className = "linkbtn";
+    clear.textContent = "Clear filters";
+    clear.addEventListener("click", () => { resetFilters(); if (state.search) runSearch(state.search.query); });
+    bar.append(clear);
+  }
+}
+
+// ---------- commander as the starting point ----------
+function renderCommander() {
+  const c = state.commander;
+  $("cmdrchip").hidden = $("cmdrclear").hidden = !c;
+  $("cmdrform").hidden = !!c;
+  $("cmdrnote").textContent = c ? "Searches stay within these colors." : "Optional: searches then stay within its colors.";
+  if (c) $("cmdrchip").textContent = `${c.name} · ${(c.colors || "c").toUpperCase().split("").join("")}`;
+}
+
+async function setCommander(name) {
+  $("cmdrnote").textContent = "Looking it up…";
+  try {
+    let card = await scryfall("https://api.scryfall.com/cards/named?" + new URLSearchParams({ fuzzy: name }));
+    if (!card || card.object !== "card") {
+      // ambiguous names ("atraxa"): take the most played commander whose name contains it
+      const found = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q: `is:commander name:"${name.replace(/"/g, "")}"`, order: "edhrec" }));
+      card = found.data && found.data[0];
+    }
+    if (!card || card.object !== "card") throw new Error(`No commander found named "${name}".`);
+    const colors = "wubrg".split("").filter(c => (card.color_identity || []).map(x => x.toLowerCase()).includes(c)).join("");
+    state.commander = { name: card.name, colors };
+    store.set("commander", state.commander);
+    renderCommander();
+    if (state.search) runSearch(state.search.query);
+  } catch (err) {
+    $("cmdrnote").textContent = err.message;
+  }
+}
+
+// ---------- imported deck: mark cards you already have ----------
+function parseDeck(text) {
+  const names = new Set();
+  for (let line of text.split(/\r?\n/)) {
+    line = line.replace(/#.*$/, "").trim();   // Moxfield tags
+    // skip empty lines and section headers such as "// Commander", "Sideboard:" or "Deck"
+    if (!line || line.startsWith("//") || /^(commander|deck|sideboard|maybeboard|companion|about|name)\b:?\s*$/i.test(line)) continue;
+    const m = line.match(/^(?:(\d+)x?\s+)?(.+?)(?:\s+\([A-Za-z0-9]{2,6}\)(?:\s+\S+)?)?(?:\s+\*[A-Z]+\*)*\s*$/);
+    if (!m) continue;
+    const name = m[2].trim().toLowerCase();
+    names.add(name);
+    if (name.includes(" // ")) names.add(name.split(" // ")[0]);
+  }
+  return names;
+}
+
+function ownsCard(name) {
+  const n = name.toLowerCase();
+  return state.deck.has(n) || state.deck.has(n.split(" // ")[0]);
+}
+
+function renderDeck() {
+  $("deckinfo").textContent = state.deck.size ? `My deck: ${plural(state.deck.size, "card")} imported` : "No deck imported.";
+  $("importdeck").textContent = state.deck.size ? "Replace deck" : "Import deck";
+  renderFilterbar();
+  refreshOwned();
+}
+
+function refreshOwned() {
+  for (const tile of $("grid").querySelectorAll(".tile")) markOwned(tile);
+  applyHideOwned();
+}
+
+function markOwned(tile) {
+  const owned = ownsCard(tile.dataset.name);
+  tile.classList.toggle("owned", owned);
+  let badge = tile.querySelector(".ownedbadge");
+  if (owned && !badge) {
+    badge = document.createElement("span");
+    badge.className = "ownedbadge";
+    badge.textContent = "In deck";
+    tile.append(badge);
+  } else if (!owned && badge) badge.remove();
+}
+
+function applyHideOwned() {
+  $("grid").classList.toggle("hideowned", state.hideOwned && state.deck.size > 0);
 }
 
 function normalise(c) {
@@ -788,6 +992,8 @@ async function runSearch(query, page = 1) {
   $("filters").textContent = extra ? "+ " + extra : "own filters";
   $("scryfalllink").href = "https://scryfall.com/search?q=" + encodeURIComponent(full) + "&order=" + state.order;
   state.search = { query, full, order: state.order, size: state.size, total: null, cache: new Map(), page: 1 };
+  renderFilterbar();
+  applyHideOwned();
   store.set("last", query);
   await showPage(page);
 }
@@ -906,6 +1112,7 @@ function render(cards, page, pages) {
     }
 
     tile.append(btn, picker);
+    markOwned(tile);
     markPicked(tile, counts.get(card.name) || 0);
     grid.append(tile);
   }
@@ -1154,6 +1361,7 @@ function renderHistory() {
     b.addEventListener("click", () => {
       $("zin").value = h.zin;
       showQuery(h.query, h.uitleg, h.combos);
+      state.previous = h.combos && h.combos.length ? null : { zin: h.zin, query: h.query };
       runSearch(h.query);
     });
     li.append(b);
@@ -1186,6 +1394,7 @@ $("searchform").addEventListener("submit", async e => {
     // Nothing to search: show why, without searching, logging or adding it to the history.
     showQuery("", result.uitleg);
     state.search = null;
+    renderFilterbar();
     for (const id of ["grid", "pagertop", "pagerbottom"]) $(id).replaceChildren();
     $("count").textContent = "";
     message("");
@@ -1193,12 +1402,16 @@ $("searchform").addEventListener("submit", async e => {
   }
   showQuery(result.query, result.uitleg, result.combos);
   addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
+  // a combo result is a list of card names, which makes no sense to refine; anything else can be
+  state.previous = result.combos && result.combos.length ? null : { zin, query: result.query };
+  resetFilters();
   runSearch(result.query);
   logShared(zin, result.query);
 });
 
 $("opnieuw").addEventListener("click", () => {
   $("uitleg").textContent = "Query edited by hand.";
+  if (state.previous) state.previous.query = $("query").value.trim();
   runSearch($("query").value);
 });
 $("query").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("opnieuw").click(); } });
@@ -1287,6 +1500,37 @@ $("viewswitch").addEventListener("click", () => {
   store.set("view", isMobile ? "desktop" : "mobile");
   location.reload();
 });
+
+// commander and deck
+$("cmdrform").addEventListener("submit", e => {
+  e.preventDefault();
+  const name = $("cmdrinput").value.trim();
+  if (name) setCommander(name);
+});
+$("cmdrclear").addEventListener("click", () => {
+  state.commander = null;
+  store.set("commander", null);
+  $("cmdrinput").value = "";
+  renderCommander();
+  if (state.search) runSearch(state.search.query);
+});
+$("importdeck").addEventListener("click", () => { $("decktext").value = ""; $("deckdialog").showModal(); $("decktext").focus(); });
+$("deckform").addEventListener("submit", e => {
+  if (!e.submitter || e.submitter.value !== "save") return;
+  state.deck = parseDeck($("decktext").value);
+  store.set("deck", [...state.deck]);
+  renderDeck();
+  toast(state.deck.size ? `Deck saved: ${plural(state.deck.size, "card")}` : "No cards found in that text.");
+});
+$("removedeck").addEventListener("click", () => {
+  state.deck = new Set();
+  store.set("deck", []);
+  renderDeck();
+  $("deckdialog").close();
+  toast("Deck removed");
+});
+renderCommander();
+renderDeck();
 
 renderList();
 renderHistory();

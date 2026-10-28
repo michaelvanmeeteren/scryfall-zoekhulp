@@ -42,6 +42,9 @@ browser → Worker (API-key, toegangscode, vaste instellingen) → Claude API
   zoekt de Worker de 10 meest gespeelde combo's op bij [Commander Spellbook](https://commanderspellbook.com) (de bron
   van EDHREC's combo-pagina's). Hun kaarten verschijnen als zoekresultaat; de combo's zelf staan onder de zoekopdracht,
   met wat ze doen, de prijs en een link. Klik op een combo om alleen die kaarten te zien.
+- **Kostenoverzicht:** de Worker telt per dag de aanroepen en tokens (D1-tabel `usage`). Op
+  [stats.html](https://michaelvanmeeteren.github.io/scryfall-zoekhulp/stats.html) zie je met je eigen beheercode
+  (secret `ADMIN_CODE`) het aantal zoekopdrachten, de geschatte kosten en hoe lang je tegoed nog meegaat.
 - **Cache warm houden:** een Cron Trigger doet elk half uur van 10:00 tot 00:00 (Nederlandse wintertijd) een mini-aanroep
   met dezelfde prompt, zodat de cache van een uur niet verloopt. Kosten ongeveer $0,01 per dag. Het schema staat in
   `worker/wrangler.toml` onder `[triggers]`.
@@ -54,6 +57,7 @@ browser → Worker (API-key, toegangscode, vaste instellingen) → Claude API
 | Wat | Commando |
 | --- | --- |
 | Toegangscode wijzigen (bijvoorbeeld als hij is uitgelekt) | `npx wrangler secret put ACCESS_CODE` |
+| Beheercode voor stats.html instellen of wijzigen | `npx wrangler secret put ADMIN_CODE` |
 | API-key vervangen | `npx wrangler secret put ANTHROPIC_API_KEY` |
 | Worker opnieuw online zetten na een wijziging in `worker/src/index.js` | `npx wrangler deploy` |
 | De taglijst verversen met nieuwe Scryfall-tags (daarna `npx wrangler deploy`) | `node update-tags.mjs` |
@@ -70,6 +74,11 @@ Wijzigingen in `index.html` staan online zodra ze naar GitHub zijn gepusht (`git
 Wijzigingen in de Worker zet je online met `npx wrangler deploy` (zie hierboven).
 
 ## Gebruik
+
+- **Commander:** vul onder de zoekbalk je commander in (bijvoorbeeld `atraxa`); alle zoekopdrachten blijven dan binnen zijn kleuren.
+- **Vervolgvragen:** na een zoekopdracht kun je die bijsturen met bijvoorbeeld `only under 1 euro`, `without creatures` of `nu alleen instants` (met de toegangscode).
+- **Deck importeren:** in de kaartlijst plak je je decklijst (bijvoorbeeld uit Moxfield); kaarten die je al hebt krijgen het label *In deck*, en je kunt ze verbergen.
+- **Filterknoppen:** boven de resultaten filter je snel op type, mana value en prijs, zonder de zoekopdracht opnieuw te typen.
 
 - Typ in het Engels, bijvoorbeeld `creatures mana value less than or equal to 5 in g/w/b`. Met de toegangscode (Claude) mag het ook in het Nederlands; de ingebouwde vertaler kent alleen Engels.
 - Begin met `/s ` of `!` om direct Scryfall-syntax te gebruiken: `/s t:creature kw:flying id<=r mv<3`.

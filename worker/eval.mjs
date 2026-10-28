@@ -43,7 +43,7 @@ const CASES = [
   { zin: "one sided board wipes", any: [["sweeper-one-sided"]] },
   { zin: "artifact removal in green", any: [["removal-artifact", "artifact-removal"]], id: "<=g" },
   { zin: "instant speed removal in white", any: [["t:instant"], ["removal"]], id: "<=w" },
-  { zin: "free sac outlets", any: [["free-sacrifice-outlet"]] },
+  { zin: "free sac outlets", any: [["free-sacrifice-outlet", "free-sac-outlet"]] },
   { zin: "token doublers", any: [["token-doubler"]] },
   { zin: "clone effects in blue", any: [["otag:clone", "copy-permanent"]], id: "<=u" },
   { zin: "steal effects in red", any: [["control-changing", "threaten", "gain control", "exchange-control", "theft"]], id: "<=r" },

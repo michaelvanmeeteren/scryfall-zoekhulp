@@ -34,6 +34,13 @@ Example: "cheap infinite mana combos in green" => query "", combo {"wanted": tru
 "result": "Infinite mana", "max_eur": 20, "cards": 0}; "infinite combos in dimir" => combo {"wanted": true, "colors": "ub",
 "card": "", "result": "", "max_eur": 0, "cards": 0}.
 
+The message may start with extra lines before "Request:":
+- "My commander: <name> (color identity: <letters>)." Use id<=<letters> for every search for deck cards, unless the
+  request names other colors or asks for commanders. Combos then use those colors too.
+- "My previous search: "<sentence>" => <query>". If the request is a follow-up that changes that search ("only under
+  1 euro", "without creatures", "now in blue", "more expensive", "nu alleen instants"), return the previous query
+  changed accordingly, keeping everything else. If the request is a new, complete search, ignore the previous one.
+
 Dutch words you will see: wit=white, blauw=blue, zwart=black, rood=red, groen=green, kleurloos=colorless,
 wezens=creatures, draken=dragons, landen=lands, spreuken=instants and sorceries, goedkoop=cheap,
 "die ik als commander kan gebruiken" = is:commander, "kaarten trekken" = card draw, "hoogstens"/"of minder" = <=,
@@ -160,6 +167,46 @@ function readAnswer(response) {
   try { return JSON.parse(text); } catch { return null; }
 }
 
+// ---------- the user message: the request, plus the chosen commander and the previous search ----------
+function requestText(zin, commander, previous) {
+  const clean = (s, max) => typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, max) : "";
+  const lines = [];
+  const name = clean(commander && commander.name, 100);
+  const colors = clean(commander && commander.colors, 5).toLowerCase().replace(/[^wubrg]/g, "");
+  if (name) lines.push(`My commander: ${name} (color identity: ${colors || "colorless"}).`);
+  const prevZin = clean(previous && previous.zin, MAX_SENTENCE);
+  const prevQuery = clean(previous && previous.query, 500);
+  if (prevZin && prevQuery) lines.push(`My previous search: "${prevZin}" => ${prevQuery}`);
+  if (!lines.length) return zin;   // same message as always, so nothing changes for plain searches
+  return lines.join("\n") + `\nRequest: ${zin}`;
+}
+
+// ---------- usage and cost (D1 table "usage", see schema.sql) ----------
+// Claude Haiku 5.5 list prices in dollars per million tokens; cache reads 0.1x, 1-hour cache writes 2x input.
+const PRICES = { input: 0.10, output: 0.50, cache_read: 0.01, cache_write: 0.20 };
+
+async function recordUsage(env, kind, u) {
+  if (!u) return;
+  const day = new Date().toISOString().slice(0, 10);
+  try {
+    await env.DB.prepare(
+      `INSERT INTO usage (day, kind, calls, input, cache_read, cache_write, output) VALUES (?, ?, 1, ?, ?, ?, ?)
+       ON CONFLICT(day, kind) DO UPDATE SET calls = calls + 1, input = input + excluded.input,
+         cache_read = cache_read + excluded.cache_read, cache_write = cache_write + excluded.cache_write,
+         output = output + excluded.output`
+    ).bind(day, kind, u.input_tokens || 0, u.cache_read_input_tokens || 0, u.cache_creation_input_tokens || 0, u.output_tokens || 0).run();
+  } catch (error) {
+    console.log("usage not recorded: " + String(error));
+  }
+}
+
+async function usageStats(env) {
+  const { results } = await env.DB.prepare(
+    "SELECT day, kind, calls, input, cache_read, cache_write, output FROM usage WHERE day >= date('now', '-60 days') ORDER BY day DESC, kind"
+  ).all();
+  return results;
+}
+
 // ---------- combos from Commander Spellbook (the source of EDHREC's combo pages) ----------
 const MAX_COMBOS = 10;
 
@@ -277,12 +324,13 @@ export default {
         messages: [{ role: "user", content: "warm-up" }]
       });
       console.log("warm-up " + JSON.stringify(response.usage));
+      await recordUsage(env, "warmup", response.usage);
     } catch (error) {
       console.log("warm-up failed: " + (error instanceof Anthropic.APIError ? `${error.status} ${error.type}` : String(error)));
     }
   },
 
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const origin = request.headers.get("Origin") || "";
     const cors = {
       "Access-Control-Allow-Origin": ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
@@ -297,7 +345,7 @@ export default {
 
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
     const path = new URL(request.url).pathname;
-    if (request.method !== "POST" || !["/translate", "/log", "/recent"].includes(path)) {
+    if (request.method !== "POST" || !["/translate", "/log", "/recent", "/stats"].includes(path)) {
       return reply(404, { error: "Not found." });
     }
 
@@ -310,6 +358,14 @@ export default {
     try { input = await request.json(); } catch { return reply(400, { error: "Bad request." }); }
     const code = typeof input.code === "string" ? input.code : "";
     const zin = typeof input.zin === "string" ? input.zin.trim() : "";
+
+    // The owner's cost overview (stats.html) uses its own code, separate from the one friends have.
+    if (path === "/stats") {
+      if (!env.ADMIN_CODE || !(await sameText(typeof input.admin === "string" ? input.admin : "", env.ADMIN_CODE))) {
+        return reply(401, { error: "Admin code invalid." });
+      }
+      return reply(200, { days: await usageStats(env), prices: PRICES });
+    }
 
     if (!env.ACCESS_CODE || !(await sameText(code, env.ACCESS_CODE))) {
       return reply(401, { error: "Access code invalid. Check it in Settings." });
@@ -327,17 +383,21 @@ export default {
     if (zin.length > MAX_SENTENCE) return reply(400, { error: `Keep the search under ${MAX_SENTENCE} characters.` });
 
     const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-    const ask = messages => client.messages.create({
-      model: MODEL,
-      max_tokens: 4000,   // room for a little thinking before the short JSON answer
-      system: SYSTEM,
-      output_config: OUTPUT_CONFIG,
-      messages
-    });
-    const messages = [{ role: "user", content: zin }];
+    const ask = async (messages, kind) => {
+      const r = await client.messages.create({
+        model: MODEL,
+        max_tokens: 4000,   // room for a little thinking before the short JSON answer
+        system: SYSTEM,
+        output_config: OUTPUT_CONFIG,
+        messages
+      });
+      ctx.waitUntil(recordUsage(env, kind, r.usage));
+      return r;
+    };
+    const messages = [{ role: "user", content: requestText(zin, input.commander, input.previous) }];
     let response, answer;
     try {
-      response = await ask(messages);
+      response = await ask(messages, "search");
       answer = readAnswer(response);
       // Self-check: one correction round when the query uses a tag that doesn't exist,
       // makes Scryfall warn, or finds no cards at all.
@@ -346,7 +406,7 @@ export default {
       if (problem) {
         messages.push({ role: "assistant", content: response.content });
         messages.push({ role: "user", content: `${problem} Fix the query so it finds what I asked for. Reply with the corrected JSON.` });
-        const second = await ask(messages);
+        const second = await ask(messages, "correction");
         const corrected = readAnswer(second);
         if (corrected && corrected.query) { response = second; answer = corrected; }
       }

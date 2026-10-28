@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zoekhulp Costs</title>
+<link rel="icon" href="data:,">
+<meta name="robots" content="noindex">
+<style>
+/* Owner-only cost overview for the Scryfall Zoekhulp translator. Same look as index.html. */
+:root {
+  --bg: #f4f6f5; --surface: #ffffff; --fg: #1b2420; --muted: #5b6863; --line: #d9e0dd;
+  --accent: #1f6f5c; --accent-fg: #ffffff; --danger: #b42318;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #111614; --surface: #1a211e; --fg: #e4ebe8; --muted: #97a59f; --line: #2b3531;
+    --accent: #4fbf9f; --accent-fg: #062118; --danger: #f97066; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--font); }
+main { max-width: 860px; margin: 0 auto; padding: 20px 16px 40px; display: grid; gap: 16px; }
+h1 { margin: 0; font-size: 20px; }
+p { margin: 0; }
+.muted { color: var(--muted); font-size: 13px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+form { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
+input { font: inherit; color: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg); font-weight: 600; cursor: pointer; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.tile .label { font-size: 13px; color: var(--muted); }
+.tile .value { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 14px; }
+th, td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.error { color: var(--danger); }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <h1>Zoekhulp costs</h1>
+    <p class="muted">Claude usage of the translator, per day (UTC). Costs are estimates from the token counts and Haiku 5.5 list prices; your Anthropic Console shows the real bill. <a href="./">Back to the app</a></p>
+  </div>
+
+  <form id="login" class="panel">
+    <label>Admin code <input id="admin" type="password" autocomplete="off"></label>
+    <label>Starting credit ($) <input id="credit" type="number" min="0" step="0.01" value="7"></label>
+    <button type="submit">Show</button>
+    <p id="err" class="error" hidden></p>
+  </form>
+
+  <section id="summary" class="tiles" hidden></section>
+  <section id="days" class="panel tablewrap" hidden></section>
+</main>
+<script>
+"use strict";
+const WORKER = "https://scryfall-zoekhulp.michaelvanmeeteren.workers.dev/stats";
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("szh." + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("szh." + k, JSON.stringify(v)); } catch { /* storage unavailable */ } }
+};
+const usd = n => "$" + (n < 0.01 && n > 0 ? n.toFixed(4) : n.toFixed(2));
+
+function cost(row, p) {
+  return (row.input * p.input + row.output * p.output + row.cache_read * p.cache_read + row.cache_write * p.cache_write) / 1e6;
+}
+
+function tile(label, value) {
+  const d = document.createElement("div");
+  d.className = "panel tile";
+  d.innerHTML = '<div class="label"></div><div class="value"></div>';
+  d.firstChild.textContent = label;
+  d.lastChild.textContent = value;
+  return d;
+}
+
+function render({ days, prices }) {
+  const byDay = new Map();
+  for (const r of days) {
+    const d = byDay.get(r.day) || { search: 0, correction: 0, warmup: 0, cost: 0 };
+    d[r.kind] = (d[r.kind] || 0) + r.calls;
+    d.cost += cost(r, prices);
+    byDay.set(r.day, d);
+  }
+  const total = [...byDay.values()].reduce((n, d) => n + d.cost, 0);
+  const searches = [...byDay.values()].reduce((n, d) => n + d.search, 0);
+  const credit = Number($("credit").value) || 0;
+  const last7 = [...byDay.entries()].slice(0, 7).reduce((n, [, d]) => n + d.cost, 0);
+  const perDay = last7 / Math.max(1, Math.min(7, byDay.size));
+
+  const s = $("summary");
+  s.replaceChildren(
+    tile("Searches (60 days)", String(searches)),
+    tile("Estimated cost (60 days)", usd(total)),
+    tile("Per search, on average", searches ? usd(total / searches) : "–"),
+    tile("Credit left (estimate)", usd(Math.max(0, credit - total))),
+    tile("Lasts at this pace", perDay > 0 ? `${Math.floor((credit - total) / perDay)} days` : "–")
+  );
+  s.hidden = false;
+
+  const t = document.createElement("table");
+  t.innerHTML = "<thead><tr><th>Day</th><th>Searches</th><th>Corrections</th><th>Warm-ups</th><th>Cost</th></tr></thead>";
+  const tb = document.createElement("tbody");
+  for (const [day, d] of byDay) {
+    const tr = document.createElement("tr");
+    for (const v of [day, d.search, d.correction, d.warmup, usd(d.cost)]) {
+      const td = document.createElement("td");
+      td.textContent = v;
+      tr.append(td);
+    }
+    tb.append(tr);
+  }
+  if (!byDay.size) tb.innerHTML = '<tr><td colspan="5">No usage recorded yet.</td></tr>';
+  t.append(tb);
+  $("days").replaceChildren(t);
+  $("days").hidden = false;
+}
+
+async function load() {
+  $("err").hidden = true;
+  try {
+    const res = await fetch(WORKER, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ admin: $("admin").value }) });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || `Error ${res.status}`);
+    store.set("admin", $("admin").value);
+    store.set("credit", $("credit").value);
+    render(body);
+  } catch (e) {
+    $("err").textContent = e.message;
+    $("err").hidden = false;
+  }
+}
+
+$("admin").value = store.get("admin", "");
+$("credit").value = store.get("credit", "7");
+$("login").addEventListener("submit", e => { e.preventDefault(); load(); });
+if ($("admin").value) load();
+</script>
+</body>
+</html>
