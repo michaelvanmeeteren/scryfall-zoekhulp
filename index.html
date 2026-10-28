@@ -1,0 +1,1050 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scryfall Zoekhulp</title>
+<link rel="icon" href="data:,">
+<style>
+/* Layout: header on top, search + card grid on the left, a sticky list column on the right; stacked on narrow screens. */
+:root {
+  --bg: #f4f6f5;
+  --surface: #ffffff;
+  --fg: #1b2420;
+  --muted: #5b6863;
+  --line: #d9e0dd;
+  --accent: #1f6f5c;
+  --accent-fg: #ffffff;
+  --accent-soft: #e2f0eb;
+  --danger: #b42318;
+  --note-bg: #fff4dc;
+  --note-fg: #6b4a00;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 4px 12px rgb(0 0 0 / 0.06);
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --radius: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111614;
+    --surface: #1a211e;
+    --fg: #e4ebe8;
+    --muted: #97a59f;
+    --line: #2b3531;
+    --accent: #4fbf9f;
+    --accent-fg: #062118;
+    --accent-soft: #173029;
+    --danger: #f97066;
+    --note-bg: #3a2f14;
+    --note-fg: #f2d189;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.45 var(--font); }
+[hidden] { display: none !important; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, .mono { font-family: var(--mono); font-size: 0.92em; }
+
+.top { display: flex; align-items: baseline; gap: 12px; padding: 14px max(16px, 3vw) 0; flex-wrap: wrap; }
+.top h1 { margin: 0; font-size: 20px; letter-spacing: -0.01em; }
+.top p { margin: 0; color: var(--muted); font-size: 13px; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; padding: 14px max(16px, 3vw) 24px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+
+/* search */
+.search { padding: 14px; display: grid; gap: 10px; }
+.searchrow { display: flex; gap: 8px; }
+.searchrow input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.btn { padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); white-space: nowrap; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+.btn.small { padding: 5px 10px; font-size: 13px; }
+.btn:disabled { opacity: 0.55; cursor: default; }
+.hint { margin: 0; color: var(--muted); font-size: 13px; }
+
+.querybar { display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px; }
+.queryrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.queryrow input { flex: 1 1 260px; min-width: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-family: var(--mono); font-size: 14px; }
+.chip { font-family: var(--mono); font-size: 12.5px; padding: 3px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--fg); white-space: nowrap; }
+.queryrow a { font-size: 13px; color: var(--accent); white-space: nowrap; }
+.explain { margin: 0; font-size: 13px; color: var(--muted); }
+
+.history summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+.history ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; }
+.history button { width: 100%; text-align: left; background: none; border: 0; padding: 4px 6px; border-radius: 6px; display: flex; gap: 10px; justify-content: space-between; }
+.history button:hover { background: var(--accent-soft); }
+.history .q { font-family: var(--mono); font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+
+/* results */
+.results { margin-top: 16px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.toolbar .count { font-weight: 600; }
+.toolbar .controls { display: flex; gap: 14px; flex-wrap: wrap; }
+.toolbar label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.toolbar select { padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); }
+.note { background: var(--note-bg); color: var(--note-fg); border-radius: 8px; padding: 8px 12px; font-size: 13.5px; margin-bottom: 10px; }
+.note.error { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
+.empty { padding: 40px 16px; text-align: center; color: var(--muted); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min, 150px), 100%), 1fr)); gap: 14px; }
+.sizer { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.sizer button { width: 30px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-size: 16px; font-weight: 700; line-height: 1; }
+.sizer button:disabled { opacity: 0.4; cursor: default; }
+.card { position: relative; display: grid; width: 100%; gap: 4px; padding: 0; border: 0; background: none; text-align: left; }
+.card img { width: 100%; aspect-ratio: 488 / 680; border-radius: 4.75% / 3.5%; display: block; background: var(--line); box-shadow: var(--shadow); transition: transform 0.12s; }
+.card:hover img { transform: translateY(-2px); }
+.tile { position: relative; min-width: 0; }
+.tile.picked .card img { outline: 3px solid var(--accent); outline-offset: 1px; }
+.picker { position: absolute; top: 6px; right: 6px; display: flex; align-items: center; border-radius: 99px; background: var(--accent); color: var(--accent-fg); box-shadow: var(--shadow); overflow: hidden; }
+.picker .minus { width: 30px; height: 28px; padding: 0; border: 0; border-right: 1px solid rgb(255 255 255 / 0.35); background: transparent; color: inherit; font-size: 17px; font-weight: 700; line-height: 1; }
+.picker .minus:hover { background: rgb(0 0 0 / 0.18); }
+.picker .badge { min-width: 28px; height: 28px; padding: 0 9px 0 7px; font-weight: 700; display: grid; place-items: center; font-variant-numeric: tabular-nums; }
+.picker .check { min-width: 30px; height: 28px; padding: 0 8px; font-weight: 700; display: grid; place-items: center; }
+.list li.single { grid-template-columns: minmax(0, 1fr) auto; }
+.card .name { font-size: 13px; font-weight: 600; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card .meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.pager { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; margin: 14px 0; }
+.pager button { min-width: 34px; padding: 5px 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; font-variant-numeric: tabular-nums; }
+.pager button[aria-current="page"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 700; }
+.pager .gap { padding: 0 4px; color: var(--muted); }
+.pager .label { width: 100%; text-align: center; font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+/* list */
+.list { position: sticky; top: 14px; padding: 14px; display: grid; gap: 10px; max-height: calc(100vh - 28px); overflow: auto; }
+@media (max-width: 900px) { .list { position: static; max-height: none; } }
+.list h2 { margin: 0; font-size: 16px; }
+.list .totals { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.qty { display: inline-flex; align-items: center; gap: 2px; }
+.qty button, .remove { width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); padding: 0; line-height: 1; }
+.qty span { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
+.list .cardname { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list .cardname small { color: var(--muted); font-family: var(--mono); font-size: 11.5px; margin-left: 4px; }
+.remove { color: var(--muted); }
+.list .emptylist { color: var(--muted); font-size: 13.5px; margin: 0; }
+.exportopts { display: flex; gap: 12px; font-size: 13px; flex-wrap: wrap; }
+.exportopts label { display: inline-flex; gap: 5px; align-items: center; }
+.listactions { display: flex; gap: 8px; flex-wrap: wrap; }
+.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.confirm .btn.danger { border-color: var(--danger); color: var(--danger); }
+.list textarea { width: 100%; min-height: 140px; font-family: var(--mono); font-size: 12.5px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 8px; }
+
+.foot { padding: 0 max(16px, 3vw) 20px; color: var(--muted); font-size: 12px; }
+
+#preview { position: fixed; z-index: 20; width: 300px; pointer-events: none; border-radius: 14px; box-shadow: 0 8px 30px rgb(0 0 0 / 0.35); }
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 14px; z-index: 30; }
+
+.listhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; font-size: inherit; }
+.mobilebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 22; display: flex; gap: 10px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -4px 14px rgb(0 0 0 / 0.1); }
+.mobilebar .btn { flex: 1; min-height: 48px; font-size: 15px; }
+.mobilebar .btn:first-child { text-align: left; overflow: hidden; text-overflow: ellipsis; }
+
+/* Mobile view: switched on by script (touch screen + small screen), or by the view switch in the footer. */
+html.mobile body { font-size: 16px; padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+html.mobile .top { padding: 12px 12px 0; }
+html.mobile .top p { display: none; }
+html.mobile .layout { grid-template-columns: minmax(0, 1fr); padding: 10px 12px 16px; gap: 12px; }
+html.mobile .search { padding: 12px; }
+html.mobile .searchrow { flex-wrap: wrap; }
+html.mobile .searchrow input { flex-basis: 100%; font-size: 16px; padding: 12px; }
+html.mobile #zoek { flex: 1; min-height: 46px; font-size: 16px; }
+html.mobile .hint { font-size: 13.5px; }
+html.mobile .queryrow input { flex-basis: 100%; font-size: 15px; padding: 10px; }
+html.mobile .btn.small { min-height: 42px; padding: 8px 14px; font-size: 14px; }
+html.mobile .queryrow a { font-size: 14px; padding: 8px 0; }
+html.mobile .history button { padding: 10px 6px; }
+html.mobile .toolbar label { font-size: 14px; }
+html.mobile .toolbar select { padding: 8px; font-size: 15px; }
+html.mobile .grid { grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 16px 10px; }
+html.mobile .sizer { font-size: 14px; }
+html.mobile .sizer button { width: 44px; height: 40px; font-size: 20px; }
+html.mobile .card .name { font-size: 15px; }
+html.mobile .card .meta { font-size: 13.5px; }
+html.mobile .card:hover img { transform: none; }
+html.mobile .tile.picked .card img { outline-width: 4px; outline-offset: 2px; }
+html.mobile .picker { top: 5px; right: 5px; }
+html.mobile .picker .minus { width: 48px; height: 44px; font-size: 26px; }
+html.mobile .picker .badge { min-width: 42px; height: 44px; padding: 0 12px 0 8px; font-size: 19px; }
+html.mobile .picker .check { min-width: 44px; height: 44px; font-size: 22px; }
+html.mobile .pager { gap: 6px; }
+html.mobile .pager button { min-width: 46px; min-height: 46px; font-size: 15px; }
+html.mobile .list { position: fixed; inset: 0; z-index: 25; border: 0; border-radius: 0; max-height: none; padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); align-content: start; }
+html.mobile .list:not(.open) { display: none; }
+html.mobile .list h2 { font-size: 19px; }
+html.mobile .list li { padding: 8px 0; }
+html.mobile .list .cardname { font-size: 15px; }
+html.mobile .qty button, html.mobile .remove { width: 40px; height: 40px; font-size: 19px; }
+html.mobile .exportopts { font-size: 15px; gap: 16px; }
+html.mobile .exportopts input { width: 20px; height: 20px; }
+html.mobile .listactions .btn { min-height: 46px; flex: 1; }
+html.mobile .toast { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 32px); }
+html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) { .card img { transition: none; } .card:hover img { transform: none; } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>Scryfall Zoekhulp</h1>
+  <p>Commander · paper cards · prototype with built-in translator</p>
+</header>
+
+<main class="layout">
+  <div>
+    <section class="panel search" aria-label="Search">
+      <form id="searchform" class="searchrow">
+        <input id="zin" type="search" autocomplete="off" placeholder="creatures mana value less than or equal to 5 in g/w/b" aria-label="Search in plain English">
+        <button id="zoek" class="btn primary" type="submit">Translate &amp; search</button>
+      </form>
+      <p class="hint">Type in plain English, or start with <code>/s</code> or <code>!</code> to use Scryfall syntax directly. Searches are always limited to Commander-legal paper cards.</p>
+
+      <div id="querybar" class="querybar" hidden>
+        <div class="queryrow">
+          <input id="query" type="text" spellcheck="false" aria-label="Scryfall query">
+          <span id="filters" class="chip" title="Fixed filters, always added"></span>
+          <button id="opnieuw" class="btn small" type="button">Search again</button>
+          <a id="scryfalllink" href="https://scryfall.com" target="_blank" rel="noopener">Open on Scryfall ↗</a>
+        </div>
+        <p id="uitleg" class="explain"></p>
+      </div>
+
+      <details id="history" class="history" hidden>
+        <summary>Recent searches</summary>
+        <ul id="historylist"></ul>
+      </details>
+    </section>
+
+    <section class="results" aria-label="Results">
+      <div class="toolbar">
+        <span id="count" class="count"></span>
+        <div class="controls">
+          <label>Sort by
+            <select id="order">
+              <option value="edhrec">EDHREC rank (most played first)</option>
+              <option value="name">Name</option>
+              <option value="eur">Price</option>
+              <option value="cmc">Mana value</option>
+              <option value="released">Newest</option>
+            </select>
+          </label>
+          <span class="sizer" role="group" aria-label="Card size">Card size
+            <button id="smaller" type="button" aria-label="Smaller cards">−</button>
+            <button id="larger" type="button" aria-label="Larger cards">+</button>
+          </span>
+          <label>Per page
+            <select id="size">
+              <option>20</option>
+              <option>50</option>
+              <option>100</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div id="message"></div>
+      <nav id="pagertop" class="pager" aria-label="Pages"></nav>
+      <div id="grid" class="grid"></div>
+      <nav id="pagerbottom" class="pager" aria-label="Pages"></nav>
+      <div id="start" class="empty">Type a search above, for example <i>flying creatures under 3 mana in red</i>.</div>
+    </section>
+  </div>
+
+  <aside id="list" class="panel list" aria-label="Card list">
+    <div class="listhead">
+      <h2>Card list</h2>
+      <button id="closelist" class="btn small closelist" type="button">Close</button>
+    </div>
+    <div id="totals" class="totals"></div>
+    <p id="emptylist" class="emptylist">Click a card to add it, click it again to take it out. Basic lands and cards that allow more copies get a counter with −.</p>
+    <ul id="listitems"></ul>
+    <div class="exportopts" role="radiogroup" aria-label="Export format">
+      <label><input type="radio" name="fmt" value="full" checked> with set and number</label>
+      <label><input type="radio" name="fmt" value="names"> names only</label>
+    </div>
+    <div class="listactions">
+      <button id="copy" class="btn primary" type="button">Copy for Moxfield</button>
+      <button id="clear" class="btn" type="button">Clear list</button>
+    </div>
+    <div id="confirm" class="confirm" hidden>
+      <span>Remove the whole list?</span>
+      <button id="confirmyes" class="btn small danger" type="button">Yes, clear it</button>
+      <button id="confirmno" class="btn small" type="button">Cancel</button>
+    </div>
+    <textarea id="exporttext" readonly hidden aria-label="List to copy"></textarea>
+  </aside>
+</main>
+
+<footer class="foot">Card data and images via Scryfall. Magic: The Gathering is © Wizards of the Coast. · <button id="viewswitch" class="linkbtn" type="button">Switch view</button></footer>
+
+<div id="mobilebar" class="mobilebar">
+  <button id="openlist" class="btn" type="button">List is empty</button>
+  <button id="barcopy" class="btn primary" type="button">Copy for Moxfield</button>
+</div>
+
+<img id="preview" alt="" hidden>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script>
+"use strict";
+
+// ---------- storage ----------
+const store = {
+  get(key, fallback) {
+    try { const v = localStorage.getItem("szh." + key); return v == null ? fallback : JSON.parse(v); }
+    catch { return fallback; }
+  },
+  set(key, value) {
+    try { localStorage.setItem("szh." + key, JSON.stringify(value)); } catch { /* storage unavailable */ }
+  }
+};
+
+const state = {
+  list: migrateList(store.get("list", [])),
+  history: store.get("history", []),
+  order: store.get("order", "edhrec"),
+  size: store.get("size", 50),
+  search: null   // { query, full, order, size, total, cache: Map(apiPage -> cards), page }
+};
+
+const $ = id => document.getElementById(id);
+const euro = new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" });
+const dollar = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+const fmtNum = n => n.toLocaleString("en-US");
+const plural = (n, word) => `${fmtNum(n)} ${word}${n === 1 ? "" : "s"}`;
+const API_PAGE = 175;
+
+// ---------- phone or computer ----------
+function looksLikePhone() {
+  const touch = matchMedia("(pointer: coarse)").matches;
+  const small = Math.min(screen.width, screen.height) < 768;
+  return (touch && small) || /Android.+Mobile|iPhone|iPod/i.test(navigator.userAgent);
+}
+const savedView = store.get("view", null);   // "mobile" or "desktop" when the viewer switched by hand
+const isMobile = savedView ? savedView === "mobile" : looksLikePhone();
+document.documentElement.classList.toggle("mobile", isMobile);
+
+// ---------- built-in translator (to be replaced by Claude later) ----------
+const COLORS = { white: "w", blue: "u", black: "b", red: "r", green: "g" };
+const GROUPS = {
+  azorius: "wu", dimir: "ub", rakdos: "br", gruul: "rg", selesnya: "gw", orzhov: "wb", izzet: "ur",
+  golgari: "bg", boros: "rw", simic: "gu", esper: "wub", grixis: "ubr", jund: "brg", naya: "rgw",
+  bant: "gwu", abzan: "wbg", jeskai: "urw", sultai: "bgu", mardu: "rwb", temur: "gur"
+};
+const TYPES = {
+  creature: "creature", instant: "instant", sorcery: "sorcery", sorcerie: "sorcery", artifact: "artifact",
+  enchantment: "enchantment", land: "land", planeswalker: "planeswalker", walker: "planeswalker",
+  battle: "battle", legendary: "legendary", legend: "legendary", equipment: "equipment", aura: "aura",
+  vehicle: "vehicle", saga: "saga"
+};
+const TRIBES = ("angel dragon elf goblin zombie vampire wizard merfolk human knight soldier warrior beast dinosaur cat dog " +
+  "bird spirit demon devil elemental giant faerie rogue cleric druid shaman pirate sliver eldrazi hydra sphinx horror insect " +
+  "spider snake wolf werewolf squirrel rat treefolk golem construct thopter myr ninja samurai dwarf ally assassin skeleton " +
+  "rabbit bat frog otter phyrexian saproling dryad nymph minotaur kraken leviathan serpent octopus orc").split(" ");
+const PLURAL = { elf: "elves", dwarf: "dwarves", wolf: "wolves", werewolf: "werewolves", faerie: "faeries", sphinx: "sphinxes",
+  merfolk: "merfolk", myr: "myr", samurai: "samurai", eldrazi: "eldrazi", ally: "allies", octopus: "octopuses" };
+const KEYWORDS = ["first strike", "double strike", "flying", "trample", "lifelink", "deathtouch", "haste", "vigilance", "menace",
+  "reach", "hexproof", "indestructible", "flash", "ward", "defender", "infect", "prowess", "cascade", "convoke", "flashback",
+  "cycling", "landfall", "storm", "persist", "undying", "shroud", "toxic", "partner"];
+const FUNCTIONS = [
+  [/\b(?:card draw|card advantage|draw engines?|draw cards|card drawers?)\b/, "otag:draw", "card draw"],
+  [/\b(?:board ?wipes?|wipes?|wraths?|sweepers?|mass removal)\b/, "otag:board-wipe", "board wipe"],
+  [/\bremoval\b/, "otag:removal", "removal"],
+  [/\bramp\b/, "otag:ramp", "ramp"],
+  [/\btutors?\b/, "otag:tutor", "tutor"],
+  [/\bcounter ?spells?\b|\bcounters\b/, "otag:counterspell", "counterspell"],
+  [/\bmana rocks?\b/, "otag:mana-rock", "mana rock"],
+  [/\bburn\b/, "otag:burn", "burn"]
+];
+const COMP = "(less than or equal to|equal to or less than|greater than or equal to|equal to or greater than|no more than|no less than|at most|at least|less than|fewer than|more than|greater than|under|below|over|above|exactly|equal to|<=|>=|<|>|=)";
+const COMP_OP = {
+  "less than or equal to": "<=", "equal to or less than": "<=", "no more than": "<=", "at most": "<=", "<=": "<=",
+  "greater than or equal to": ">=", "equal to or greater than": ">=", "no less than": ">=", "at least": ">=", ">=": ">=",
+  "less than": "<", "fewer than": "<", "under": "<", "below": "<", "<": "<",
+  "more than": ">", "greater than": ">", "over": ">", "above": ">", ">": ">",
+  "exactly": "=", "equal to": "=", "=": "="
+};
+const TAIL_OP = { "or less": "<=", "or fewer": "<=", "or lower": "<=", "and below": "<=", "or more": ">=", "or greater": ">=", "or higher": ">=", "and up": ">=" };
+const ATTR = "(mana value|converted mana cost|mana cost|cmc|mv|mana|power|pow|toughness|tou)";
+const attrKey = a => /^(pow|power)$/.test(a) ? "pow" : /^(tou|toughness)$/.test(a) ? "tou" : "mv";
+const ATTR_LABEL = { mv: "mana value", pow: "power", tou: "toughness" };
+const STOP = new Set(("a an the in for with that which who whose can be is are my me i want find show cards card of to and or " +
+  "deck decks some any all please that's has have having good best spells").split(" "));
+
+function looksLikeSyntax(text) {
+  return /(^|\s|\()-?[a-z]+(:|<=|>=|<|>|=)\S/i.test(text);
+}
+
+function translate(input) {
+  let s = " " + input.toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, " ") + " ";
+  s = s.replace(/\b(?:a|one) (euro|dollar|buck)\b/g, "1 $1");
+  const terms = [];
+  const seen = [];
+  const take = (re, fn) => { s = s.replace(re, (...m) => { fn(...m); return " "; }); };
+
+  // literal rules text in quotes
+  take(/"([^"]+)"/g, (_, t) => { terms.push(`o:"${t.trim()}"`); seen.push(`text "${t.trim()}"`); });
+
+  // mentioning the format is redundant: searches are always Commander
+  take(/\b(?:for|in) (?:my |a |an )?(?:commander|edh)(?: decks?| format)?\b/g, () => {});
+  take(/\b(?:commander|edh) decks?\b/g, () => {});
+
+  // sorting
+  let order = null;
+  take(/\b(?:most (?:played|popular)|popular|popularity|by edhrec(?: rank)?|edhrec(?: rank)?)(?: first)?\b/, () => { order = "order:edhrec"; seen.push("most played first"); });
+  take(/\b(?:cheapest(?: first| ones?)?|sorted by price|by price)\b/, () => { order = "order:eur dir:asc"; seen.push("cheapest first"); });
+  take(/\bmost expensive(?: first)?\b/, () => { order = "order:eur dir:desc"; seen.push("most expensive first"); });
+  take(/\b(?:newest|most recent)(?: first)?\b/, () => { order = "order:released dir:desc"; seen.push("newest first"); });
+
+  // price, always in euro
+  let price = false;
+  const addPrice = (c, n) => { const op = COMP_OP[c]; terms.push(`eur${op}${n.replace(",", ".")}`); seen.push(`price ${op} €${n}`); price = true; };
+  take(new RegExp(`${COMP}\\s*(?:€|\\$)\\s*(\\d+(?:[.,]\\d+)?)`, "g"), (_, c, n) => addPrice(c, n));
+  take(new RegExp(`${COMP}\\s*(\\d+(?:[.,]\\d+)?)\\s*(?:€|\\$|euros?|eur|dollars?|bucks)`, "g"), (_, c, n) => addPrice(c, n));
+  take(/\b(?:cheap|budget|inexpensive)\b/g, () => { if (!price) { terms.push("eur<2"); seen.push("cheap (< €2)"); price = true; } });
+
+  // mana value, power, toughness
+  const num = (k, op, n) => { terms.push(`${k}${op}${n}`); seen.push(`${ATTR_LABEL[k]} ${op} ${n}`); };
+  take(new RegExp(`\\b${ATTR}\\s+(?:of\\s+|is\\s+)?${COMP}\\s+(\\d+)\\b`, "g"), (_, a, c, n) => num(attrKey(a), COMP_OP[c], n));
+  take(new RegExp(`\\b${ATTR}\\s+(\\d+)\\s+(or less|or fewer|or lower|and below|or more|or greater|or higher|and up)\\b`, "g"), (_, a, n, t) => num(attrKey(a), TAIL_OP[t], n));
+  take(new RegExp(`${COMP}\\s+(\\d+)\\s*${ATTR}\\b`, "g"), (_, c, n, a) => num(attrKey(a), COMP_OP[c], n));
+  take(new RegExp(`\\b(\\d+)\\s*${ATTR}\\s+(or less|or fewer|or lower|and below|or more|or greater|or higher|and up)\\b`, "g"), (_, n, a, t) => num(attrKey(a), TAIL_OP[t], n));
+  take(new RegExp(`\\b(\\d+)\\+\\s*${ATTR}\\b`, "g"), (_, n, a) => num(attrKey(a), ">=", n));
+  take(/\b(\d+)[- ]drops?\b/g, (_, n) => num("mv", "=", n));
+  take(new RegExp(`\\b(\\d+)\\s*${ATTR}\\b`, "g"), (_, n, a) => num(attrKey(a), "=", n));
+
+  // colours: always colour identity
+  const colors = new Set();
+  let colorless = false;
+  take(/\bcolou?rless\b/g, () => { colorless = true; });
+  take(/\b(?:five|5)[- ]colou?r(?:ed)?\b|\bwubrg\b/g, () => "wubrg".split("").forEach(c => colors.add(c)));
+  take(new RegExp(`\\b(${Object.keys(GROUPS).join("|")})\\b`, "g"), (_, g) => GROUPS[g].split("").forEach(c => colors.add(c)));
+  take(/\bmono[- ]?(white|blue|black|red|green|w|u|b|r|g)\b/g, (_, c) => colors.add(COLORS[c] || c));
+  take(/\b([wubrg](?:\s*\/\s*[wubrg])+)\b/g, (m) => m.replace(/[^wubrg]/g, "").split("").forEach(c => colors.add(c)));
+  take(/\b(in|for)\s+([wubrg]{1,5})\b/g, (_, p, letters) => letters.split("").forEach(c => colors.add(c)));
+  take(/\b(white|blue|black|red|green)\b/g, (_, c) => colors.add(COLORS[c]));
+  if (colors.size) {
+    const id = "wubrg".split("").filter(c => colors.has(c)).join("");
+    terms.push(`id<=${id}`); seen.push(`colours ${id.toUpperCase().split("").join("/")}`);
+  } else if (colorless) {
+    terms.push("id:c"); seen.push("colourless");
+  }
+
+  // types and excluded types
+  take(/\b(?:no|not|non-?)\s*basics?(?: lands?)?\b|\bnonbasic(?: lands?)?\b/g, () => {
+    terms.push("-t:basic"); seen.push("no basic lands");
+    if (!/\bland/.test(s)) terms.push("t:land");
+  });
+  take(/\bnon-?(creature|land|artifact|enchantment|legendary)s?\b/g, (_, t) => { terms.push(`-t:${t}`); seen.push(`non-${t}`); });
+  take(/\b(instants?|sorcery|sorceries)\s+(?:or|and|\/)\s+(instants?|sorcery|sorceries)\b/g, () => { terms.push("(t:instant OR t:sorcery)"); seen.push("instant or sorcery"); });
+  const typeWords = Object.keys(TYPES).join("|");
+  take(new RegExp(`\\b(${typeWords})s?\\s+or\\s+(${typeWords})s?\\b`, "g"), (_, a, b) => {
+    terms.push(`(t:${TYPES[a]} OR t:${TYPES[b]})`); seen.push(`${TYPES[a]} or ${TYPES[b]}`);
+  });
+  take(new RegExp(`\\b(${typeWords})s?\\b`, "g"), (_, t) => { terms.push(`t:${TYPES[t]}`); seen.push(`type ${TYPES[t]}`); });
+  const tribeAlternatives = TRIBES.flatMap(t => [PLURAL[t] || t + "s", t]).join("|");
+  take(new RegExp(`\\b(${tribeAlternatives})\\b`, "g"), (m) => {
+    const t = TRIBES.find(x => x === m || (PLURAL[x] || x + "s") === m);
+    terms.push(`t:${t}`); seen.push(`type ${t}`);
+  });
+  take(/\bspells\b/g, () => { if (!terms.some(t => t.includes("t:instant"))) { terms.push("(t:instant OR t:sorcery)"); seen.push("instant or sorcery"); } });
+
+  // commanders
+  take(/\b(?:can be (?:my |a )?commanders?|as (?:my |a )?commanders?|commanders?)\b/g, () => { terms.push("is:commander"); seen.push("can be your commander"); });
+
+  // keywords and functions
+  take(/\b(?:fliers|flyers)\b/g, () => { terms.push("kw:flying"); seen.push("flying"); });
+  for (const kw of KEYWORDS) {
+    take(new RegExp(`\\b(?:with\\s+)?${kw}\\b`, "g"), () => { terms.push(kw.includes(" ") ? `kw:"${kw}"` : `kw:${kw}`); seen.push(kw); });
+  }
+  take(/\bdraws? an? (?:extra )?cards?\b/g, () => { terms.push('o:"draw a card"'); seen.push('text "draw a card"'); });
+  for (const [re, term, label] of FUNCTIONS) {
+    take(new RegExp(re.source, "g"), () => { terms.push(term); seen.push(label); });
+  }
+  take(/\b(?:make|makes|produce|produces|tap for|add)s?\s+(?:mana of\s+)?any colou?r(?: of mana)?\b|\bany colou?r of mana\b/g, () => {
+    terms.push('o:"any color"'); seen.push("mana of any colour");
+  });
+
+  // rarity
+  take(/\b(mythic(?: rare)?s?|uncommons?|commons?|rares?)\b/g, (m) => {
+    const r = m.startsWith("myth") ? "m" : m.startsWith("unc") ? "u" : m.startsWith("com") ? "c" : "r";
+    terms.push(`r:${r}`); seen.push(`rarity ${r}`);
+  });
+
+  if (order) terms.push(order);
+
+  const leftover = s.replace(/[^a-z0-9' -]/g, " ").split(" ").filter(w => w && !STOP.has(w));
+  if (!terms.length) {
+    return { query: input.trim(), uitleg: "Nothing recognised, so Scryfall searches card names instead." };
+  }
+  let uitleg = "Recognised: " + seen.join(", ") + ".";
+  if (leftover.length) uitleg += " Not used: " + leftover.join(" ") + ".";
+  return { query: terms.join(" "), uitleg };
+}
+
+// ---------- Scryfall ----------
+let lastCall = 0;
+let pausedUntil = 0;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function scryfall(url) {
+  const now = Date.now();
+  if (now < pausedUntil) {
+    throw new Error(`Scryfall asked for a short break. Try again in ${Math.ceil((pausedUntil - now) / 1000)} seconds.`);
+  }
+  const wait = Math.max(0, lastCall + 500 - now);   // at most 2 search requests per second
+  lastCall = now + wait;
+  if (wait) await sleep(wait);
+  let res;
+  try {
+    res = await fetch(url, { headers: { Accept: "application/json" } });
+  } catch {
+    throw new Error("Can't reach Scryfall. Check your internet connection and try again.");
+  }
+  if (res.status === 429) {
+    pausedUntil = Date.now() + 30000;
+    throw new Error("Too many searches in a row. Scryfall is pausing for 30 seconds.");
+  }
+  const body = await res.json().catch(() => ({}));
+  if (res.status === 404) return { data: [], total_cards: 0, none: true, details: body.details, warnings: body.warnings };
+  if (!res.ok) throw new Error(body.details || `Scryfall returned an error (${res.status}).`);
+  return body;
+}
+
+function withFilters(query) {
+  let extra = "";
+  if (!/(^|[\s(-])(f|format|legal):/i.test(query)) extra += " f:commander";
+  if (!/(^|[\s(-])game:/i.test(query)) extra += " game:paper";
+  return { full: query.trim() + extra, extra: extra.trim() };
+}
+
+function normalise(c) {
+  const faces = c.card_faces || [];
+  const face = faces[0];
+  const img = c.image_uris || (face && face.image_uris) || {};
+  // Reversible Secret Lair prints are called "X // X"; they are the same card as X.
+  const sameFaces = faces.length > 1 && faces.every(f => f.name === face.name);
+  // foil-only prints have just a foil price; brand-new sets often have no price at all yet
+  const price = (...keys) => { const k = keys.find(k => c.prices && c.prices[k] != null); return k ? Number(c.prices[k]) : null; };
+  const eur = price("eur", "eur_foil");
+  const usd = eur == null ? price("usd", "usd_foil") : null;   // only when there is no euro price
+  return { id: c.id, name: sameFaces ? face.name : c.name, set: c.set, cn: c.collector_number, eur, usd, multi: allowsMultiple(c), img: img.normal || img.small || "", large: img.large || img.normal || "" };
+}
+
+function priceText(card) {
+  return card.eur != null ? euro.format(card.eur) : card.usd != null ? dollar.format(card.usd) : "no price";
+}
+
+// Commander is singleton, except basic lands and cards that say a deck may hold more copies of them
+// ("A deck can have any number of cards named …", "A deck can have up to seven cards named …").
+function allowsMultiple(c) {
+  const faces = c.card_faces || [];
+  const type = c.type_line || faces.map(f => f.type_line).join(" ");
+  const text = [c.oracle_text, ...faces.map(f => f.oracle_text)].filter(Boolean).join("\n");
+  return /\bBasic\b/.test(type) || /A deck can have (?:any number of|up to [a-z]+) cards named/i.test(text);
+}
+
+async function apiPage(search, p) {
+  if (search.cache.has(p)) return search.cache.get(p);
+  const params = new URLSearchParams({ q: search.full, order: search.order, page: String(p) });
+  const body = await scryfall("https://api.scryfall.com/cards/search?" + params);
+  const cards = (body.data || []).map(normalise);
+  search.cache.set(p, cards);
+  if (search.total == null) {
+    search.total = body.total_cards || 0;
+    search.details = body.none ? body.details : null;
+    search.warnings = body.warnings || [];
+  }
+  return cards;
+}
+
+// ---------- searching ----------
+function setBusy(busy, label) {
+  $("zoek").disabled = busy;
+  $("opnieuw").disabled = busy;
+  $("zoek").textContent = busy ? (label || "Working…") : "Translate & search";
+}
+
+function showQuery(query, uitleg) {
+  $("querybar").hidden = false;
+  $("query").value = query;
+  $("uitleg").textContent = uitleg || "";
+}
+
+async function runSearch(query, page = 1) {
+  query = query.trim();
+  if (!query) return;
+  const { full, extra } = withFilters(query);
+  $("filters").textContent = extra ? "+ " + extra : "own filters";
+  $("scryfalllink").href = "https://scryfall.com/search?q=" + encodeURIComponent(full) + "&order=" + state.order;
+  state.search = { query, full, order: state.order, size: state.size, total: null, cache: new Map(), page: 1 };
+  store.set("last", query);
+  await showPage(page);
+}
+
+async function showPage(n) {
+  const search = state.search;
+  if (!search) return;
+  setBusy(true, "Searching…");
+  $("start").hidden = true;
+  message("");
+  try {
+    if (search.total == null) await apiPage(search, 1);
+    if (search !== state.search) return;   // a newer search has started meanwhile
+    const pages = Math.max(1, Math.ceil(search.total / search.size));
+    n = Math.min(Math.max(1, n), pages);
+    const first = (n - 1) * search.size;
+    const last = Math.min(first + search.size, search.total) - 1;
+    const cards = [];
+    if (search.total > 0) {
+      const fromApi = Math.floor(first / API_PAGE) + 1;
+      const toApi = Math.floor(last / API_PAGE) + 1;
+      for (let p = fromApi; p <= toApi; p++) await apiPage(search, p);
+      if (search !== state.search) return;
+      for (let i = first; i <= last; i++) {
+        const chunk = search.cache.get(Math.floor(i / API_PAGE) + 1) || [];
+        const card = chunk[i % API_PAGE];
+        if (card) cards.push(card);
+      }
+    }
+    search.page = n;
+    render(cards, n, pages);
+  } catch (err) {
+    message(err.message, true);
+  } finally {
+    setBusy(false);
+  }
+}
+
+function message(text, isError) {
+  const box = $("message");
+  box.replaceChildren();
+  if (!text) return;
+  const div = document.createElement("div");
+  div.className = "note" + (isError ? " error" : "");
+  div.textContent = text;
+  box.append(div);
+}
+
+function render(cards, page, pages) {
+  const search = state.search;
+  const grid = $("grid");
+  grid.replaceChildren();
+  $("count").textContent = `${plural(search.total, "card")} found`;
+
+  const notes = [];
+  if (search.total === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "No cards found. Adjust the query and click Search again.";
+    grid.append(empty);
+    if (search.details && !/didn.t match any cards/i.test(search.details)) notes.push(search.details);
+  }
+  if (search.warnings.length) notes.push("Scryfall: " + search.warnings.join(" "));
+  if (search.total > 500) notes.push("Lots of results. Make your search more specific, or sort by EDHREC rank or price.");
+  if (notes.length) message(notes.join(" "));
+
+  const counts = new Map(state.list.map(c => [c.name, c.qty]));
+  for (const card of cards) {
+    const tile = document.createElement("div");
+    tile.className = "tile";
+    tile.dataset.name = card.name;
+    tile.dataset.multi = card.multi ? "1" : "";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "card";
+    btn.setAttribute("aria-label", `Add ${card.name} to the list`);
+    const img = document.createElement("img");
+    img.loading = "lazy";
+    img.alt = card.name;
+    img.src = card.img;
+    const name = document.createElement("span");
+    name.className = "name";
+    name.textContent = card.name;
+    name.title = card.name;
+    const meta = document.createElement("span");
+    meta.className = "meta";
+    meta.textContent = `${card.set.toUpperCase()} · ${priceText(card)}`;
+    btn.append(img, name, meta);
+    btn.addEventListener("click", () => addToList(card));
+    btn.addEventListener("mouseenter", e => showPreview(card, e));
+    btn.addEventListener("mousemove", movePreview);
+    btn.addEventListener("mouseleave", hidePreview);
+
+    const picker = document.createElement("span");
+    picker.className = "picker";
+    picker.hidden = true;
+    if (card.multi) {
+      // basic lands and "any number of" cards: count copies, − takes one off
+      const minus = document.createElement("button");
+      minus.type = "button";
+      minus.className = "minus";
+      minus.textContent = "−";
+      minus.title = "Remove one";
+      minus.setAttribute("aria-label", `Remove one ${card.name} from the list`);
+      minus.addEventListener("click", () => changeQty(card.name, -1));
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      picker.append(minus, badge);
+    } else {
+      // singleton: the card is either in the list or not; clicking it again takes it out
+      const check = document.createElement("span");
+      check.className = "check";
+      check.textContent = "✓";
+      check.setAttribute("aria-hidden", "true");
+      picker.append(check);
+    }
+
+    tile.append(btn, picker);
+    markPicked(tile, counts.get(card.name) || 0);
+    grid.append(tile);
+  }
+  renderPager($("pagertop"), page, pages);
+  renderPager($("pagerbottom"), page, pages);
+}
+
+function markPicked(tile, qty) {
+  const name = tile.dataset.name;
+  const multi = tile.dataset.multi === "1";
+  tile.classList.toggle("picked", qty > 0);
+  tile.querySelector(".picker").hidden = !qty;
+  if (multi) tile.querySelector(".badge").textContent = qty || "";
+  tile.querySelector(".card").setAttribute("aria-label",
+    qty && !multi ? `${name} is in the list; select to take it out` : multi && qty ? `Add another ${name}` : `Add ${name} to the list`);
+}
+
+function refreshBadges() {
+  const counts = new Map(state.list.map(c => [c.name, c.qty]));
+  for (const tile of $("grid").querySelectorAll(".tile")) markPicked(tile, counts.get(tile.dataset.name) || 0);
+}
+
+function renderPager(nav, page, pages) {
+  nav.replaceChildren();
+  const search = state.search;
+  if (!search || search.total === 0) return;
+  const button = (label, target, opts = {}) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    if (opts.current) b.setAttribute("aria-current", "page");
+    if (opts.aria) b.setAttribute("aria-label", opts.aria);
+    b.disabled = !!opts.disabled;
+    b.addEventListener("click", async () => {
+      await showPage(target);
+      $("count").scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    });
+    nav.append(b);
+  };
+  if (pages > 1) {
+    button("‹ Previous", page - 1, { disabled: page === 1 });
+    const around = isMobile ? [1, page - 1, page, page + 1, pages] : [1, 2, page - 1, page, page + 1, pages - 1, pages];
+    const wanted = [...new Set(around)].filter(p => p >= 1 && p <= pages).sort((a, b) => a - b);
+    let prev = 0;
+    for (const p of wanted) {
+      if (p - prev > 1) { const gap = document.createElement("span"); gap.className = "gap"; gap.textContent = "…"; nav.append(gap); }
+      button(String(p), p, { current: p === page, aria: `Page ${p}` });
+      prev = p;
+    }
+    button("Next ›", page + 1, { disabled: page === pages });
+  }
+  const label = document.createElement("div");
+  label.className = "label";
+  const first = (page - 1) * search.size + 1;
+  const last = Math.min(page * search.size, search.total);
+  label.textContent = `Page ${page} of ${pages} · cards ${fmtNum(first)}–${fmtNum(last)} of ${fmtNum(search.total)}`;
+  nav.append(label);
+}
+
+// ---------- larger preview on hover ----------
+const canHover = matchMedia("(hover: hover)").matches;
+function showPreview(card, e) {
+  if (!canHover || !card.large) return;
+  const p = $("preview");
+  p.src = card.large;
+  p.alt = card.name;
+  p.hidden = false;
+  movePreview(e);
+}
+function movePreview(e) {
+  const p = $("preview");
+  if (p.hidden) return;
+  const w = 300, h = 418, pad = 18;
+  let x = e.clientX + pad;
+  if (x + w > innerWidth - 8) x = e.clientX - w - pad;
+  const y = Math.min(Math.max(8, e.clientY - h / 2), innerHeight - h - 8);
+  p.style.left = Math.max(8, x) + "px";
+  p.style.top = y + "px";
+}
+function hidePreview() { $("preview").hidden = true; }
+
+// ---------- card list ----------
+function saveList() { store.set("list", state.list); renderList(); refreshBadges(); }
+
+// The list is keyed by card name, so another printing of a card already in the list counts as the same card.
+function addToList(card) {
+  const found = state.list.find(c => c.name === card.name);
+  if (found && found.multi) found.qty += 1;
+  else if (found) state.list = state.list.filter(c => c.name !== card.name);   // singleton: second click takes it out
+  else state.list.push({ id: card.id, name: card.name, set: card.set, cn: card.cn, eur: card.eur, usd: card.usd, multi: card.multi, qty: 1 });
+  saveList();
+}
+
+function changeQty(name, delta) {
+  const item = state.list.find(c => c.name === name);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) state.list = state.list.filter(c => c.name !== name);
+  saveList();
+}
+
+// Lists saved by older versions have no singleton flag and could hold several copies of any card.
+function migrateList(list) {
+  const basic = /^(?:Snow-Covered )?(?:Plains|Island|Swamp|Mountain|Forest|Wastes)$/;
+  const byName = new Map();
+  for (const c of list) {
+    const multi = typeof c.multi === "boolean" ? c.multi : basic.test(c.name);
+    const prev = byName.get(c.name);
+    if (prev) { if (multi) prev.qty += c.qty; continue; }
+    byName.set(c.name, { ...c, multi, qty: multi ? c.qty : 1 });
+  }
+  return [...byName.values()];
+}
+
+function renderList() {
+  const ul = $("listitems");
+  ul.replaceChildren();
+  const items = [...state.list].sort((a, b) => a.name.localeCompare(b.name));
+  $("emptylist").hidden = items.length > 0;
+  $("copy").disabled = items.length === 0;
+  $("clear").disabled = items.length === 0;
+  const total = items.reduce((n, c) => n + c.qty, 0);
+  const price = items.reduce((n, c) => n + (c.eur || 0) * c.qty, 0);
+  // cards without a euro price count in dollars, shown separately rather than converted
+  const dollars = items.reduce((n, c) => n + (c.eur == null && c.usd != null ? c.usd * c.qty : 0), 0);
+  const priceLabel = euro.format(price) + (dollars ? " + " + dollar.format(dollars) : "");
+  const unpriced = items.some(c => c.eur == null && c.usd == null);
+  $("totals").textContent = items.length
+    ? `${plural(total, "card")} · ${priceLabel}${unpriced ? " (some prices unknown)" : ""}`
+    : "";
+  $("openlist").textContent = items.length ? `List: ${plural(total, "card")} · ${priceLabel}` : "List is empty";
+  $("barcopy").disabled = items.length === 0;
+  for (const c of items) {
+    const li = document.createElement("li");
+    if (!c.multi) li.className = "single";
+    const qty = document.createElement("span");
+    qty.className = "qty";
+    const minus = document.createElement("button");
+    minus.type = "button"; minus.textContent = "−"; minus.setAttribute("aria-label", `One fewer ${c.name}`);
+    minus.addEventListener("click", () => changeQty(c.name, -1));
+    const n = document.createElement("span");
+    n.textContent = c.qty;
+    const plus = document.createElement("button");
+    plus.type = "button"; plus.textContent = "+"; plus.setAttribute("aria-label", `One more ${c.name}`);
+    plus.addEventListener("click", () => changeQty(c.name, 1));
+    qty.append(minus, n, plus);
+    const name = document.createElement("span");
+    name.className = "cardname";
+    name.title = c.name;
+    name.textContent = c.name;
+    const set = document.createElement("small");
+    set.textContent = `${c.set.toUpperCase()} ${c.cn}`;
+    name.append(set);
+    const remove = document.createElement("button");
+    remove.type = "button"; remove.className = "remove"; remove.textContent = "×";
+    remove.setAttribute("aria-label", `Remove ${c.name}`);
+    remove.addEventListener("click", () => changeQty(c.name, -c.qty));
+    if (c.multi) li.append(qty, name, remove);
+    else li.append(name, remove);
+    ul.append(li);
+  }
+}
+
+function exportText() {
+  const full = document.querySelector('input[name="fmt"]:checked').value === "full";
+  return [...state.list]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(c => full ? `${c.qty} ${c.name} (${c.set.toUpperCase()}) ${c.cn}` : `${c.qty} ${c.name}`)
+    .join("\n");
+}
+
+async function copyList() {
+  const text = exportText();
+  const total = state.list.reduce((n, c) => n + c.qty, 0);
+  const area = $("exporttext");
+  try {
+    await navigator.clipboard.writeText(text);
+    area.hidden = true;
+    toast(`Copied: ${plural(total, "card")}`);
+    return;
+  } catch { /* clipboard blocked, e.g. a page served over plain http; try the older copy command */ }
+  const temp = document.createElement("textarea");
+  temp.value = text;
+  temp.setAttribute("readonly", "");
+  temp.style.cssText = "position:fixed;top:0;left:-9999px;opacity:0";
+  document.body.append(temp);
+  temp.select();
+  temp.setSelectionRange(0, text.length);
+  let copied = false;
+  try { copied = document.execCommand("copy"); } catch { copied = false; }
+  temp.remove();
+  if (copied) {
+    area.hidden = true;
+    toast(`Copied: ${plural(total, "card")}`);
+    return;
+  }
+  if (isMobile) openList();
+  area.value = text;
+  area.hidden = false;
+  area.focus();
+  area.select();
+  toast(isMobile ? "Couldn't copy automatically. Select the text below and copy it." : "Couldn't copy automatically. Select the text and press Ctrl+C.");
+}
+
+function openList() {
+  $("list").classList.add("open");
+  document.body.style.overflow = "hidden";
+  $("closelist").focus();
+}
+function closeList() {
+  $("list").classList.remove("open");
+  document.body.style.overflow = "";
+  $("openlist").focus();
+}
+
+let toastTimer;
+function toast(text) {
+  const t = $("toast");
+  t.textContent = text;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+}
+
+// ---------- history ----------
+function addHistory(entry) {
+  state.history = [entry, ...state.history.filter(h => h.zin !== entry.zin)].slice(0, 10);
+  store.set("history", state.history);
+  renderHistory();
+}
+
+function renderHistory() {
+  const ul = $("historylist");
+  ul.replaceChildren();
+  $("history").hidden = state.history.length === 0;
+  for (const h of state.history) {
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.type = "button";
+    const zin = document.createElement("span");
+    zin.textContent = h.zin;
+    const q = document.createElement("span");
+    q.className = "q";
+    q.textContent = h.query;
+    b.append(zin, q);
+    b.addEventListener("click", () => {
+      $("zin").value = h.zin;
+      showQuery(h.query, h.uitleg);
+      runSearch(h.query);
+    });
+    li.append(b);
+    ul.append(li);
+  }
+}
+
+// ---------- wiring ----------
+$("searchform").addEventListener("submit", e => {
+  e.preventDefault();
+  const zin = $("zin").value.trim();
+  if (!zin) return;
+  let result;
+  if (zin.startsWith("/s ")) result = { query: zin.slice(3).trim(), uitleg: "Scryfall syntax, used as typed." };
+  else if (zin.startsWith("!")) result = { query: zin.slice(1).trim(), uitleg: "Scryfall syntax, used as typed." };
+  else if (looksLikeSyntax(zin)) result = { query: zin, uitleg: "This already looks like Scryfall syntax, so it was used as typed." };
+  else result = translate(zin);
+  showQuery(result.query, result.uitleg);
+  addHistory({ zin, query: result.query, uitleg: result.uitleg });
+  runSearch(result.query);
+});
+
+$("opnieuw").addEventListener("click", () => {
+  $("uitleg").textContent = "Query edited by hand.";
+  runSearch($("query").value);
+});
+$("query").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("opnieuw").click(); } });
+
+$("order").value = state.order;
+$("size").value = String(state.size);
+$("order").addEventListener("change", () => {
+  state.order = $("order").value;
+  store.set("order", state.order);
+  if (state.search) runSearch(state.search.query);
+});
+$("size").addEventListener("change", () => {
+  const oldSize = state.size;
+  state.size = Number($("size").value);
+  store.set("size", state.size);
+  if (state.search && state.search.total != null) {
+    const firstCard = (state.search.page - 1) * oldSize;
+    state.search.size = state.size;
+    showPage(Math.floor(firstCard / state.size) + 1);   // stay on the same cards
+  }
+});
+
+$("copy").addEventListener("click", copyList);
+document.querySelectorAll('input[name="fmt"]').forEach(r => r.addEventListener("change", () => {
+  if (!$("exporttext").hidden) $("exporttext").value = exportText();
+}));
+$("clear").addEventListener("click", () => { $("confirm").hidden = false; $("clear").hidden = true; });
+$("confirmno").addEventListener("click", () => { $("confirm").hidden = true; $("clear").hidden = false; });
+$("confirmyes").addEventListener("click", () => {
+  state.list = [];
+  $("confirm").hidden = true;
+  $("clear").hidden = false;
+  $("exporttext").hidden = true;
+  saveList();
+  toast("List cleared");
+});
+
+$("openlist").addEventListener("click", openList);
+$("closelist").addEventListener("click", closeList);
+$("barcopy").addEventListener("click", copyList);
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("list").classList.contains("open")) closeList(); });
+$("viewswitch").textContent = isMobile ? "Switch to desktop view" : "Switch to mobile view";
+if (isMobile) $("emptylist").textContent = "Tap a card to add it, tap it again to take it out. Basic lands and cards that allow more copies get a counter with −.";
+
+// card size: minimum card width on desktop, cards per row on a phone
+const CARD_SIZES = isMobile ? ["3", "2", "1"] : ["110px", "150px", "200px", "260px", "330px"];
+const sizeKey = isMobile ? "cardsizeMobile" : "cardsize";
+let cardSize = Math.min(Math.max(0, Number(store.get(sizeKey, 1)) || 0), CARD_SIZES.length - 1);
+function applyCardSize() {
+  $("grid").style.setProperty(isMobile ? "--cols" : "--card-min", CARD_SIZES[cardSize]);
+  $("smaller").disabled = cardSize === 0;
+  $("larger").disabled = cardSize === CARD_SIZES.length - 1;
+  store.set(sizeKey, cardSize);
+}
+$("smaller").addEventListener("click", () => { cardSize = Math.max(0, cardSize - 1); applyCardSize(); });
+$("larger").addEventListener("click", () => { cardSize = Math.min(CARD_SIZES.length - 1, cardSize + 1); applyCardSize(); });
+applyCardSize();
+$("viewswitch").addEventListener("click", () => {
+  store.set("view", isMobile ? "desktop" : "mobile");
+  location.reload();
+});
+
+renderList();
+renderHistory();
+const last = store.get("last", "");
+if (last) { showQuery(last, "Your last search from the previous session."); runSearch(last); }
+</script>
+</body>
+</html>
