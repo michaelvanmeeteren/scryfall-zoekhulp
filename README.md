@@ -17,18 +17,32 @@ Op je telefoon kun je de pagina ook op je beginscherm zetten (browsermenu, *Toev
 
 ### Claude API
 
-Met een Claude API-key vertaalt Claude je zin naar Scryfall-syntax; zonder key doet de ingebouwde vertaler het.
+De vertaling naar Scryfall-syntax loopt via een kleine Cloudflare Worker (map `worker/`), op
+`https://scryfall-zoekhulp.michaelvanmeeteren.workers.dev`. Alleen de Worker kent de Claude API-key; de pagina en GitHub niet.
 
-1. Maak een key op [console.anthropic.com](https://console.anthropic.com) (*API Keys*) en zet onder *Limits* een maandlimiet, bijvoorbeeld €5.
-2. Klik **⚙ Settings** in de app, plak de key en klik **Save**. De app gebruikt altijd `claude-haiku-5-5`, het kleinste model; dat is niet in te stellen.
-3. Lukt de vertaling via Claude niet (verkeerde key, geen verbinding, te veel verzoeken), dan zoekt de app met de ingebouwde vertaler en staat de reden onder de zoekopdracht.
+```
+browser → Worker (API-key, toegangscode, vaste instellingen) → Claude API
+```
 
-De key staat alleen in de browser van dat apparaat, niet in de code op GitHub. Voer hem in op je pc en op je telefoon apart.
-Plak hem nooit in een chat. Vermoed je een lek: verwijder de key in de Console en maak een nieuwe.
+- Wie de **toegangscode** heeft, vult die in bij **⚙ Settings**; dan vertaalt Claude. Zonder code (of als Claude faalt) doet de ingebouwde vertaler het, met de reden onder de zoekopdracht.
+- De Worker gebruikt altijd `claude-haiku-5-5`, altijd dezelfde systeemprompt voor Scryfall, zinnen tot 300 tekens en maximaal 20 vertalingen per minuut per bezoeker. Zo kan de key nergens anders voor gebruikt worden.
+- Hij accepteert alleen verzoeken van deze GitHub-pagina (en `http://localhost:8010` om te testen).
+
+**Beheer** (in een terminal in de map `worker`, na `npm install`):
+
+| Wat | Commando |
+| --- | --- |
+| Toegangscode wijzigen (bijvoorbeeld als hij is uitgelekt) | `npx wrangler secret put ACCESS_CODE` |
+| API-key vervangen | `npx wrangler secret put ANTHROPIC_API_KEY` |
+| Worker opnieuw online zetten na een wijziging in `worker/src/index.js` | `npx wrangler deploy` |
+
+Plak de key nooit in een chat. Zet in de [Anthropic Console](https://console.anthropic.com) een maandlimiet, bijvoorbeeld €5.
+Vermoed je een lek: verwijder de key in de Console, maak een nieuwe en zet die met het commando hierboven in de Worker.
 
 ### Bijwerken
 
 Wijzigingen in `index.html` staan online zodra ze naar GitHub zijn gepusht (`git push`); GitHub Pages heeft daar ongeveer een minuut voor nodig.
+Wijzigingen in de Worker zet je online met `npx wrangler deploy` (zie hierboven).
 
 ## Gebruik
 

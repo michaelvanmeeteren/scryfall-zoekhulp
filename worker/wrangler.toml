@@ -1,0 +1,14 @@
+name = "scryfall-zoekhulp"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+# At most 20 translations per minute per visitor (IP address).
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }
+
+# Secrets, set with "npx wrangler secret put <NAME>" (never stored in this file or on GitHub):
+#   ANTHROPIC_API_KEY  the Claude API key
+#   ACCESS_CODE        the code you give to friends
