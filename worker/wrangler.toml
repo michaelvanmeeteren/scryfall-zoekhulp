@@ -9,6 +9,18 @@ name = "LIMITER"
 namespace_id = "1001"
 simple = { limit = 20, period = 60 }
 
+# Logging searches and reading "Recent searches": cheaper, so a higher limit.
+[[ratelimits]]
+name = "LOG_LIMITER"
+namespace_id = "1002"
+simple = { limit = 120, period = 60 }
+
+# Shared search log (table in schema.sql).
+[[d1_databases]]
+binding = "DB"
+database_name = "zoekhulp-log"
+database_id = "f67c431b-7d76-43cd-9ce4-982740285f97"
+
 # Secrets, set with "npx wrangler secret put <NAME>" (never stored in this file or on GitHub):
 #   ANTHROPIC_API_KEY  the Claude API key
 #   ACCESS_CODE        the code you give to friends

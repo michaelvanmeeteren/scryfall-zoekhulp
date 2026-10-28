@@ -120,8 +120,17 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .pager .label { width: 100%; text-align: center; font-size: 13px; color: var(--muted); margin-top: 4px; }
 
 /* list */
-.list { position: sticky; top: 14px; padding: 14px; display: grid; gap: 10px; max-height: calc(100vh - 28px); overflow: auto; }
-@media (max-width: 900px) { .list { position: static; max-height: none; } }
+.side { position: sticky; top: 14px; display: grid; gap: 14px; align-content: start; max-height: calc(100vh - 28px); overflow: auto; }
+@media (max-width: 900px) { .side { position: static; max-height: none; } }
+.list { padding: 14px; display: grid; gap: 10px; }
+.recent { padding: 14px; display: grid; gap: 8px; }
+.recent h2 { margin: 0; font-size: 16px; }
+.recent ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.recent li button { width: 100%; text-align: left; background: none; border: 0; padding: 6px; border-radius: 6px; display: grid; gap: 1px; }
+.recent li button:hover { background: var(--accent-soft); }
+.recent .zin { font-size: 13.5px; overflow-wrap: anywhere; }
+.recent .q { font-family: var(--mono); font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent .when { font-size: 11.5px; color: var(--muted); }
 .list h2 { margin: 0; font-size: 16px; }
 .list .totals { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
@@ -188,6 +197,8 @@ html.mobile .picker .badge { min-width: 42px; height: 44px; padding: 0 12px 0 8p
 html.mobile .picker .check { min-width: 44px; height: 44px; font-size: 22px; }
 html.mobile .pager { gap: 6px; }
 html.mobile .pager button { min-width: 46px; min-height: 46px; font-size: 15px; }
+html.mobile .side { position: static; max-height: none; overflow: visible; }
+html.mobile .recent li button { padding: 10px 6px; }
 html.mobile .list { position: fixed; inset: 0; z-index: 25; border: 0; border-radius: 0; max-height: none; padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); align-content: start; }
 html.mobile .list:not(.open) { display: none; }
 html.mobile .list h2 { font-size: 19px; }
@@ -219,6 +230,7 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
     </label>
     <p class="hint">Ask the owner of this page for the code. With it, Claude (<code>claude-haiku-5-5</code>) translates your searches;
       without it the built-in translator is used. The code is stored only in this browser on this device.</p>
+    <p class="hint">With the code, your searches are shared under <b>Recent searches</b> with everyone who has the code (no names).</p>
     <div class="listactions">
       <button id="savesettings" class="btn primary" type="submit" value="save">Save</button>
       <button id="removecode" class="btn" type="button">Remove code</button>
@@ -248,7 +260,7 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
       </div>
 
       <details id="history" class="history" hidden>
-        <summary>Recent searches</summary>
+        <summary>Your recent searches</summary>
         <ul id="historylist"></ul>
       </details>
     </section>
@@ -287,6 +299,7 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
     </section>
   </div>
 
+  <div class="side">
   <aside id="list" class="panel list" aria-label="Card list">
     <div class="listhead">
       <h2>Card list</h2>
@@ -310,6 +323,16 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
     </div>
     <textarea id="exporttext" readonly hidden aria-label="List to copy"></textarea>
   </aside>
+
+  <section id="recent" class="panel recent" aria-label="Recent searches by everyone" hidden>
+    <div class="listhead">
+      <h2>Recent searches</h2>
+      <button id="refreshrecent" class="btn small" type="button" aria-label="Refresh recent searches">↻</button>
+    </div>
+    <p class="hint">Searches by everyone with the access code. Click one to run it.</p>
+    <ul id="recentlist"></ul>
+  </section>
+  </div>
 </main>
 
 <footer class="foot">Card data and images via Scryfall. Magic: The Gathering is © Wizards of the Coast. · <button id="viewswitch" class="linkbtn" type="button">Switch view</button></footer>
@@ -532,12 +555,12 @@ function translate(input) {
 // ---------- Claude translator (via the Worker; translate() stays the fallback) ----------
 // The Worker holds the API key and always uses claude-haiku-5-5 with a fixed prompt (see worker/src/index.js).
 // Visitors only need the shared access code.
-const TRANSLATOR_URL = "https://scryfall-zoekhulp.michaelvanmeeteren.workers.dev/translate";
+const WORKER_URL = "https://scryfall-zoekhulp.michaelvanmeeteren.workers.dev";
 
 async function translateWithClaude(zin) {
   let res;
   try {
-    res = await fetch(TRANSLATOR_URL, {
+    res = await fetch(WORKER_URL + "/translate", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ zin, code: settings.code })
@@ -549,6 +572,77 @@ async function translateWithClaude(zin) {
   if (!res.ok) throw new Error(body.error || `The translator returned an error (${res.status}).`);
   if (!body.query) throw new Error(body.uitleg || "Claude couldn't turn this into a card search.");
   return { query: body.query, uitleg: body.uitleg || "" };
+}
+
+// ---------- shared "Recent searches" (everyone with the access code) ----------
+async function worker(path, data) {
+  const res = await fetch(WORKER_URL + path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ ...data, code: settings.code })
+  });
+  if (!res.ok) throw new Error(`Worker returned ${res.status}`);
+  return res.json();
+}
+
+async function logShared(zin, query) {
+  if (!settings.code) return;
+  try { await worker("/log", { zin, query }); } catch { /* the search itself still works */ }
+  loadRecent();
+}
+
+async function loadRecent() {
+  if (!settings.code) return;
+  try {
+    const { searches } = await worker("/recent", {});
+    renderRecent(searches || []);
+  } catch { /* keep what is shown */ }
+}
+
+const ago = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+function timeAgo(iso) {
+  const sec = Math.round((Date.parse(iso) - Date.now()) / 1000);
+  const steps = [[60, "second"], [60, "minute"], [24, "hour"], [7, "day"], [Infinity, "week"]];
+  let n = sec;
+  for (const [size, unit] of steps) {
+    if (Math.abs(n) < size) return ago.format(n, unit);
+    n = Math.round(n / size);
+  }
+}
+
+function renderRecent(searches) {
+  const ul = $("recentlist");
+  ul.replaceChildren();
+  for (const s of searches) {
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.type = "button";
+    const zin = document.createElement("span");
+    zin.className = "zin";
+    zin.textContent = s.zin;
+    const q = document.createElement("span");
+    q.className = "q";
+    q.textContent = s.query;
+    q.title = s.query;
+    const when = document.createElement("span");
+    when.className = "when";
+    when.textContent = timeAgo(s.at);
+    b.append(zin, q, when);
+    b.addEventListener("click", () => {
+      $("zin").value = s.zin;
+      showQuery(s.query, "From Recent searches.");
+      runSearch(s.query);
+      if (isMobile) $("count").scrollIntoView({ block: "start" });
+    });
+    li.append(b);
+    ul.append(li);
+  }
+  if (!searches.length) {
+    const li = document.createElement("li");
+    li.className = "hint";
+    li.textContent = "No searches yet.";
+    ul.append(li);
+  }
 }
 
 // ---------- Scryfall ----------
@@ -1044,6 +1138,7 @@ $("searchform").addEventListener("submit", async e => {
   showQuery(result.query, result.uitleg);
   addHistory({ zin, query: result.query, uitleg: result.uitleg });
   runSearch(result.query);
+  logShared(zin, result.query);
 });
 
 $("opnieuw").addEventListener("click", () => {
@@ -1107,7 +1202,13 @@ $("larger").addEventListener("click", () => { cardSize = Math.min(CARD_SIZES.len
 applyCardSize();
 
 // settings: access code for the translator
-function renderCodeState() { $("nokey").hidden = !!settings.code; }
+function renderCodeState() {
+  $("nokey").hidden = !!settings.code;
+  $("recent").hidden = !settings.code;
+  loadRecent();
+}
+$("refreshrecent").addEventListener("click", loadRecent);
+setInterval(() => { if (settings.code && document.visibilityState === "visible") loadRecent(); }, 60000);
 function openSettings() {
   $("accesscode").value = settings.code;
   $("settings").showModal();
@@ -1115,8 +1216,9 @@ function openSettings() {
 }
 $("opensettings").addEventListener("click", openSettings);
 document.querySelectorAll("[data-opensettings]").forEach(b => b.addEventListener("click", openSettings));
-$("settings").addEventListener("close", () => {
-  if ($("settings").returnValue !== "save") return;
+// Saved on submit rather than on the dialog's close event, which not every browser fires reliably.
+$("settingsform").addEventListener("submit", e => {
+  if (!e.submitter || e.submitter.value !== "save") return;
   settings.code = $("accesscode").value.trim();
   store.set("code", settings.code);
   renderCodeState();

@@ -27,6 +27,9 @@ browser → Worker (API-key, toegangscode, vaste instellingen) → Claude API
 - Wie de **toegangscode** heeft, vult die in bij **⚙ Settings**; dan vertaalt Claude. Zonder code (of als Claude faalt) doet de ingebouwde vertaler het, met de reden onder de zoekopdracht.
 - De Worker gebruikt altijd `claude-haiku-5-5`, altijd dezelfde systeemprompt voor Scryfall, zinnen tot 300 tekens en maximaal 20 vertalingen per minuut per bezoeker. Zo kan de key nergens anders voor gebruikt worden.
 - Hij accepteert alleen verzoeken van deze GitHub-pagina (en `http://localhost:8010` om te testen).
+- **Recent searches:** elke zoekopdracht van iemand met de code (zin + query + tijd, geen naam of IP-adres) komt in een
+  Cloudflare D1-database (`zoekhulp-log`, tabel in `worker/schema.sql`). Iedereen met de code ziet de laatste 30 in het
+  paneel *Recent searches* rechts (op een telefoon onderaan). De database bewaart de laatste 1000.
 
 **Beheer** (in een terminal in de map `worker`, na `npm install`):
 
@@ -35,6 +38,8 @@ browser → Worker (API-key, toegangscode, vaste instellingen) → Claude API
 | Toegangscode wijzigen (bijvoorbeeld als hij is uitgelekt) | `npx wrangler secret put ACCESS_CODE` |
 | API-key vervangen | `npx wrangler secret put ANTHROPIC_API_KEY` |
 | Worker opnieuw online zetten na een wijziging in `worker/src/index.js` | `npx wrangler deploy` |
+| Alle gelogde zoekopdrachten bekijken | `npx wrangler d1 execute zoekhulp-log --remote --command "SELECT * FROM searches ORDER BY id DESC"` |
+| Het logboek leegmaken | `npx wrangler d1 execute zoekhulp-log --remote --command "DELETE FROM searches"` |
 
 Plak de key nooit in een chat. Zet in de [Anthropic Console](https://console.anthropic.com) een maandlimiet, bijvoorbeeld €5.
 Vermoed je een lek: verwijder de key in de Console, maak een nieuwe en zet die met het commando hierboven in de Worker.
