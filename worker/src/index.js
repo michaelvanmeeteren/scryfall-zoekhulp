@@ -121,6 +121,10 @@ export default {
       if (error instanceof Anthropic.AuthenticationError) return reply(502, { error: "The translator's API key doesn't work. Tell the owner of this page." });
       if (error instanceof Anthropic.PermissionDeniedError) return reply(502, { error: "The translator's API key isn't allowed to do this. Tell the owner of this page." });
       if (error instanceof Anthropic.RateLimitError) return reply(429, { error: "Too many requests, try again in a minute." });
+      // 402 billing_error: the prepaid credit is used up (auto-reload is off on purpose)
+      if (error instanceof Anthropic.APIError && (error.type === "billing_error" || error.status === 402)) {
+        return reply(503, { error: "The translator's credit is used up. Tell the owner of this page." });
+      }
       if (error instanceof Anthropic.APIError) return reply(502, { error: "Claude is temporarily unavailable." });
       return reply(502, { error: "Can't reach Claude right now." });
     }
