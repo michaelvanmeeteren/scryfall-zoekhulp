@@ -32,6 +32,12 @@ browser → Worker (API-key, toegangscode, vaste instellingen) → Claude API
   `otag:copy-spell` of `otag:sacrifice-outlet-creature`. Gebruikt hij een tag die niet bestaat, dan vraagt de Worker
   één keer om een verbetering. De lijst staat in `worker/src/tags.js` en wordt gecachet, dus hij kost per zoekopdracht
   bijna niets extra.
+- **Commander-kennis:** de prompt kent gilden, shards, wedges en vierkleurencombinaties, spelersjargon (dork, rock,
+  cantrip, wincon, staples …), archetypes met hun tags (aristocrats, tokens, +1/+1 counters, reanimator, lifegain,
+  landfall, spellslinger, voltron, blink, group hug) en extra syntax (`is:gamechanger`, `is:partner`, `is:shockland`,
+  `produces:`, enzovoort). Alles is vooraf bij Scryfall gecontroleerd.
+- **Zelfcontrole:** na het vertalen vraagt de Worker Scryfall of de query kaarten oplevert. Bij 0 kaarten, een
+  waarschuwing van Scryfall of een niet-bestaande tag krijgt Claude één verbeterronde.
 - **Cache warm houden:** een Cron Trigger doet elk half uur van 10:00 tot 00:00 (Nederlandse wintertijd) een mini-aanroep
   met dezelfde prompt, zodat de cache van een uur niet verloopt. Kosten ongeveer $0,01 per dag. Het schema staat in
   `worker/wrangler.toml` onder `[triggers]`.

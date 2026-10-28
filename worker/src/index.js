@@ -64,6 +64,35 @@ Rules:
 - If the request is ambiguous, pick the most likely meaning and say so in the explanation.
 - If the request is not about finding Magic cards, reply with an empty query and say so in the explanation.
 
+Commander knowledge (all syntax and tags below are checked against Scryfall):
+- Color groups. Guilds: azorius=wu, dimir=ub, rakdos=br, gruul=rg, selesnya=gw, orzhov=wb, izzet=ur, golgari=bg,
+  boros=rw, simic=gu. Shards: bant=gwu, esper=wub, grixis=ubr, jund=brg, naya=rgw. Wedges: abzan=wbg, jeskai=urw,
+  sultai=bgu, mardu=rwb, temur=gur. Four colors: "no white"=ubrg, "no blue"=wbrg, "no black"=wurg, "no red"=wubg,
+  "no green"=wubr. Five color = wubrg.
+- Player slang: dork = otag:mana-dork, rock = otag:mana-rock, cantrip = otag:cantrip, tutor = otag:tutor,
+  fixing / land ramp = otag:land-ramp, wheel = otag:wheel, draw engine = otag:draw-engine, wincon / alt win =
+  otag:win-condition, extra turns = otag:extra-turn, extra combat = otag:extra-combat, recursion = otag:regrowth,
+  graveyard hate = otag:hate-graveyard, protection = otag:protects-creature, evasion = otag:gives-evasion,
+  ETB = "enters" effects (is:etb), lord = otag:lord, anthem = otag:anthem, game changers (Commander brackets) = is:gamechanger,
+  punishing opponents for drawing = otag:draw-hate.
+  "staples" / "best" / "must-haves" = add order:edhrec (most played first).
+- Archetypes, map them to tags (combine with OR when the user asks for the archetype in general):
+  aristocrats = otag:sacrifice-outlet, otag:death-trigger, otag:synergy-sacrifice;
+  tokens / go wide = otag:repeatable-token-generator, otag:synergy-token, otag:token-doubler, otag:anthem;
+  +1/+1 counters = otag:pp-counters-matter, otag:gives-pp-counters, otag:counters-matter;
+  reanimator = otag:reanimate, otag:mill-self, otag:discard-outlet, otag:entomb;
+  lifegain = otag:lifegain-matters, otag:lifegain; landfall = otag:landfall, otag:extra-land;
+  spellslinger = otag:synergy-instant, otag:synergy-sorcery, otag:magecraft, otag:copy-spell;
+  voltron = t:equipment or t:aura with otag:gives-evasion or otag:protects-creature; blink = otag:blink;
+  group hug = otag:group-hug.
+- Card kinds: is:permanent, is:spell, is:mdfc (modal double-faced), is:dfc, is:vanilla, is:frenchvanilla, is:reserved.
+- Lands: is:fetchland, is:shockland, is:dual, is:triome, is:checkland, is:painland, is:fastland, is:bounceland,
+  is:manland (creature lands); produces:wu (lands or rocks that make those colors).
+  Fetchlands are colorless in color identity, so filter them with o:plains / o:island etc., not with id.
+- Commanders: is:commander; partners = is:partner; backgrounds = t:background, and commanders that take one =
+  is:commander o:"choose a background". Devotion: devotion:rr.
+- Commander deck cards use id<= (they may have fewer colors). Only the commander itself uses id= (see rules above).
+
 Examples (request => query):
 creatures mana value less than or equal to 5 in g/w/b => t:creature mv<=5 id<=bgw
 flying creatures under 3 mana in red => t:creature kw:flying mv<3 id<=r
@@ -79,6 +108,9 @@ cards that boost the power of my creatures in green => (otag:anthem OR otag:powe
 board wipes in white => otag:sweeper id<=w
 big sorceries in jeskai => t:sorcery mv>=6 id<=wur
 big creatures in green => t:creature pow>=5 id<=g
+aristocrats payoffs in orzhov => (otag:death-trigger OR otag:synergy-sacrifice) id<=wb
+mana rocks under 3 mana => otag:mana-rock mv<3
+shocklands for my esper deck => is:shockland id<=wub
 ik wil alle gruul draken zien die ik als commander kan gebruiken => is:commander t:dragon id=rg
 goedkope removal in zwart groen => otag:removal eur<2 id<=bg
 vliegende wezens van hoogstens 3 mana in wit => t:creature kw:flying mv<=3 id<=w`;
@@ -99,6 +131,30 @@ function readAnswer(response) {
   if (response.stop_reason === "refusal") return null;
   const text = response.content.filter(b => b.type === "text").map(b => b.text).join("").trim();
   try { return JSON.parse(text); } catch { return null; }
+}
+
+// Asks Scryfall about a query (with the page's fixed filters) and describes what is wrong, or returns null.
+// When Scryfall can't be reached, the query is trusted as it is.
+async function checkQuery(query) {
+  const unknown = unknownTags(query);
+  if (unknown.length) return `These tags don't exist: ${unknown.join(", ")}. Use only tags from the list, or o:"..." rules text instead.`;
+  let full = query;
+  if (!/(^|[\s(-])(f|format|legal):/i.test(full)) full += " f:commander";
+  if (!/(^|[\s(-])game:/i.test(full)) full += " game:paper";
+  let body;
+  try {
+    const res = await fetch("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q: full }), {
+      headers: { "User-Agent": "ScryfallZoekhulp/1.0 (https://michaelvanmeeteren.github.io/scryfall-zoekhulp/)", Accept: "application/json" }
+    });
+    if (res.status !== 200 && res.status !== 404) return null;
+    body = await res.json();
+  } catch {
+    return null;
+  }
+  const warnings = (body.warnings || []).join(" ");
+  if (warnings) return `Scryfall says about this query: ${warnings}`;
+  if (body.object === "error" || !body.total_cards) return `Scryfall finds 0 cards for "${full}".`;
+  return null;
 }
 
 // Tag names in a query that Scryfall doesn't know.
@@ -194,14 +250,15 @@ export default {
     try {
       response = await ask(messages);
       answer = readAnswer(response);
-      // One correction round when Claude used a tag that doesn't exist.
-      const unknown = answer ? unknownTags(answer.query) : [];
-      if (unknown.length) {
+      // Self-check: one correction round when the query uses a tag that doesn't exist,
+      // makes Scryfall warn, or finds no cards at all.
+      const problem = answer && answer.query ? await checkQuery(String(answer.query)) : null;
+      if (problem) {
         messages.push({ role: "assistant", content: response.content });
-        messages.push({ role: "user", content: `These tags don't exist: ${unknown.join(", ")}. Use only tags from the list, or o:"..." rules text instead. Reply with the corrected JSON.` });
+        messages.push({ role: "user", content: `${problem} Fix the query so it finds what I asked for. Reply with the corrected JSON.` });
         const second = await ask(messages);
         const corrected = readAnswer(second);
-        if (corrected) { response = second; answer = corrected; }
+        if (corrected && corrected.query) { response = second; answer = corrected; }
       }
     } catch (error) {
       if (error instanceof Anthropic.AuthenticationError) return reply(502, { error: "The translator's API key doesn't work. Tell the owner of this page." });
