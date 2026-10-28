@@ -583,7 +583,8 @@ async function translateWithClaude(zin) {
   }
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.error || `The translator returned an error (${res.status}).`);
-  if (!body.query) throw new Error(body.uitleg || "Claude couldn't turn this into a card search.");
+  // An empty query is an answer, not a failure: Claude says this isn't a card search (or no combos match).
+  if (!body.query) return { query: "", uitleg: body.uitleg || "This isn't a search for Magic cards." };
   return { query: body.query, uitleg: body.uitleg || "", combos: body.combos || [] };
 }
 
@@ -1181,6 +1182,15 @@ $("searchform").addEventListener("submit", async e => {
     }
   }
   else result = translate(zin);
+  if (!result.query) {
+    // Nothing to search: show why, without searching, logging or adding it to the history.
+    showQuery("", result.uitleg);
+    state.search = null;
+    for (const id of ["grid", "pagertop", "pagerbottom"]) $(id).replaceChildren();
+    $("count").textContent = "";
+    message("");
+    return;
+  }
   showQuery(result.query, result.uitleg, result.combos);
   addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
   runSearch(result.query);
