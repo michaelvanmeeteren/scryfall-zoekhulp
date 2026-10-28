@@ -53,6 +53,7 @@ browser → Worker (API-key, toegangscode, vaste instellingen) → Claude API
 | API-key vervangen | `npx wrangler secret put ANTHROPIC_API_KEY` |
 | Worker opnieuw online zetten na een wijziging in `worker/src/index.js` | `npx wrangler deploy` |
 | De taglijst verversen met nieuwe Scryfall-tags (daarna `npx wrangler deploy`) | `node update-tags.mjs` |
+| De vertaler testen met 66 vragen (kost minder dan 5 cent) | `$env:ACCESS_CODE="<code>"; node eval.mjs` |
 | Alle gelogde zoekopdrachten bekijken | `npx wrangler d1 execute zoekhulp-log --remote --command "SELECT * FROM searches ORDER BY id DESC"` |
 | Het logboek leegmaken | `npx wrangler d1 execute zoekhulp-log --remote --command "DELETE FROM searches"` |
 

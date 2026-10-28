@@ -676,7 +676,7 @@ async function scryfall(url) {
 
 function withFilters(query) {
   let extra = "";
-  if (!/(^|[\s(-])(f|format|legal):/i.test(query)) extra += " f:commander";
+  if (!/(^|[\s(-])(f|format|legal|banned|restricted):/i.test(query)) extra += " f:commander";
   if (!/(^|[\s(-])game:/i.test(query)) extra += " game:paper";
   return { full: query.trim() + extra, extra: extra.trim() };
 }

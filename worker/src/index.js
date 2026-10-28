@@ -31,7 +31,8 @@ Syntax:
   "g/w/b", "gwb", "in green white black" and "abzan" all mean id<=bgw. "mono red" means id<=r.
 - Type: t:creature, t:legendary, t:dragon, -t:basic
 - Rules text: o:"draw a card", o:damage
-- Keyword: kw:flying, kw:trample
+- Keyword: kw:flying, kw:trample. Always use kw: for a keyword ability the card itself has (storm, cascade, flash,
+  convoke, ward …), not o:. Use a tag like otag:gives-trample when the card gives the keyword to others.
 - Function tags from Scryfall Tagger: otag:<tag>, for example otag:removal, otag:ramp, otag:draw, otag:tutor,
   otag:counterspell, otag:sweeper, otag:anthem, otag:power-boost-to-all. The full list of tags is at the end.
 - Mana value: mv<3, mv=2, mv<=5
@@ -56,6 +57,11 @@ Rules:
   Use only tags from that list, never invent one. Fall back to o:"..." only when no tag fits,
   e.g. creatures that make Treasure = t:creature o:"create a treasure" (there is no treasure-maker tag).
 - "most played" / "popular" / "by edhrec" = order:edhrec.
+- t: describes the card itself. When the user describes what an effect finds, removes or affects, use the specific
+  tag instead of t:. "tutors that find creatures" = otag:tutor-creature (not otag:tutor t:creature, which finds
+  creature cards that tutor); "removal for artifacts" = otag:removal-artifact; "tutors for lands" = otag:tutor-land.
+- Requests about art or versions (full art, showcase, borderless, alternate art, "all printings", an artist) are about
+  prints, not cards: add unique:prints, e.g. "full art basic lands" = t:basic is:fullart unique:prints.
 - Add a color filter (id or c) only when the user names colors, a guild or shard, or "colorless". Never add one yourself.
 - Only creatures (and vehicles) have power and toughness. Never use pow or tou for other card types.
   "big" creatures = pow>=5; "big" (or "expensive") instants, sorceries, artifacts, enchantments and planeswalkers = mv>=6.
@@ -85,6 +91,9 @@ Commander knowledge (all syntax and tags below are checked against Scryfall):
   spellslinger = otag:synergy-instant, otag:synergy-sorcery, otag:magecraft, otag:copy-spell;
   voltron = t:equipment or t:aura with otag:gives-evasion or otag:protects-creature; blink = otag:blink;
   group hug = otag:group-hug.
+- X spells / X in the cost = m:{X}. Cards that return themselves from the graveyard = otag:recursion-self
+  (otag:reanimate and otag:regrowth bring back other cards).
+- Banned in Commander = banned:commander (the page then leaves out f:commander, so this works).
 - Card kinds: is:permanent, is:spell, is:mdfc (modal double-faced), is:dfc, is:vanilla, is:frenchvanilla, is:reserved.
 - Lands: is:fetchland, is:shockland, is:dual, is:triome, is:checkland, is:painland, is:fastland, is:bounceland,
   is:manland (creature lands); produces:wu (lands or rocks that make those colors).
@@ -139,7 +148,7 @@ async function checkQuery(query) {
   const unknown = unknownTags(query);
   if (unknown.length) return `These tags don't exist: ${unknown.join(", ")}. Use only tags from the list, or o:"..." rules text instead.`;
   let full = query;
-  if (!/(^|[\s(-])(f|format|legal):/i.test(full)) full += " f:commander";
+  if (!/(^|[\s(-])(f|format|legal|banned|restricted):/i.test(full)) full += " f:commander";
   if (!/(^|[\s(-])game:/i.test(full)) full += " game:paper";
   let body;
   try {
