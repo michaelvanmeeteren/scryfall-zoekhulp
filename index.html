@@ -511,6 +511,13 @@ function translate(input) {
     terms.push(`r:${r}`); seen.push(`rarity ${r}`);
   });
 
+  // commanders in named colours: exactly those colours, not fewer
+  const idTerm = terms.findIndex(t => t.startsWith("id<="));
+  if (idTerm >= 0 && terms.includes("is:commander")) {
+    terms[idTerm] = terms[idTerm].replace("id<=", "id=");
+    seen.push("commander with exactly these colours");
+  }
+
   if (order) terms.push(order);
 
   const leftover = s.replace(/[^a-z0-9' -]/g, " ").split(" ").filter(w => w && !STOP.has(w));

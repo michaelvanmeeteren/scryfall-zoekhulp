@@ -17,6 +17,7 @@ Reply with JSON only, no other text:
 
 Syntax:
 - Color identity (default for any colors the user names): id<=bgw, id<=r, id<=esper
+- Exact color identity, always when the user asks for commanders (is:commander) in named colors: id=rg, id=bgw
 - Card color (only when the user explicitly asks for the card's own color): c:r, c=g, c:m, c:c
 - Color shorthand: w=white, u=blue, b=black, r=red, g=green.
   "g/w/b", "gwb", "in green white black" and "abzan" all mean id<=bgw. "mono red" means id<=r.
@@ -40,6 +41,8 @@ Rules:
 - "cheap" = eur<2 unless an amount is given. Prices are always in euro (eur), also when the user writes $ or dollar.
 - "removal" = otag:removal, "ramp" = function:ramp, "card draw" = otag:draw. otag:card-draw does not exist.
 - "most played" / "popular" / "by edhrec" = order:edhrec.
+- Commanders in named colors get exactly those colors: "gruul commanders" = is:commander id=rg, not id<=rg.
+  Cards for the deck itself keep id<=, because they may have fewer colors than the commander.
 - If the request is ambiguous, pick the most likely meaning and say so in the explanation.
 - If the request is not about finding Magic cards, reply with an empty query and say so in the explanation.
 
@@ -48,6 +51,7 @@ creatures mana value less than or equal to 5 in g/w/b => t:creature mv<=5 id<=bg
 flying creatures under 3 mana in red => t:creature kw:flying mv<3 id<=r
 cheap removal in b/g => otag:removal eur<2 id<=bg
 dragons that can be my commander => is:commander t:dragon
+gruul dragons I can use as my commander => is:commander t:dragon id=rg
 blue instants that draw a card => t:instant o:"draw a card" id<=u
 lands for w/u that make any color, no basics => t:land o:"any color" -t:basic id<=wu
 green creatures with 5+ power for 4 mana or less, cheapest first => t:creature pow>=5 mv<=4 id<=g order:eur dir:asc
