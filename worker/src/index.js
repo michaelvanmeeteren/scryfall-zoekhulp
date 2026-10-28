@@ -4,6 +4,7 @@
 // Endpoints (all POST, all need the code): /translate, /log (store a search), /recent (the last searches by everyone).
 // Model, system prompt and output size are fixed here, so the key can't be used for anything else.
 import Anthropic from "@anthropic-ai/sdk";
+import { ORACLE_TAGS } from "./tags.js";   // refresh with: node update-tags.mjs
 
 const MODEL = "claude-haiku-5-5";   // fixed on purpose: never any other model
 const MAX_SENTENCE = 300;            // characters
@@ -14,7 +15,8 @@ The request is in English or Dutch. The user always builds Commander decks with 
 The page adds "f:commander game:paper" itself: never add f: or game: yourself.
 
 Reply with JSON only, no other text:
-{"query": "<scryfall query>", "uitleg": "<one short sentence, in the language of the request, describing what the query finds>"}
+{"query": "<scryfall query>", "uitleg": "<one short sentence describing what the query finds>"}
+Write "uitleg" in English. Only when the request itself is written in Dutch, write "uitleg" in Dutch.
 
 Dutch words you will see: wit=white, blauw=blue, zwart=black, rood=red, groen=green, kleurloos=colorless,
 wezens=creatures, draken=dragons, landen=lands, spreuken=instants and sorceries, goedkoop=cheap,
@@ -30,7 +32,8 @@ Syntax:
 - Type: t:creature, t:legendary, t:dragon, -t:basic
 - Rules text: o:"draw a card", o:damage
 - Keyword: kw:flying, kw:trample
-- Function tags: otag:removal, function:ramp, otag:draw, otag:tutor, otag:counterspell, otag:board-wipe
+- Function tags from Scryfall Tagger: otag:<tag>, for example otag:removal, otag:ramp, otag:draw, otag:tutor,
+  otag:counterspell, otag:sweeper, otag:anthem, otag:power-boost-to-all. The full list of tags is at the end.
 - Mana value: mv<3, mv=2, mv<=5
 - Power/toughness: pow>=4, tou<=2, pow>tou
 - Rarity: r:c, r:u, r:r, r:m
@@ -45,7 +48,13 @@ Rules:
 - "less than or equal to" / "or less" / "at most" = <=, "under" / "less than" = <,
   "at least" / "or more" / "5+" = >=.
 - "cheap" = eur<2 unless an amount is given. Prices are always in euro (eur), also when the user writes $ or dollar.
-- "removal" = otag:removal, "ramp" = function:ramp, "card draw" = otag:draw. otag:card-draw does not exist.
+- "removal" = otag:removal, "ramp" = otag:ramp, "card draw" = otag:draw, "board wipe" = otag:sweeper.
+- Prefer a Tagger tag whenever the request describes what a card does (an effect or role): tags find cards by
+  function even when their rules text is worded differently. Pick the tag from the list at the end whose name fits
+  best; when several fit, combine them with OR in parentheses, e.g. (otag:anthem OR otag:power-boost-to-all).
+  Prefer the most specific tag that matches (otag:copy-spell for copying spells, not otag:copy).
+  Use only tags from that list, never invent one. Fall back to o:"..." only when no tag fits,
+  e.g. creatures that make Treasure = t:creature o:"create a treasure" (there is no treasure-maker tag).
 - "most played" / "popular" / "by edhrec" = order:edhrec.
 - Commanders in named colors get exactly those colors: "gruul commanders" = is:commander id=rg, not id<=rg.
   Cards for the deck itself keep id<=, because they may have fewer colors than the commander.
@@ -61,11 +70,38 @@ gruul dragons I can use as my commander => is:commander t:dragon id=rg
 blue instants that draw a card => t:instant o:"draw a card" id<=u
 lands for w/u that make any color, no basics => t:land o:"any color" -t:basic id<=wu
 green creatures with 5+ power for 4 mana or less, cheapest first => t:creature pow>=5 mv<=4 id<=g order:eur dir:asc
-ramp for 2 mana or less in green => function:ramp mv<=2 id<=g
+ramp for 2 mana or less in green => otag:ramp mv<=2 id<=g
 burn spells under 1 euro in mono red => (t:instant OR t:sorcery) o:damage eur<1 id<=r
+cards that boost the power of my creatures in green => (otag:anthem OR otag:power-boost-to-all) id<=g
+board wipes in white => otag:sweeper id<=w
 ik wil alle gruul draken zien die ik als commander kan gebruiken => is:commander t:dragon id=rg
 goedkope removal in zwart groen => otag:removal eur<2 id<=bg
 vliegende wezens van hoogstens 3 mana in wit => t:creature kw:flying mv<=3 id<=w`;
+
+// The prompt plus every Tagger tag (about 20k tokens). It never changes between requests, so it is cached:
+// after the first search, later ones within the hour read it from the cache at a tenth of the price.
+const SYSTEM = [{
+  type: "text",
+  text: SYSTEM_PROMPT + "\n\nScryfall Tagger tags (use as otag:<tag>):\n" + ORACLE_TAGS.join(" "),
+  cache_control: { type: "ephemeral", ttl: "1h" }
+}];
+// Tags that Scryfall accepts as aliases although they aren't in the list.
+const TAG_ALIASES = new Set(["board-wipe", "card-draw"]);
+const KNOWN_TAGS = new Set([...ORACLE_TAGS, ...TAG_ALIASES]);
+
+// The JSON answer from a response, or null when there is none (refusal, cut off, not JSON).
+function readAnswer(response) {
+  if (response.stop_reason === "refusal") return null;
+  const text = response.content.filter(b => b.type === "text").map(b => b.text).join("").trim();
+  try { return JSON.parse(text); } catch { return null; }
+}
+
+// Tag names in a query that Scryfall doesn't know.
+function unknownTags(query) {
+  return [...query.matchAll(/(?:otag|oracletag|oracle|function):([a-z0-9-]+)/gi)]
+    .map(m => m[1].toLowerCase())
+    .filter(t => !KNOWN_TAGS.has(t));
+}
 
 const ANSWER_SCHEMA = {
   type: "object",
@@ -120,15 +156,27 @@ export default {
     if (zin.length > MAX_SENTENCE) return reply(400, { error: `Keep the search under ${MAX_SENTENCE} characters.` });
 
     const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-    let response;
+    const ask = messages => client.messages.create({
+      model: MODEL,
+      max_tokens: 4000,   // room for a little thinking before the short JSON answer
+      system: SYSTEM,
+      output_config: { effort: "low", format: { type: "json_schema", schema: ANSWER_SCHEMA } },
+      messages
+    });
+    const messages = [{ role: "user", content: zin }];
+    let response, answer;
     try {
-      response = await client.messages.create({
-        model: MODEL,
-        max_tokens: 4000,   // room for a little thinking before the short JSON answer
-        system: SYSTEM_PROMPT,
-        output_config: { effort: "low", format: { type: "json_schema", schema: ANSWER_SCHEMA } },
-        messages: [{ role: "user", content: zin }]
-      });
+      response = await ask(messages);
+      answer = readAnswer(response);
+      // One correction round when Claude used a tag that doesn't exist.
+      const unknown = answer ? unknownTags(answer.query) : [];
+      if (unknown.length) {
+        messages.push({ role: "assistant", content: response.content });
+        messages.push({ role: "user", content: `These tags don't exist: ${unknown.join(", ")}. Use only tags from the list, or o:"..." rules text instead. Reply with the corrected JSON.` });
+        const second = await ask(messages);
+        const corrected = readAnswer(second);
+        if (corrected) { response = second; answer = corrected; }
+      }
     } catch (error) {
       if (error instanceof Anthropic.AuthenticationError) return reply(502, { error: "The translator's API key doesn't work. Tell the owner of this page." });
       if (error instanceof Anthropic.PermissionDeniedError) return reply(502, { error: "The translator's API key isn't allowed to do this. Tell the owner of this page." });
@@ -141,14 +189,15 @@ export default {
       return reply(502, { error: "Can't reach Claude right now." });
     }
 
+    // Token counts only (no search text), visible with "npx wrangler tail" to check that caching works.
+    console.log(JSON.stringify(response.usage));
     if (response.stop_reason === "refusal") return reply(422, { error: "Claude declined to translate this request." });
-    const text = response.content.filter(b => b.type === "text").map(b => b.text).join("").trim();
-    try {
-      const answer = JSON.parse(text);
-      return reply(200, { query: String(answer.query || "").trim(), uitleg: String(answer.uitleg || "") });
-    } catch {
-      return reply(502, { error: "Claude's answer wasn't the expected JSON." });
-    }
+    if (!answer) return reply(502, { error: "Claude's answer wasn't the expected JSON." });
+    const query = String(answer.query || "").trim();
+    let uitleg = String(answer.uitleg || "");
+    const unknown = unknownTags(query);
+    if (unknown.length) uitleg += ` (Scryfall may not know the tag ${unknown.join(", ")}.)`;
+    return reply(200, { query, uitleg });
   }
 };
 
