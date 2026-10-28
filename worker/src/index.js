@@ -100,6 +100,8 @@ Commander knowledge (all syntax and tags below are checked against Scryfall):
   Fetchlands are colorless in color identity, so filter them with o:plains / o:island etc., not with id.
 - Commanders: is:commander; partners = is:partner; backgrounds = t:background, and commanders that take one =
   is:commander o:"choose a background". Devotion: devotion:rr.
+- "budget / cheap <colors> commander" means a cheap commander card: is:commander id=<colors> eur<2.
+  Only "budget cards for my <colors> deck" means deck cards (id<=).
 - Commander deck cards use id<= (they may have fewer colors). Only the commander itself uses id= (see rules above).
 
 Examples (request => query):
