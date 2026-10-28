@@ -145,6 +145,14 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 #preview { position: fixed; z-index: 20; width: 300px; pointer-events: none; border-radius: 14px; box-shadow: 0 8px 30px rgb(0 0 0 / 0.35); }
 .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 14px; z-index: 30; }
 
+.top .gear { margin-left: auto; align-self: center; }
+.settings { width: min(460px, calc(100% - 32px)); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--fg); padding: 18px; box-shadow: var(--shadow); }
+.settings::backdrop { background: rgb(0 0 0 / 0.4); }
+.settings form { display: grid; gap: 10px; }
+.settings h2 { margin: 0; font-size: 17px; }
+.settings label { display: grid; gap: 4px; font-size: 13.5px; font-weight: 600; }
+.settings input { padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-weight: 400; font-family: var(--mono); font-size: 14px; }
+.settings a { color: var(--accent); }
 .listhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .linkbtn { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; font-size: inherit; }
 .mobilebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 22; display: flex; gap: 10px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -4px 14px rgb(0 0 0 / 0.1); }
@@ -199,8 +207,29 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
 
 <header class="top">
   <h1>Scryfall Zoekhulp</h1>
-  <p>Commander · paper cards · prototype with built-in translator</p>
+  <p>Commander · paper cards</p>
+  <button id="opensettings" class="btn small gear" type="button" aria-label="Settings">⚙ Settings</button>
 </header>
+
+<dialog id="settings" class="settings" aria-labelledby="settingstitle">
+  <form method="dialog" id="settingsform">
+    <h2 id="settingstitle">Settings</h2>
+    <label>Claude API key
+      <input id="apikey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…">
+    </label>
+    <p class="hint">Stored only in this browser on this device. Without a key the built-in translator is used.
+      Get a key at <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a> and set a monthly limit there.</p>
+    <label>Model ID
+      <input id="model" type="text" autocomplete="off" spellcheck="false">
+    </label>
+    <p class="hint">Default <code>claude-haiku-5-5</code>, the smallest current Claude model.</p>
+    <div class="listactions">
+      <button id="savesettings" class="btn primary" type="submit" value="save">Save</button>
+      <button id="removekey" class="btn" type="button">Remove key</button>
+      <button class="btn" type="submit" value="cancel" formnovalidate>Cancel</button>
+    </div>
+  </form>
+</dialog>
 
 <main class="layout">
   <div>
@@ -210,6 +239,7 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
         <button id="zoek" class="btn primary" type="submit">Translate &amp; search</button>
       </form>
       <p class="hint">Type in plain English, or start with <code>/s</code> or <code>!</code> to use Scryfall syntax directly. Searches are always limited to Commander-legal paper cards.</p>
+      <p id="nokey" class="hint" hidden>Using the built-in translator. <button class="linkbtn" type="button" data-opensettings>Add a Claude API key</button> for better translations.</p>
 
       <div id="querybar" class="querybar" hidden>
         <div class="queryrow">
@@ -316,6 +346,10 @@ const state = {
   order: store.get("order", "edhrec"),
   size: store.get("size", 50),
   search: null   // { query, full, order, size, total, cache: Map(apiPage -> cards), page }
+};
+const settings = {
+  key: store.get("apikey", ""),
+  model: store.get("model", "") || "claude-haiku-5-5"
 };
 
 const $ = id => document.getElementById(id);
@@ -491,6 +525,112 @@ function translate(input) {
   let uitleg = "Recognised: " + seen.join(", ") + ".";
   if (leftover.length) uitleg += " Not used: " + leftover.join(" ") + ".";
   return { query: terms.join(" "), uitleg };
+}
+
+// ---------- Claude translator (used when an API key is set; translate() stays the fallback) ----------
+const DEFAULT_MODEL = "claude-haiku-5-5";
+const SYSTEM_PROMPT = `You translate a search request for Magic: The Gathering cards into Scryfall search syntax.
+The request is always in English. The user always builds Commander decks with paper cards.
+The page adds "f:commander game:paper" itself: never add f: or game: yourself.
+
+Reply with JSON only, no other text:
+{"query": "<scryfall query>", "uitleg": "<one short sentence in English describing what the query finds>"}
+
+Syntax:
+- Color identity (default for any colors the user names): id<=bgw, id<=r, id<=esper
+- Card color (only when the user explicitly asks for the card's own color): c:r, c=g, c:m, c:c
+- Color shorthand: w=white, u=blue, b=black, r=red, g=green.
+  "g/w/b", "gwb", "in green white black" and "abzan" all mean id<=bgw. "mono red" means id<=r.
+- Type: t:creature, t:legendary, t:dragon, -t:basic
+- Rules text: o:"draw a card", o:damage
+- Keyword: kw:flying, kw:trample
+- Function tags: otag:removal, function:ramp, otag:draw, otag:tutor, otag:counterspell, otag:board-wipe
+- Mana value: mv<3, mv=2, mv<=5
+- Power/toughness: pow>=4, tou<=2, pow>tou
+- Rarity: r:c, r:u, r:r, r:m
+- Possible commanders: is:commander
+- Price, always in euro: eur<2, eur<=5
+- Set: s:mh3; year: year>=2020
+- Sort: order:edhrec (most played in Commander decks first), order:eur, order:mv, order:released; dir:asc or dir:desc
+- Logic: space = AND, OR between terms, parentheses for groups, - for NOT
+
+Rules:
+- Use only real Scryfall syntax. Never invent filters.
+- "less than or equal to" / "or less" / "at most" = <=, "under" / "less than" = <,
+  "at least" / "or more" / "5+" = >=.
+- "cheap" = eur<2 unless an amount is given. Prices are always in euro (eur), also when the user writes $ or dollar.
+- "removal" = otag:removal, "ramp" = function:ramp, "card draw" = otag:draw. otag:card-draw does not exist.
+- "most played" / "popular" / "by edhrec" = order:edhrec.
+- If the request is ambiguous, pick the most likely meaning and say so in the explanation.
+
+Examples (request => query):
+creatures mana value less than or equal to 5 in g/w/b => t:creature mv<=5 id<=bgw
+flying creatures under 3 mana in red => t:creature kw:flying mv<3 id<=r
+cheap removal in b/g => otag:removal eur<2 id<=bg
+dragons that can be my commander => is:commander t:dragon
+blue instants that draw a card => t:instant o:"draw a card" id<=u
+lands for w/u that make any color, no basics => t:land o:"any color" -t:basic id<=wu
+green creatures with 5+ power for 4 mana or less, cheapest first => t:creature pow>=5 mv<=4 id<=g order:eur dir:asc
+ramp for 2 mana or less in green => function:ramp mv<=2 id<=g
+burn spells under 1 euro in mono red => (t:instant OR t:sorcery) o:damage eur<1 id<=r`;
+
+const ANSWER_SCHEMA = {
+  type: "object",
+  properties: { query: { type: "string" }, uitleg: { type: "string" } },
+  required: ["query", "uitleg"],
+  additionalProperties: false
+};
+
+// Errors that mean "fix your settings" rather than "try again later".
+class SettingsError extends Error {}
+
+async function translateWithClaude(zin) {
+  let res;
+  try {
+    // The key lives in this browser only, hence the direct-browser-access header.
+    res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": settings.key,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: settings.model,
+        max_tokens: 4000,   // room for a little thinking before the short JSON answer
+        system: SYSTEM_PROMPT,
+        output_config: { effort: "low", format: { type: "json_schema", schema: ANSWER_SCHEMA } },
+        messages: [{ role: "user", content: zin }]
+      })
+    });
+  } catch {
+    throw new Error("Can't reach Claude. Check your internet connection.");
+  }
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail = body.error && body.error.message ? ` (${body.error.message})` : "";
+    if (res.status === 401) throw new SettingsError("API key invalid. Check it in Settings.");
+    if (res.status === 403) throw new SettingsError("This API key isn't allowed to do this" + detail);
+    if (res.status === 404 || res.status === 400) throw new SettingsError("Claude rejected the request" + detail + ". Check the model ID in Settings.");
+    if (res.status === 429) throw new Error("Too many requests, try again in a minute.");
+    throw new Error("Claude is temporarily unavailable" + (res.status === 529 ? " (overloaded)" : "") + ".");
+  }
+  if (body.stop_reason === "refusal") throw new Error("Claude declined to translate this request.");
+  const text = (body.content || []).filter(b => b.type === "text").map(b => b.text).join("").trim();
+  return parseAnswer(text);
+}
+
+// Tolerant: plain JSON, else the part from the first { to the last }, else the raw text as the query.
+function parseAnswer(text) {
+  const attempts = [text, text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)];
+  for (const t of attempts) {
+    try {
+      const a = JSON.parse(t);
+      if (a && typeof a.query === "string" && a.query.trim()) return { query: a.query.trim(), uitleg: String(a.uitleg || "") };
+    } catch { /* try the next form */ }
+  }
+  return { query: text, uitleg: "Claude's answer wasn't the expected JSON, so it is used as the query." };
 }
 
 // ---------- Scryfall ----------
@@ -963,14 +1103,25 @@ function renderHistory() {
 }
 
 // ---------- wiring ----------
-$("searchform").addEventListener("submit", e => {
+$("searchform").addEventListener("submit", async e => {
   e.preventDefault();
   const zin = $("zin").value.trim();
-  if (!zin) return;
+  if (!zin || $("zoek").disabled) return;
   let result;
   if (zin.startsWith("/s ")) result = { query: zin.slice(3).trim(), uitleg: "Scryfall syntax, used as typed." };
   else if (zin.startsWith("!")) result = { query: zin.slice(1).trim(), uitleg: "Scryfall syntax, used as typed." };
   else if (looksLikeSyntax(zin)) result = { query: zin, uitleg: "This already looks like Scryfall syntax, so it was used as typed." };
+  else if (settings.key) {
+    setBusy(true, "Translating…");
+    try {
+      result = await translateWithClaude(zin);
+    } catch (err) {
+      const fallback = translate(zin);
+      result = { query: fallback.query, uitleg: `${err.message} Used the built-in translator instead. ${fallback.uitleg}` };
+    } finally {
+      setBusy(false);
+    }
+  }
   else result = translate(zin);
   showQuery(result.query, result.uitleg);
   addHistory({ zin, query: result.query, uitleg: result.uitleg });
@@ -1036,6 +1187,28 @@ function applyCardSize() {
 $("smaller").addEventListener("click", () => { cardSize = Math.max(0, cardSize - 1); applyCardSize(); });
 $("larger").addEventListener("click", () => { cardSize = Math.min(CARD_SIZES.length - 1, cardSize + 1); applyCardSize(); });
 applyCardSize();
+// settings: API key and model
+function renderKeyState() { $("nokey").hidden = !!settings.key; }
+function openSettings() {
+  $("apikey").value = settings.key;
+  $("model").value = settings.model;
+  $("settings").showModal();
+  (settings.key ? $("model") : $("apikey")).focus();
+}
+$("opensettings").addEventListener("click", openSettings);
+document.querySelectorAll("[data-opensettings]").forEach(b => b.addEventListener("click", openSettings));
+$("settings").addEventListener("close", () => {
+  if ($("settings").returnValue !== "save") return;
+  settings.key = $("apikey").value.trim();
+  settings.model = $("model").value.trim() || DEFAULT_MODEL;
+  store.set("apikey", settings.key);
+  store.set("model", settings.model);
+  renderKeyState();
+  toast(settings.key ? "Settings saved. Searches now use Claude." : "Settings saved. Using the built-in translator.");
+});
+$("removekey").addEventListener("click", () => { $("apikey").value = ""; $("apikey").focus(); });
+renderKeyState();
+
 $("viewswitch").addEventListener("click", () => {
   store.set("view", isMobile ? "desktop" : "mobile");
   location.reload();

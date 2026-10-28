@@ -1,4 +1,4 @@
-# Scryfall Zoekhulp (prototype)
+# Scryfall Zoekhulp
 
 Zoek Magic-kaarten met een Engelse zin, verzamel ze in een lijst en kopieer die naar Moxfield.
 Er wordt altijd gezocht in Commander-legale papieren kaarten (`f:commander game:paper`).
@@ -14,6 +14,17 @@ Op je telefoon kun je de pagina ook op je beginscherm zetten (browsermenu, *Toev
 - Op een telefoon opent automatisch de mobiele weergave: grotere kaarten, grote knoppen en een balk onderaan met je lijst.
   Met **Switch to mobile view** / **Switch to desktop view** onderaan de pagina kies je zelf; die keuze wordt onthouden.
 - Open `index.html` niet rechtstreeks als bestand (`file://`): Scryfall weigert dan de verzoeken.
+
+### Claude API
+
+Met een Claude API-key vertaalt Claude je zin naar Scryfall-syntax; zonder key doet de ingebouwde vertaler het.
+
+1. Maak een key op [console.anthropic.com](https://console.anthropic.com) (*API Keys*) en zet onder *Limits* een maandlimiet, bijvoorbeeld €5.
+2. Klik **⚙ Settings** in de app, plak de key en klik **Save**. Model-ID staat standaard op `claude-haiku-5-5`, het kleinste model.
+3. Lukt de vertaling via Claude niet (verkeerde key, geen verbinding, te veel verzoeken), dan zoekt de app met de ingebouwde vertaler en staat de reden onder de zoekopdracht.
+
+De key staat alleen in de browser van dat apparaat, niet in de code op GitHub. Voer hem in op je pc en op je telefoon apart.
+Plak hem nooit in een chat. Vermoed je een lek: verwijder de key in de Console en maak een nieuwe.
 
 ### Bijwerken
 
@@ -45,5 +56,4 @@ De app zelf is in het Engels; deze README is in het Nederlands.
 | Functies | `removal`, `ramp`, `card draw`, `board wipes`, `tutors`, `counterspells`, `mana rocks`, `burn` |
 | Overig | `that can be my commander`, `draw a card`, `make any color`, `rare`, tekst tussen `"aanhalingstekens"` |
 
-Wat niet herkend wordt, staat onder de zoekopdracht bij *Not used*. Later vervangt de Claude API de functie
-`translate()` in `index.html` (zie het bouwplan).
+Wat niet herkend wordt, staat onder de zoekopdracht bij *Not used*. Met een API-key neemt Claude het vertalen over.
