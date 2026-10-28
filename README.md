@@ -20,7 +20,7 @@ Op je telefoon kun je de pagina ook op je beginscherm zetten (browsermenu, *Toev
 Met een Claude API-key vertaalt Claude je zin naar Scryfall-syntax; zonder key doet de ingebouwde vertaler het.
 
 1. Maak een key op [console.anthropic.com](https://console.anthropic.com) (*API Keys*) en zet onder *Limits* een maandlimiet, bijvoorbeeld €5.
-2. Klik **⚙ Settings** in de app, plak de key en klik **Save**. Model-ID staat standaard op `claude-haiku-5-5`, het kleinste model.
+2. Klik **⚙ Settings** in de app, plak de key en klik **Save**. De app gebruikt altijd `claude-haiku-5-5`, het kleinste model; dat is niet in te stellen.
 3. Lukt de vertaling via Claude niet (verkeerde key, geen verbinding, te veel verzoeken), dan zoekt de app met de ingebouwde vertaler en staat de reden onder de zoekopdracht.
 
 De key staat alleen in de browser van dat apparaat, niet in de code op GitHub. Voer hem in op je pc en op je telefoon apart.

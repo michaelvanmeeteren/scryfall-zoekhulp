@@ -219,10 +219,7 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
     </label>
     <p class="hint">Stored only in this browser on this device. Without a key the built-in translator is used.
       Get a key at <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a> and set a monthly limit there.</p>
-    <label>Model ID
-      <input id="model" type="text" autocomplete="off" spellcheck="false">
-    </label>
-    <p class="hint">Default <code>claude-haiku-5-5</code>, the smallest current Claude model.</p>
+    <p class="hint">Translations always use <code>claude-haiku-5-5</code>, the smallest Claude model.</p>
     <div class="listactions">
       <button id="savesettings" class="btn primary" type="submit" value="save">Save</button>
       <button id="removekey" class="btn" type="button">Remove key</button>
@@ -347,10 +344,8 @@ const state = {
   size: store.get("size", 50),
   search: null   // { query, full, order, size, total, cache: Map(apiPage -> cards), page }
 };
-const settings = {
-  key: store.get("apikey", ""),
-  model: store.get("model", "") || "claude-haiku-5-5"
-};
+const settings = { key: store.get("apikey", "") };
+try { localStorage.removeItem("szh.model"); } catch { /* storage unavailable */ }   // a model choice from an earlier version
 
 const $ = id => document.getElementById(id);
 const euro = new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" });
@@ -528,7 +523,8 @@ function translate(input) {
 }
 
 // ---------- Claude translator (used when an API key is set; translate() stays the fallback) ----------
-const DEFAULT_MODEL = "claude-haiku-5-5";
+// Fixed on purpose: the app only ever uses Haiku, there is no setting to change it.
+const MODEL = "claude-haiku-5-5";
 const SYSTEM_PROMPT = `You translate a search request for Magic: The Gathering cards into Scryfall search syntax.
 The request is always in English. The user always builds Commander decks with paper cards.
 The page adds "f:commander game:paper" itself: never add f: or game: yourself.
@@ -597,7 +593,7 @@ async function translateWithClaude(zin) {
         "anthropic-dangerous-direct-browser-access": "true"
       },
       body: JSON.stringify({
-        model: settings.model,
+        model: MODEL,
         max_tokens: 4000,   // room for a little thinking before the short JSON answer
         system: SYSTEM_PROMPT,
         output_config: { effort: "low", format: { type: "json_schema", schema: ANSWER_SCHEMA } },
@@ -612,7 +608,7 @@ async function translateWithClaude(zin) {
     const detail = body.error && body.error.message ? ` (${body.error.message})` : "";
     if (res.status === 401) throw new SettingsError("API key invalid. Check it in Settings.");
     if (res.status === 403) throw new SettingsError("This API key isn't allowed to do this" + detail);
-    if (res.status === 404 || res.status === 400) throw new SettingsError("Claude rejected the request" + detail + ". Check the model ID in Settings.");
+    if (res.status === 404 || res.status === 400) throw new SettingsError("Claude rejected the request" + detail + ".");
     if (res.status === 429) throw new Error("Too many requests, try again in a minute.");
     throw new Error("Claude is temporarily unavailable" + (res.status === 529 ? " (overloaded)" : "") + ".");
   }
@@ -1187,22 +1183,19 @@ function applyCardSize() {
 $("smaller").addEventListener("click", () => { cardSize = Math.max(0, cardSize - 1); applyCardSize(); });
 $("larger").addEventListener("click", () => { cardSize = Math.min(CARD_SIZES.length - 1, cardSize + 1); applyCardSize(); });
 applyCardSize();
-// settings: API key and model
+// settings: API key
 function renderKeyState() { $("nokey").hidden = !!settings.key; }
 function openSettings() {
   $("apikey").value = settings.key;
-  $("model").value = settings.model;
   $("settings").showModal();
-  (settings.key ? $("model") : $("apikey")).focus();
+  $("apikey").focus();
 }
 $("opensettings").addEventListener("click", openSettings);
 document.querySelectorAll("[data-opensettings]").forEach(b => b.addEventListener("click", openSettings));
 $("settings").addEventListener("close", () => {
   if ($("settings").returnValue !== "save") return;
   settings.key = $("apikey").value.trim();
-  settings.model = $("model").value.trim() || DEFAULT_MODEL;
   store.set("apikey", settings.key);
-  store.set("model", settings.model);
   renderKeyState();
   toast(settings.key ? "Settings saved. Searches now use Claude." : "Settings saved. Using the built-in translator.");
 });
