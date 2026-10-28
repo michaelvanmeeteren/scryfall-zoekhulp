@@ -56,6 +56,9 @@ Rules:
   Use only tags from that list, never invent one. Fall back to o:"..." only when no tag fits,
   e.g. creatures that make Treasure = t:creature o:"create a treasure" (there is no treasure-maker tag).
 - "most played" / "popular" / "by edhrec" = order:edhrec.
+- Add a color filter (id or c) only when the user names colors, a guild or shard, or "colorless". Never add one yourself.
+- Only creatures (and vehicles) have power and toughness. Never use pow or tou for other card types.
+  "big" creatures = pow>=5; "big" (or "expensive") instants, sorceries, artifacts, enchantments and planeswalkers = mv>=6.
 - Commanders in named colors get exactly those colors: "gruul commanders" = is:commander id=rg, not id<=rg.
   Cards for the deck itself keep id<=, because they may have fewer colors than the commander.
 - If the request is ambiguous, pick the most likely meaning and say so in the explanation.
@@ -74,6 +77,8 @@ ramp for 2 mana or less in green => otag:ramp mv<=2 id<=g
 burn spells under 1 euro in mono red => (t:instant OR t:sorcery) o:damage eur<1 id<=r
 cards that boost the power of my creatures in green => (otag:anthem OR otag:power-boost-to-all) id<=g
 board wipes in white => otag:sweeper id<=w
+big sorceries in jeskai => t:sorcery mv>=6 id<=wur
+big creatures in green => t:creature pow>=5 id<=g
 ik wil alle gruul draken zien die ik als commander kan gebruiken => is:commander t:dragon id=rg
 goedkope removal in zwart groen => otag:removal eur<2 id<=bg
 vliegende wezens van hoogstens 3 mana in wit => t:creature kw:flying mv<=3 id<=w`;
@@ -109,8 +114,29 @@ const ANSWER_SCHEMA = {
   required: ["query", "uitleg"],
   additionalProperties: false
 };
+const OUTPUT_CONFIG = { effort: "low", format: { type: "json_schema", schema: ANSWER_SCHEMA } };
 
 export default {
+  // Cron trigger (wrangler.toml): reads the cached prompt so its 1-hour lifetime starts again. Keeps the first
+  // search of the day from paying for a fresh cache write. It must send the same output_config as a real search,
+  // because the answer format is part of the cached prefix; max_tokens 0 can't be combined with that format,
+  // so it asks for a tiny answer instead and throws it away.
+  async scheduled(event, env) {
+    const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+    try {
+      const response = await client.messages.create({
+        model: MODEL,
+        max_tokens: 16,
+        system: SYSTEM,
+        output_config: OUTPUT_CONFIG,
+        messages: [{ role: "user", content: "warm-up" }]
+      });
+      console.log("warm-up " + JSON.stringify(response.usage));
+    } catch (error) {
+      console.log("warm-up failed: " + (error instanceof Anthropic.APIError ? `${error.status} ${error.type}` : String(error)));
+    }
+  },
+
   async fetch(request, env) {
     const origin = request.headers.get("Origin") || "";
     const cors = {
@@ -160,7 +186,7 @@ export default {
       model: MODEL,
       max_tokens: 4000,   // room for a little thinking before the short JSON answer
       system: SYSTEM,
-      output_config: { effort: "low", format: { type: "json_schema", schema: ANSWER_SCHEMA } },
+      output_config: OUTPUT_CONFIG,
       messages
     });
     const messages = [{ role: "user", content: zin }];

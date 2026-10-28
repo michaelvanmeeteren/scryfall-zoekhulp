@@ -32,6 +32,9 @@ browser → Worker (API-key, toegangscode, vaste instellingen) → Claude API
   `otag:copy-spell` of `otag:sacrifice-outlet-creature`. Gebruikt hij een tag die niet bestaat, dan vraagt de Worker
   één keer om een verbetering. De lijst staat in `worker/src/tags.js` en wordt gecachet, dus hij kost per zoekopdracht
   bijna niets extra.
+- **Cache warm houden:** een Cron Trigger doet elk half uur van 10:00 tot 00:00 (Nederlandse wintertijd) een mini-aanroep
+  met dezelfde prompt, zodat de cache van een uur niet verloopt. Kosten ongeveer $0,01 per dag. Het schema staat in
+  `worker/wrangler.toml` onder `[triggers]`.
 - **Recent searches:** elke zoekopdracht van iemand met de code (zin + query + tijd, geen naam of IP-adres) komt in een
   Cloudflare D1-database (`zoekhulp-log`, tabel in `worker/schema.sql`). Iedereen met de code ziet de laatste 30 in het
   paneel *Recent searches* rechts (op een telefoon onderaan). De database bewaart de laatste 1000.
