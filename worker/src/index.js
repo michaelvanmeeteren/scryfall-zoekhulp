@@ -16,7 +16,7 @@ The page adds "f:commander game:paper" itself: never add f: or game: yourself.
 
 Reply with JSON only, no other text:
 {"query": "<scryfall query>", "uitleg": "<one short sentence describing what the query finds>",
- "combo": {"wanted": false, "colors": "", "card": "", "result": "", "max_eur": 0}}
+ "combo": {"wanted": false, "colors": "", "card": "", "result": "", "max_eur": 0, "cards": 0}}
 Write "uitleg" in English. Only when the request itself is written in Dutch, write "uitleg" in Dutch.
 
 Combos: when the user asks for combos (infinite combos, combo pieces, "2-card combos", "combos with <card>", "how do I
@@ -27,11 +27,12 @@ cards itself, so leave "query" empty. Fill in:
 - result: only when the user names a specific effect, in Commander Spellbook's words: "Infinite mana", "Win the game",
   "Infinite damage", "Infinite tokens", "Infinite card draw", "Infinite lifegain", "Infinite mill". Otherwise "".
   "infinite combos" or "combos" alone = "" (any combo; nearly all of them are infinite);
-- max_eur: the most the whole combo may cost in euro ("cheap combos" = 20), or 0 for no limit.
+- max_eur: the most the whole combo may cost in euro ("cheap combos" = 20), or 0 for no limit;
+- cards: the exact number of cards the user asks for ("2 card combos" / "two-card combos" = 2), or 0 for any number.
 For every other request combo.wanted = false, with "" and 0 in the other fields.
 Example: "cheap infinite mana combos in green" => query "", combo {"wanted": true, "colors": "g", "card": "",
-"result": "Infinite mana", "max_eur": 20}; "infinite combos in dimir" => combo {"wanted": true, "colors": "ub",
-"card": "", "result": "", "max_eur": 0}.
+"result": "Infinite mana", "max_eur": 20, "cards": 0}; "infinite combos in dimir" => combo {"wanted": true, "colors": "ub",
+"card": "", "result": "", "max_eur": 0, "cards": 0}.
 
 Dutch words you will see: wit=white, blauw=blue, zwart=black, rood=red, groen=green, kleurloos=colorless,
 wezens=creatures, draken=dragons, landen=lands, spreuken=instants and sorceries, goedkoop=cheap,
@@ -164,13 +165,17 @@ const MAX_COMBOS = 10;
 
 // Returns up to MAX_COMBOS combos, most played first: { id, cards, produces, eur, url }.
 // Returns null when Commander Spellbook can't be reached.
-async function findCombos({ colors, card, result, max_eur }) {
+async function findCombos({ colors, card, result, max_eur, cards }) {
+  const count = Number.isInteger(cards) && cards > 0 ? cards : 0;
   const letters = String(colors || "").toLowerCase().replace(/[^wubrgc]/g, "");
   const quote = s => '"' + String(s).replace(/"/g, "") + '"';
   let q = "legal:commander";
   if (letters) q += ` ci<=${letters}`;
   if (card) q += ` card:${quote(card)}`;
   if (result) q += ` result:${quote(result)}`;
+  // Commander Spellbook's cards= also counts requirements like "a creature with flying",
+  // so the real number of cards is checked below as well.
+  if (count) q += ` cards=${count}`;
   let body;
   try {
     const res = await fetch("https://backend.commanderspellbook.com/variants/?" + new URLSearchParams({ q, limit: "50", ordering: "-popularity" }), {
@@ -185,6 +190,7 @@ async function findCombos({ colors, card, result, max_eur }) {
   for (const v of body.results || []) {
     const eur = v.prices && v.prices.cardmarket != null ? Number(v.prices.cardmarket) : null;
     if (max_eur > 0 && (eur == null || eur > max_eur)) continue;
+    if (count && (v.uses || []).length !== count) continue;
     combos.push({
       id: v.id,
       cards: (v.uses || []).map(u => u.card.name),
@@ -243,9 +249,10 @@ const ANSWER_SCHEMA = {
         colors: { type: "string" },
         card: { type: "string" },
         result: { type: "string" },
-        max_eur: { type: "number" }
+        max_eur: { type: "number" },
+        cards: { type: "integer" }
       },
-      required: ["wanted", "colors", "card", "result", "max_eur"],
+      required: ["wanted", "colors", "card", "result", "max_eur", "cards"],
       additionalProperties: false
     }
   },
