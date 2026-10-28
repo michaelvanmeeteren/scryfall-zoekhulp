@@ -58,7 +58,7 @@ const CASES = [
   { zin: "show me Sol Ring", any: [["sol ring"]], none: ["otag:"] },
   { zin: "cards with art by Rebecca Guay", any: [["a:", "artist:"]] },
   { zin: "full art basic lands", any: [["is:full"], ["t:basic"], ["unique:prints", "unique:art"]], min: 100 },
-  { zin: "green cards released in 2024", any: [["year=2024", "year:2024"]], id: "<=g" },
+  { zin: "green cards released in 2024", any: [["year=2024", "year:2024"], ["id<=g", "c:g", "c=g"]] },
   // Dutch
   { zin: "goedkope tegenspreuken in blauw", any: [["otag:counterspell"], ["eur<2"]], id: "<=u" },
   { zin: "kleurloze artefacten van hoogstens 2 mana", any: [["t:artifact"], ["mv<=2"]] },
@@ -83,7 +83,10 @@ const CASES = [
   { zin: "graveyard hate artifacts", any: [["hate-graveyard", "graveyard-hate"], ["t:artifact"]] },
   { zin: "cards that make my creatures indestructible", any: [["indestructible"]] },
   { zin: "commanders voor een draken deck", any: [["is:commander"], ["dragon"]] },
-  { zin: "goedkope board wipes", any: [["sweeper"], ["eur<2"]] }
+  { zin: "goedkope board wipes", any: [["sweeper"], ["eur<2"]] },
+  // combos (Commander Spellbook): the query is a list of exact card names
+  { zin: "infinite combos in dimir", any: [['!"']], min: 5 },
+  { zin: "combos with Sol Ring", any: [['!"sol ring"']], min: 5 }
 ];
 
 const GROUPS = { azorius: "wu", dimir: "ub", rakdos: "br", gruul: "rg", selesnya: "gw", orzhov: "wb", izzet: "ur", golgari: "bg",

@@ -15,8 +15,23 @@ The request is in English or Dutch. The user always builds Commander decks with 
 The page adds "f:commander game:paper" itself: never add f: or game: yourself.
 
 Reply with JSON only, no other text:
-{"query": "<scryfall query>", "uitleg": "<one short sentence describing what the query finds>"}
+{"query": "<scryfall query>", "uitleg": "<one short sentence describing what the query finds>",
+ "combo": {"wanted": false, "colors": "", "card": "", "result": "", "max_eur": 0}}
 Write "uitleg" in English. Only when the request itself is written in Dutch, write "uitleg" in Dutch.
+
+Combos: when the user asks for combos (infinite combos, combo pieces, "2-card combos", "combos with <card>", "how do I
+win with ..."), set combo.wanted = true. The page then looks the combos up at Commander Spellbook and searches their
+cards itself, so leave "query" empty. Fill in:
+- colors: the color letters the combo must fit in (e.g. "ub" for dimir, "g" for mono green), or "" when none are named;
+- card: a card name the combo must include, spelled exactly as on the card, or "";
+- result: only when the user names a specific effect, in Commander Spellbook's words: "Infinite mana", "Win the game",
+  "Infinite damage", "Infinite tokens", "Infinite card draw", "Infinite lifegain", "Infinite mill". Otherwise "".
+  "infinite combos" or "combos" alone = "" (any combo; nearly all of them are infinite);
+- max_eur: the most the whole combo may cost in euro ("cheap combos" = 20), or 0 for no limit.
+For every other request combo.wanted = false, with "" and 0 in the other fields.
+Example: "cheap infinite mana combos in green" => query "", combo {"wanted": true, "colors": "g", "card": "",
+"result": "Infinite mana", "max_eur": 20}; "infinite combos in dimir" => combo {"wanted": true, "colors": "ub",
+"card": "", "result": "", "max_eur": 0}.
 
 Dutch words you will see: wit=white, blauw=blue, zwart=black, rood=red, groen=green, kleurloos=colorless,
 wezens=creatures, draken=dragons, landen=lands, spreuken=instants and sorceries, goedkoop=cheap,
@@ -144,6 +159,47 @@ function readAnswer(response) {
   try { return JSON.parse(text); } catch { return null; }
 }
 
+// ---------- combos from Commander Spellbook (the source of EDHREC's combo pages) ----------
+const MAX_COMBOS = 10;
+
+// Returns up to MAX_COMBOS combos, most played first: { id, cards, produces, eur, url }.
+// Returns null when Commander Spellbook can't be reached.
+async function findCombos({ colors, card, result, max_eur }) {
+  const letters = String(colors || "").toLowerCase().replace(/[^wubrgc]/g, "");
+  const quote = s => '"' + String(s).replace(/"/g, "") + '"';
+  let q = "legal:commander";
+  if (letters) q += ` ci<=${letters}`;
+  if (card) q += ` card:${quote(card)}`;
+  if (result) q += ` result:${quote(result)}`;
+  let body;
+  try {
+    const res = await fetch("https://backend.commanderspellbook.com/variants/?" + new URLSearchParams({ q, limit: "50", ordering: "-popularity" }), {
+      headers: { "User-Agent": "ScryfallZoekhulp/1.0 (https://michaelvanmeeteren.github.io/scryfall-zoekhulp/)", Accept: "application/json" }
+    });
+    if (!res.ok) return null;
+    body = await res.json();
+  } catch {
+    return null;
+  }
+  const combos = [];
+  for (const v of body.results || []) {
+    const eur = v.prices && v.prices.cardmarket != null ? Number(v.prices.cardmarket) : null;
+    if (max_eur > 0 && (eur == null || eur > max_eur)) continue;
+    combos.push({
+      id: v.id,
+      cards: (v.uses || []).map(u => u.card.name),
+      // what the combo does, with the result the user asked for first
+      produces: (v.produces || []).map(p => p.feature.name)
+        .sort((a, b) => Number(!!result && b.toLowerCase().includes(String(result).toLowerCase())) - Number(!!result && a.toLowerCase().includes(String(result).toLowerCase())))
+        .slice(0, 3),
+      eur,
+      url: `https://commanderspellbook.com/combo/${encodeURIComponent(v.id)}/`
+    });
+    if (combos.length === MAX_COMBOS) break;
+  }
+  return combos;
+}
+
 // Asks Scryfall about a query (with the page's fixed filters) and describes what is wrong, or returns null.
 // When Scryfall can't be reached, the query is trusted as it is.
 async function checkQuery(query) {
@@ -177,8 +233,23 @@ function unknownTags(query) {
 
 const ANSWER_SCHEMA = {
   type: "object",
-  properties: { query: { type: "string" }, uitleg: { type: "string" } },
-  required: ["query", "uitleg"],
+  properties: {
+    query: { type: "string" },
+    uitleg: { type: "string" },
+    combo: {
+      type: "object",
+      properties: {
+        wanted: { type: "boolean" },
+        colors: { type: "string" },
+        card: { type: "string" },
+        result: { type: "string" },
+        max_eur: { type: "number" }
+      },
+      required: ["wanted", "colors", "card", "result", "max_eur"],
+      additionalProperties: false
+    }
+  },
+  required: ["query", "uitleg", "combo"],
   additionalProperties: false
 };
 const OUTPUT_CONFIG = { effort: "low", format: { type: "json_schema", schema: ANSWER_SCHEMA } };
@@ -263,7 +334,8 @@ export default {
       answer = readAnswer(response);
       // Self-check: one correction round when the query uses a tag that doesn't exist,
       // makes Scryfall warn, or finds no cards at all.
-      const problem = answer && answer.query ? await checkQuery(String(answer.query)) : null;
+      const wantsCombos = answer && answer.combo && answer.combo.wanted;
+      const problem = answer && answer.query && !wantsCombos ? await checkQuery(String(answer.query)) : null;
       if (problem) {
         messages.push({ role: "assistant", content: response.content });
         messages.push({ role: "user", content: `${problem} Fix the query so it finds what I asked for. Reply with the corrected JSON.` });
@@ -287,6 +359,20 @@ export default {
     console.log(JSON.stringify(response.usage));
     if (response.stop_reason === "refusal") return reply(422, { error: "Claude declined to translate this request." });
     if (!answer) return reply(502, { error: "Claude's answer wasn't the expected JSON." });
+    if (answer.combo && answer.combo.wanted) {
+      console.log("combo " + JSON.stringify(answer.combo));
+      let combos = await findCombos(answer.combo);
+      // A result in words Commander Spellbook doesn't use finds nothing: then search without it.
+      if (combos && !combos.length && answer.combo.result) combos = await findCombos({ ...answer.combo, result: "" });
+      if (!combos) return reply(502, { error: "Commander Spellbook can't be reached right now." });
+      if (!combos.length) return reply(200, { query: "", uitleg: "No combos found at Commander Spellbook for this search." });
+      const names = [...new Set(combos.flatMap(c => c.cards))];
+      return reply(200, {
+        query: "(" + names.map(n => `!"${n.replace(/"/g, "")}"`).join(" OR ") + ")",
+        uitleg: `The ${combos.length} most played combos from Commander Spellbook that match; their cards are shown below.`,
+        combos
+      });
+    }
     const query = String(answer.query || "").trim();
     let uitleg = String(answer.uitleg || "");
     const unknown = unknownTags(query);

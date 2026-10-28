@@ -77,6 +77,15 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .chip { font-family: var(--mono); font-size: 12.5px; padding: 3px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--fg); white-space: nowrap; }
 .queryrow a { font-size: 13px; color: var(--accent); white-space: nowrap; }
 .explain { margin: 0; font-size: 13px; color: var(--muted); }
+.explain a { color: var(--accent); }
+.combos { display: grid; gap: 6px; }
+.combos ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.combos li { display: flex; gap: 8px; align-items: baseline; }
+.combos li button { flex: 1; min-width: 0; text-align: left; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; display: grid; gap: 1px; }
+.combos li button:hover { border-color: var(--accent); }
+.combos .cards { font-size: 13.5px; font-weight: 600; }
+.combos .does { font-size: 12px; color: var(--muted); }
+.combos li a { font-size: 12.5px; color: var(--accent); white-space: nowrap; }
 
 .history summary { cursor: pointer; font-size: 13px; color: var(--muted); }
 .history ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; }
@@ -257,6 +266,10 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
           <a id="scryfalllink" href="https://scryfall.com" target="_blank" rel="noopener">Open on Scryfall ↗</a>
         </div>
         <p id="uitleg" class="explain"></p>
+        <div id="combos" class="combos" hidden>
+          <ul id="combolist"></ul>
+          <p class="explain">Combos via <a href="https://commanderspellbook.com" target="_blank" rel="noopener">Commander Spellbook</a>. Click a combo to show only its cards.</p>
+        </div>
       </div>
 
       <details id="history" class="history" hidden>
@@ -571,7 +584,39 @@ async function translateWithClaude(zin) {
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.error || `The translator returned an error (${res.status}).`);
   if (!body.query) throw new Error(body.uitleg || "Claude couldn't turn this into a card search.");
-  return { query: body.query, uitleg: body.uitleg || "" };
+  return { query: body.query, uitleg: body.uitleg || "", combos: body.combos || [] };
+}
+
+// Search query for exactly these card names.
+const namesQuery = names => "(" + names.map(n => `!"${n.replace(/"/g, "")}"`).join(" OR ") + ")";
+
+function renderCombos(combos) {
+  const ul = $("combolist");
+  ul.replaceChildren();
+  $("combos").hidden = !combos || !combos.length;
+  for (const c of combos || []) {
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.type = "button";
+    const cards = document.createElement("span");
+    cards.className = "cards";
+    cards.textContent = c.cards.join(" + ");
+    const does = document.createElement("span");
+    does.className = "does";
+    does.textContent = "→ " + c.produces.join(", ") + (c.eur != null ? ` · ${euro.format(c.eur)}` : "");
+    b.append(cards, does);
+    b.addEventListener("click", () => {
+      $("query").value = namesQuery(c.cards);
+      runSearch($("query").value);
+    });
+    const a = document.createElement("a");
+    a.href = c.url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.textContent = "details ↗";
+    li.append(b, a);
+    ul.append(li);
+  }
 }
 
 // ---------- shared "Recent searches" (everyone with the access code) ----------
@@ -728,10 +773,11 @@ function setBusy(busy, label) {
   $("zoek").textContent = busy ? (label || "Working…") : "Translate & search";
 }
 
-function showQuery(query, uitleg) {
+function showQuery(query, uitleg, combos) {
   $("querybar").hidden = false;
   $("query").value = query;
   $("uitleg").textContent = uitleg || "";
+  renderCombos(combos);
 }
 
 async function runSearch(query, page = 1) {
@@ -1106,7 +1152,7 @@ function renderHistory() {
     b.append(zin, q);
     b.addEventListener("click", () => {
       $("zin").value = h.zin;
-      showQuery(h.query, h.uitleg);
+      showQuery(h.query, h.uitleg, h.combos);
       runSearch(h.query);
     });
     li.append(b);
@@ -1135,8 +1181,8 @@ $("searchform").addEventListener("submit", async e => {
     }
   }
   else result = translate(zin);
-  showQuery(result.query, result.uitleg);
-  addHistory({ zin, query: result.query, uitleg: result.uitleg });
+  showQuery(result.query, result.uitleg, result.combos);
+  addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
   runSearch(result.query);
   logShared(zin, result.query);
 });

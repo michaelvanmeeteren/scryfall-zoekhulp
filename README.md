@@ -38,6 +38,10 @@ browser → Worker (API-key, toegangscode, vaste instellingen) → Claude API
   `produces:`, enzovoort). Alles is vooraf bij Scryfall gecontroleerd.
 - **Zelfcontrole:** na het vertalen vraagt de Worker Scryfall of de query kaarten oplevert. Bij 0 kaarten, een
   waarschuwing van Scryfall of een niet-bestaande tag krijgt Claude één verbeterronde.
+- **Combo's:** vraag je om combo's ("infinite combos in dimir", "combos with Sol Ring", "cheap combos in boros"), dan
+  zoekt de Worker de 10 meest gespeelde combo's op bij [Commander Spellbook](https://commanderspellbook.com) (de bron
+  van EDHREC's combo-pagina's). Hun kaarten verschijnen als zoekresultaat; de combo's zelf staan onder de zoekopdracht,
+  met wat ze doen, de prijs en een link. Klik op een combo om alleen die kaarten te zien.
 - **Cache warm houden:** een Cron Trigger doet elk half uur van 10:00 tot 00:00 (Nederlandse wintertijd) een mini-aanroep
   met dezelfde prompt, zodat de cache van een uur niet verloopt. Kosten ongeveer $0,01 per dag. Het schema staat in
   `worker/wrangler.toml` onder `[triggers]`.
@@ -53,7 +57,7 @@ browser → Worker (API-key, toegangscode, vaste instellingen) → Claude API
 | API-key vervangen | `npx wrangler secret put ANTHROPIC_API_KEY` |
 | Worker opnieuw online zetten na een wijziging in `worker/src/index.js` | `npx wrangler deploy` |
 | De taglijst verversen met nieuwe Scryfall-tags (daarna `npx wrangler deploy`) | `node update-tags.mjs` |
-| De vertaler testen met 66 vragen (kost minder dan 5 cent) | `$env:ACCESS_CODE="<code>"; node eval.mjs` |
+| De vertaler testen met 68 vragen (kost minder dan 5 cent) | `$env:ACCESS_CODE="<code>"; node eval.mjs` |
 | Alle gelogde zoekopdrachten bekijken | `npx wrangler d1 execute zoekhulp-log --remote --command "SELECT * FROM searches ORDER BY id DESC"` |
 | Het logboek leegmaken | `npx wrangler d1 execute zoekhulp-log --remote --command "DELETE FROM searches"` |
 
