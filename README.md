@@ -46,7 +46,7 @@ Wijzigingen in de Worker zet je online met `npx wrangler deploy` (zie hierboven)
 
 ## Gebruik
 
-- Typ in het Engels, bijvoorbeeld `creatures mana value less than or equal to 5 in g/w/b`.
+- Typ in het Engels, bijvoorbeeld `creatures mana value less than or equal to 5 in g/w/b`. Met de toegangscode (Claude) mag het ook in het Nederlands; de ingebouwde vertaler kent alleen Engels.
 - Begin met `/s ` of `!` om direct Scryfall-syntax te gebruiken: `/s t:creature kw:flying id<=r mv<3`.
 - Pas de vertaalde zoekopdracht aan in het tweede veld en klik **Search again**.
 - Resultaten staan standaard op **EDHREC rank**: de meest gespeelde Commander-kaarten eerst. Via **Sort by** kies je ook naam, prijs, mana value of nieuwste.

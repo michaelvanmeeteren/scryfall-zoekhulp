@@ -9,11 +9,16 @@ const MAX_SENTENCE = 300;            // characters
 const ALLOWED_ORIGINS = ["https://michaelvanmeeteren.github.io", "http://localhost:8010"];
 
 const SYSTEM_PROMPT = `You translate a search request for Magic: The Gathering cards into Scryfall search syntax.
-The request is always in English. The user always builds Commander decks with paper cards.
+The request is in English or Dutch. The user always builds Commander decks with paper cards.
 The page adds "f:commander game:paper" itself: never add f: or game: yourself.
 
 Reply with JSON only, no other text:
-{"query": "<scryfall query>", "uitleg": "<one short sentence in English describing what the query finds>"}
+{"query": "<scryfall query>", "uitleg": "<one short sentence, in the language of the request, describing what the query finds>"}
+
+Dutch words you will see: wit=white, blauw=blue, zwart=black, rood=red, groen=green, kleurloos=colorless,
+wezens=creatures, draken=dragons, landen=lands, spreuken=instants and sorceries, goedkoop=cheap,
+"die ik als commander kan gebruiken" = is:commander, "kaarten trekken" = card draw, "hoogstens"/"of minder" = <=,
+"minder dan"/"onder" = <, "minstens"/"of meer" = >=, "meest gespeeld" = order:edhrec, "goedkoopste eerst" = order:eur dir:asc.
 
 Syntax:
 - Color identity (default for any colors the user names): id<=bgw, id<=r, id<=esper
@@ -56,7 +61,10 @@ blue instants that draw a card => t:instant o:"draw a card" id<=u
 lands for w/u that make any color, no basics => t:land o:"any color" -t:basic id<=wu
 green creatures with 5+ power for 4 mana or less, cheapest first => t:creature pow>=5 mv<=4 id<=g order:eur dir:asc
 ramp for 2 mana or less in green => function:ramp mv<=2 id<=g
-burn spells under 1 euro in mono red => (t:instant OR t:sorcery) o:damage eur<1 id<=r`;
+burn spells under 1 euro in mono red => (t:instant OR t:sorcery) o:damage eur<1 id<=r
+ik wil alle gruul draken zien die ik als commander kan gebruiken => is:commander t:dragon id=rg
+goedkope removal in zwart groen => otag:removal eur<2 id<=bg
+vliegende wezens van hoogstens 3 mana in wit => t:creature kw:flying mv<=3 id<=w`;
 
 const ANSWER_SCHEMA = {
   type: "object",
