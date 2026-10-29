@@ -194,20 +194,11 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .settings a { color: var(--accent); }
 .pager:empty { display: none; }
 
-/* first-visit welcome, help and clearer labels */
+/* help and clearer labels */
 h2, .help h3 { font-family: var(--serif); font-weight: 700; letter-spacing: 0.01em; }
-.list h2, .welcome h2, .settings h2 { font-size: 21px; }
+.list h2, .settings h2 { font-size: 21px; }
 .help h3 { font-size: 18px; }
-.qlabel, .cmdrlabel, .tryhead, .filterbar .group > span { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
-.welcome { padding: 18px; display: grid; gap: 12px; }
-.welcome h2 { margin: 0; font-size: 18px; }
-.steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 10px; }
-.steps li { counter-increment: step; display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; }
-.steps li::before { content: counter(step) "."; font-family: var(--serif); font-size: 24px; font-weight: 700; line-height: 1; color: var(--accent); }
-.tryhead { margin: 4px 0 0; font-weight: 600; }
-.examples { display: flex; flex-wrap: wrap; gap: 8px; }
-.example { max-width: 100%; padding: 7px 12px; border-radius: 3px; border: 1px solid var(--line); background: transparent; color: var(--fg); }
-.example:hover { border-color: var(--accent); color: var(--accent); }
+.qlabel, .cmdrlabel, .filterbar .group > span { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
 .keynote { margin: 0; padding: 2px 0 2px 10px; border-left: 2px solid var(--accent); font-size: 13.5px; color: var(--muted); }
 .qlabel { font-size: 13px; font-weight: 600; }
 .optional { font-weight: 400; color: var(--muted); }
@@ -307,17 +298,10 @@ body.home .topbar .btn { color: var(--fg); border-color: var(--line); }
 
 .layout { max-width: 1500px; margin: 0 auto; padding: 14px max(16px, 2vw) 24px; }
 section.home { max-width: 760px; margin: 0 auto; display: grid; gap: 22px; }
-.homeline { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; align-items: center; color: var(--muted); font-size: 13.5px; text-align: center; }
 .home .cmdr { justify-content: center; }
 .cmdrpick { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; min-width: 0; }   /* the commander and its remove link stay together */
 .cmdrpick .chip { min-width: 0; max-width: calc(100vw - 110px); overflow: hidden; text-overflow: ellipsis; }   /* very long names are cut off with … (vw: a % would not stop the page from widening) */
 .cmdrpick[hidden] { display: none; }
-.examples { justify-content: center; }
-.welcome { padding: 0; border: 0; background: none; }
-.welcome h2 { text-align: center; }
-.steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.steps li { grid-template-columns: 1fr; gap: 6px; text-align: center; justify-items: center; }
-@media (max-width: 700px) { .steps { grid-template-columns: 1fr; } }
 
 /* results view */
 .strip { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
@@ -381,6 +365,7 @@ html.mobile #listtoggle { display: none; }
   /* the start screen sits in the middle of the window */
   html:not(.mobile) body.home { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
   html:not(.mobile) body.home .topbar { padding-top: 24px; }
+  html:not(.mobile) body.home .foot { position: fixed; left: 0; right: 0; bottom: 10px; text-align: center; }
 }
 /* big screens: the start screen grows with the window instead of staying a small column in the middle */
 @media (min-width: 1500px) {
@@ -435,7 +420,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
     <button id="zoek" class="btn primary" type="submit">Search</button>
   </form>
   <nav class="topbuttons" aria-label="Page">
-    <button id="listtoggle" class="btn small" type="button" aria-controls="drawer">List<span id="listcount">0</span></button>
+    <button id="listtoggle" class="btn small" type="button" aria-controls="drawer" title="Your card list. Import your own deck here to see which cards you already have.">List &amp; your deck<span id="listcount">0</span></button>
     <button id="themetoggle" class="btn small" type="button"></button>
     <button class="btn small" type="button" data-openhelp>Help</button>
     <button id="opensettings" class="btn small" type="button" aria-label="Settings">Settings</button>
@@ -566,21 +551,6 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
         </form>
         <span id="cmdrnote" class="hint"></span>
       </div></div>
-    <div class="welcome">
-      <p class="tryhead" style="text-align:center">Examples</p>
-      <div class="examples">
-        <button type="button" class="example">cheap removal in black</button>
-        <button type="button" class="example">flying creatures under 3 mana in red</button>
-        <button type="button" class="example">gruul dragons that can be my commander</button>
-        <button type="button" class="example">board wipes in white</button>
-      </div>
-    </div>
-    <ol class="steps">
-      <li><span><b>Describe what you need</b> in plain words. No syntax required.</span></li>
-      <li><span><b>Click a card</b> to add it to your list. The <i>i</i> on a card shows its details.</span></li>
-      <li><span><b>Copy decklist</b> from your list and paste it into Moxfield or another deck site.</span></li>
-    </ol>
-    <p class="homeline">Commander filter, follow-up questions, combos and deck import: <button class="linkbtn" type="button" data-openhelp>Help</button></p>
   </section>
 
   <section id="results" class="results" aria-label="Results" hidden>
@@ -646,7 +616,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 <aside id="drawer" class="drawer" aria-label="Card list">
   <div id="list" class="list">
     <div class="listhead">
-      <h2>Card list</h2>
+      <h2>List &amp; your deck</h2>
       <button id="closelist" class="btn small closelist" type="button">Close</button>
     </div>
     <div id="totals" class="totals"></div>
@@ -1315,7 +1285,7 @@ function ownsCard(name) {
 }
 
 function renderDeck() {
-  $("deckinfo").textContent = state.deck.size ? `My deck: ${plural(state.deck.size, "card")} imported` : "No deck imported.";
+  $("deckinfo").textContent = state.deck.size ? `My deck: ${plural(state.deck.size, "card")} imported` : "Import your own deck to see which cards you already have.";
   $("importdeck").textContent = state.deck.size ? "Replace deck" : "Import deck";
   renderFilterbar();
   refreshOwned();
@@ -2218,14 +2188,10 @@ $("themetoggle").addEventListener("click", () => {
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderThemeButton);
 renderThemeButton();
 
-// help window and the example searches on the welcome panel
+// help window
 document.querySelectorAll("[data-openhelp]").forEach(b => b.addEventListener("click", () => {
   $("helpdialog").showModal();
   $("helpdialog").scrollTop = 0;   // the "Got it" button gets focus, which would scroll to the bottom
-}));
-document.querySelectorAll(".example").forEach(b => b.addEventListener("click", () => {
-  $("zin").value = b.textContent;
-  $("searchform").requestSubmit();
 }));
 $("cmdrclear").addEventListener("click", () => {
   state.commander = null;
