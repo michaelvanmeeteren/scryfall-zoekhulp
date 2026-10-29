@@ -298,6 +298,8 @@ body.home .topbar .btn { color: var(--fg); border-color: var(--line); }
 .home { max-width: 760px; margin: 0 auto; display: grid; gap: 22px; }
 .homeline { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; align-items: center; color: var(--muted); font-size: 13.5px; text-align: center; }
 .home .cmdr { justify-content: center; }
+.cmdrpick { display: inline-flex; align-items: center; gap: 8px; }   /* the commander and its remove link stay together */
+.cmdrpick[hidden] { display: none; }
 .examples { justify-content: center; }
 .welcome { padding: 0; border: 0; background: none; }
 .welcome h2 { text-align: center; }
@@ -508,13 +510,14 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 
 <main class="layout">
   <section id="start" class="home" aria-label="Start">
-    <p class="homeline">English or Dutch · Commander-legal paper cards only</p>
     <p id="nokey" class="keynote" hidden>Have the access code? <button class="linkbtn" type="button" data-opensettings>Enter it</button> for smarter translation by Claude.</p>
     <div id="cmdrhome"><div id="cmdrrow" class="cmdr">
         <span class="cmdrlabel">Commander <span class="optional">(optional)</span></span>
-        <span id="cmdrchip" class="chip" hidden></span>
+        <span id="cmdrpick" class="cmdrpick" hidden>
+          <span id="cmdrchip" class="chip"></span>
+          <button id="cmdrclear" class="linkbtn" type="button">remove</button>
+        </span>
         <button id="cmdredhrec" class="btn small" type="button" hidden>EDHREC top cards</button>
-        <button id="cmdrclear" class="linkbtn" type="button" hidden>remove</button>
         <form id="cmdrform" class="cmdrform">
           <input id="cmdrinput" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. Atraxa" aria-label="Commander name" list="cmdrlist">
           <datalist id="cmdrlist"></datalist>
@@ -1057,7 +1060,7 @@ function renderFilterbar() {
 function renderCommander() {
   const c = state.commander;
   $("cmdredhrec").hidden = !c;
-  $("cmdrchip").hidden = $("cmdrclear").hidden = !c;
+  $("cmdrpick").hidden = !c;
   $("cmdrform").hidden = !!c;
   $("cmdrnote").textContent = c ? "Searches stay within these colors." : "Limits every search to its colors.";
   if (c) $("cmdrchip").textContent = `${c.name} · ${(c.colors || "c").toUpperCase().split("").join("")}`;
