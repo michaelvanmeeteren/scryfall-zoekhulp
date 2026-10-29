@@ -205,9 +205,10 @@ h2, .help h3 { font-family: var(--serif); font-weight: 700; letter-spacing: 0.01
 .help { width: min(620px, calc(100% - 32px)); max-height: calc(100vh - 48px); overflow: auto; }
 .help h3 { margin: 6px 0 2px; font-size: 15px; }
 .help p { margin: 0; font-size: 14px; }
-.refine { display: flex; gap: 6px; flex: 1 1 100%; max-width: 620px; order: -1; }   /* its own line, first under the results info */
-.refine[hidden] { display: none; }
-.refine input { flex: 1; min-width: 0; padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
+.refinetoggle { flex: none; padding: 0 12px; border: 1px solid #3a3220; border-radius: 4px; background: transparent; color: var(--bar-fg); font-weight: 600; }
+.refinetoggle[hidden], body.home .refinetoggle { display: none; }
+.refinetoggle[aria-pressed="true"] { background: var(--gold); border-color: var(--gold); color: #0b0b0c; }
+html.mobile .refinetoggle { margin-right: 6px; border-radius: 6px; }
 .help ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 14px; }
 .help code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
 
@@ -426,6 +427,8 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
   <button id="home" class="brandbtn" type="button" title="Back to the start"><img class="brandlogo" src="logo.svg" alt="">SpellSeekr</button>
   <p class="tagline">Commander card search in plain words</p>
   <form id="searchform" class="searchrow">
+    <button id="refinetoggle" class="refinetoggle" type="button" aria-pressed="false" hidden
+      title="On: the search bar changes the results on screen. Tip: start with + to refine once.">Refine</button>
     <input id="zin" type="search" autocomplete="off" placeholder="Describe the cards you want, e.g. cheap removal in black" aria-label="Describe the cards you want">
     <button id="zoek" class="btn primary" type="submit">Search</button>
   </form>
@@ -468,7 +471,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
       <li>Describe what you need: <i>cheap removal in black</i>, <i>blue instants that draw a card</i>. Dutch works with the access code.</li>
       <li><b>Cheap</b> = mana value 2 or less, <b>expensive</b> = 6 or more. For price: <i>budget</i> (under €2) or <i>under 1 euro</i>.</li>
       <li>Know Scryfall's syntax? Start with <code>/s</code>: <code>/s t:elf mv=1</code>. Only Commander-legal paper cards are shown.</li>
-      <li><b>Refine</b> (under the results) changes the search on screen: <i>only instants</i>, <i>under 1 euro</i>. The search bar always starts a new search.</li>
+      <li>To change the results instead of searching again, switch on <b>Refine</b> in the search bar (or start with <b>+</b>): <i>only instants</i>, <i>under 1 euro</i>.</li>
       <li>With the access code you can ask for combos: <i>2 card combos in dimir</i>.</li>
     </ul>
 
@@ -585,11 +588,6 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
     </div>
     <div class="stripsub">
       <div id="cmdrresults"></div>
-      <form id="refineform" class="refine" hidden>
-        <input id="refinetext" type="text" autocomplete="off" spellcheck="false" aria-label="Refine these results"
-          placeholder="Refine these results, e.g. only instants or under 1 euro">
-        <button class="btn small" type="submit">Refine</button>
-      </form>
       <details id="querybar" class="querybar">
         <summary>Edit query</summary>
         <div class="queryrow">
@@ -1982,6 +1980,7 @@ function closeList() {
 // Home: big centered search. Results: top bar, info strip and grid. Shared parts move with the view.
 function setView(home) {
   document.body.classList.toggle("home", home);
+  if (home && refining) setRefining(false);
   $("start").hidden = !home;
   $("results").hidden = home;
   (home ? $("cmdrhome") : $("cmdrresults")).append($("cmdrrow"));
@@ -2102,7 +2101,18 @@ function renderHistory() {
 // The search on screen that the Refine field changes; null for combos, EDHREC lists and "nothing to search".
 function setPrevious(p) {
   state.previous = p;
-  $("refineform").hidden = !p;
+  $("refinetoggle").hidden = !p;
+  setRefining(refining && !!p);
+}
+
+// Refine mode: the search bar changes the search on screen instead of starting a new one.
+let refining = false;
+const NEW_SEARCH_HINT = $("zin").placeholder;
+function setRefining(on) {
+  refining = on;
+  $("refinetoggle").setAttribute("aria-pressed", on ? "true" : "false");
+  const chain = state.previous && state.previous.zin;
+  $("zin").placeholder = on && chain ? `${chain} → refine, e.g. only instants` : NEW_SEARCH_HINT;
 }
 
 // ---------- wiring ----------
@@ -2111,6 +2121,10 @@ $("searchform").addEventListener("submit", async e => {
   const zin = $("zin").value.trim();
   if (!zin || $("zoek").disabled) return;
   if (isMobile) $("zin").blur();   // closes the on-screen keyboard, so the results can be seen
+  if (state.previous && !document.body.classList.contains("home") && (refining || zin.startsWith("+"))) {
+    refineSearch(zin.replace(/^\+\s*/, ""));
+    return;
+  }
   let result;
   if (/^\/s(\s|$)/i.test(zin)) result = { query: zin.slice(2).trim(), uitleg: "Scryfall syntax, used as typed." };
   else if (zin.startsWith("!")) result = { query: zin.slice(1).trim(), uitleg: "Scryfall syntax, used as typed." };
@@ -2144,12 +2158,9 @@ $("searchform").addEventListener("submit", async e => {
 
 // Refine: Claude changes the search on screen ("only instants"); without the code the built-in translator's terms
 // are added to it.
-$("refineform").addEventListener("submit", async e => {
-  e.preventDefault();
-  const text = $("refinetext").value.trim();
+async function refineSearch(text) {
   const prev = state.previous;
-  if (!text || !prev || $("zoek").disabled) return;
-  if (isMobile) $("refinetext").blur();
+  if (!text || !prev) return;
   const added = () => {
     const t = translate(text);
     return { query: `${prev.query} ${t.query}`.trim(), uitleg: `Added to the search: ${t.uitleg}` };
@@ -2167,13 +2178,18 @@ $("refineform").addEventListener("submit", async e => {
   } else result = added();
   if (!result.query || result.edhrec) { message("That can't be used to refine this search. Use the search bar for a new search.", true); return; }
   const zin = `${prev.zin} → ${text}`;
-  $("refinetext").value = "";
+  $("zin").value = "";
   showQuery(result.query, result.uitleg, result.combos, result.warn);
   pushSearchUrl(result.query, zin);
   addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
   setPrevious(result.combos && result.combos.length ? null : { zin, query: result.query });
   resetFilters();
   runSearch(result.query);
+}
+$("refinetoggle").addEventListener("click", () => {
+  setRefining(!refining);
+  $("zin").value = "";
+  $("zin").focus();
 });
 
 $("opnieuw").addEventListener("click", () => {
