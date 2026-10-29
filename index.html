@@ -205,6 +205,9 @@ h2, .help h3 { font-family: var(--serif); font-weight: 700; letter-spacing: 0.01
 .help { width: min(620px, calc(100% - 32px)); max-height: calc(100vh - 48px); overflow: auto; }
 .help h3 { margin: 6px 0 2px; font-size: 15px; }
 .help p { margin: 0; font-size: 14px; }
+.refine { display: flex; gap: 6px; flex: 1 1 100%; max-width: 620px; order: -1; }   /* its own line, first under the results info */
+.refine[hidden] { display: none; }
+.refine input { flex: 1; min-width: 0; padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
 .help ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 14px; }
 .help code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
 
@@ -465,7 +468,8 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
       <li>Describe what you need: <i>cheap removal in black</i>, <i>blue instants that draw a card</i>. Dutch works with the access code.</li>
       <li><b>Cheap</b> = mana value 2 or less, <b>expensive</b> = 6 or more. For price: <i>budget</i> (under €2) or <i>under 1 euro</i>.</li>
       <li>Know Scryfall's syntax? Start with <code>/s</code>: <code>/s t:elf mv=1</code>. Only Commander-legal paper cards are shown.</li>
-      <li>With the access code: follow-ups like <i>only under 1 euro</i>, and combos like <i>2 card combos in dimir</i>.</li>
+      <li><b>Refine</b> (under the results) changes the search on screen: <i>only instants</i>, <i>under 1 euro</i>. The search bar always starts a new search.</li>
+      <li>With the access code you can ask for combos: <i>2 card combos in dimir</i>.</li>
     </ul>
 
     <h3>Commander</h3>
@@ -581,6 +585,11 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
     </div>
     <div class="stripsub">
       <div id="cmdrresults"></div>
+      <form id="refineform" class="refine" hidden>
+        <input id="refinetext" type="text" autocomplete="off" spellcheck="false" aria-label="Refine these results"
+          placeholder="Refine these results, e.g. only instants or under 1 euro">
+        <button class="btn small" type="submit">Refine</button>
+      </form>
       <details id="querybar" class="querybar">
         <summary>Edit query</summary>
         <div class="queryrow">
@@ -933,13 +942,13 @@ function translate(input) {
 // Visitors only need the shared access code.
 const WORKER_URL = "https://scryfall-zoekhulp.michaelvanmeeteren.workers.dev";
 
-async function translateWithClaude(zin) {
+async function translateWithClaude(zin, previous = null) {
   let res;
   try {
     res = await fetch(WORKER_URL + "/translate", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ zin, code: settings.code, commander: state.commander, previous: state.previous,
+      body: JSON.stringify({ zin, code: settings.code, commander: state.commander, previous,
         companion: state.companion ? { name: state.companion, rule: $("compnote").textContent } : null })
     });
   } catch {
@@ -1273,6 +1282,7 @@ function suggestCommanders() {
 function showNothing(title, uitleg) {
   showQuery("", uitleg);
   state.search = null;
+  setPrevious(null);
   setView(false);
   $("results").classList.add("nosearch");
   renderFilterbar();
@@ -1349,7 +1359,7 @@ function showEdhrec(commanderName, tag, cards, uitleg) {
   const cache = new Map();
   for (let i = 0; i < cards.length; i += API_PAGE) cache.set(i / API_PAGE + 1, cards.slice(i, i + API_PAGE));
   state.search = { query: label, full: label, order: state.order, size: state.size, total: cards.length, cache, page: 1, static: true, warnings: [], details: null };
-  state.previous = null;
+  setPrevious(null);
   showQuery("", uitleg || `Most played cards in ${commanderName} decks on EDHREC${tag ? ` (${tag})` : ""}.`);
   $("uitleg").textContent += " Percentages: share of EDHREC decks with this commander that play the card.";
   if (companionRule()) $("uitleg").textContent += ` Only cards that fit your companion (${$("compnote").textContent}).`;
@@ -2080,13 +2090,19 @@ function renderHistory() {
     b.addEventListener("click", () => {
       $("zin").value = h.zin;
       showQuery(h.query, h.uitleg, h.combos);
-      state.previous = h.combos && h.combos.length ? null : { zin: h.zin, query: h.query };
+      setPrevious(h.combos && h.combos.length ? null : { zin: h.zin, query: h.query });
       pushSearchUrl(h.query, h.zin);
       runSearch(h.query);
     });
     li.append(b);
     ul.append(li);
   }
+}
+
+// The search on screen that the Refine field changes; null for combos, EDHREC lists and "nothing to search".
+function setPrevious(p) {
+  state.previous = p;
+  $("refineform").hidden = !p;
 }
 
 // ---------- wiring ----------
@@ -2121,7 +2137,41 @@ $("searchform").addEventListener("submit", async e => {
   pushSearchUrl(result.query, zin);
   addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
   // a combo result is a list of card names, which makes no sense to refine; anything else can be
-  state.previous = result.combos && result.combos.length ? null : { zin, query: result.query };
+  setPrevious(result.combos && result.combos.length ? null : { zin, query: result.query });
+  resetFilters();
+  runSearch(result.query);
+});
+
+// Refine: Claude changes the search on screen ("only instants"); without the code the built-in translator's terms
+// are added to it.
+$("refineform").addEventListener("submit", async e => {
+  e.preventDefault();
+  const text = $("refinetext").value.trim();
+  const prev = state.previous;
+  if (!text || !prev || $("zoek").disabled) return;
+  if (isMobile) $("refinetext").blur();
+  const added = () => {
+    const t = translate(text);
+    return { query: `${prev.query} ${t.query}`.trim(), uitleg: `Added to the search: ${t.uitleg}` };
+  };
+  let result;
+  if (settings.code) {
+    setBusy(true, "Refining…");
+    try {
+      result = await translateWithClaude(text, prev);
+    } catch (err) {
+      result = { ...added(), uitleg: `${err.message} ${added().uitleg}` };
+    } finally {
+      setBusy(false);
+    }
+  } else result = added();
+  if (!result.query || result.edhrec) { message("That can't be used to refine this search. Use the search bar for a new search.", true); return; }
+  const zin = `${prev.zin} → ${text}`;
+  $("refinetext").value = "";
+  showQuery(result.query, result.uitleg, result.combos, result.warn);
+  pushSearchUrl(result.query, zin);
+  addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
+  setPrevious(result.combos && result.combos.length ? null : { zin, query: result.query });
   resetFilters();
   runSearch(result.query);
 });
@@ -2204,7 +2254,7 @@ function searchFromUrl() {
   if (!query) return false;
   $("zin").value = params.get("s") || query;
   showQuery(query, params.get("s") ? "" : "Search from a link.");
-  state.previous = { zin: params.get("s") || query, query };
+  setPrevious({ zin: params.get("s") || query, query });
   resetFilters();
   runSearch(query);
   return true;
