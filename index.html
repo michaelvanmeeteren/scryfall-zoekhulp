@@ -883,7 +883,7 @@ async function setCommander(name) {
   }
 }
 
-// Suggestions while typing a commander: the most played commanders whose name contains the text.
+// Suggestions while typing a commander: the most played commanders whose name starts with the text.
 let suggestTimer, suggestRun = 0;
 function suggestCommanders() {
   clearTimeout(suggestTimer);
@@ -894,7 +894,9 @@ function suggestCommanders() {
   suggestTimer = setTimeout(async () => {
     const run = ++suggestRun;
     try {
-      const body = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q: `is:commander name:"${text.replace(/"/g, "")}"`, order: "edhrec" }));
+      // name:/^…/ is a Scryfall regex: only names that begin with what was typed
+      const prefix = text.replace(/[\\^$.|?*+()[\]{}\/]/g, "\\$&");
+      const body = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q: `is:commander name:/^${prefix}/`, order: "edhrec" }));
       if (run !== suggestRun) return;   // a newer request has started meanwhile
       $("cmdrlist").replaceChildren(...(body.data || []).slice(0, 8).map(c => {
         const o = document.createElement("option");
