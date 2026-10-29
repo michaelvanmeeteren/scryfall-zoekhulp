@@ -2104,7 +2104,7 @@ function renderHistory() {
     q.textContent = h.query;
     b.append(zin, q);
     b.addEventListener("click", () => {
-      $("zin").value = h.zin;
+      $("zin").value = refining ? "" : h.zin;   // when refining, the steps are already shown before the field
       showQuery(h.query, h.uitleg, h.combos);
       setPrevious(h.combos && h.combos.length ? null : { zin: h.zin, query: h.query });
       pushSearchUrl(h.query, h.zin);
@@ -2202,7 +2202,10 @@ $("searchform").addEventListener("submit", async e => {
 // are added to it.
 async function refineSearch(text) {
   const prev = state.previous;
-  if (!text || !prev) return;
+  if (!prev) return;
+  // the steps so far may have been typed or pasted along: only the new part counts
+  if (text.startsWith(prev.zin)) text = text.slice(prev.zin.length).replace(/^\s*→\s*/, "").trim();
+  if (!text) return;
   const added = () => {
     const t = translate(text);
     return { query: `${prev.query} ${t.query}`.trim(), uitleg: `Added to the search: ${t.uitleg}` };
