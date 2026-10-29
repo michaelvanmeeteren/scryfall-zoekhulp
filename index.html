@@ -339,6 +339,9 @@ body.home .topbar .btn { color: var(--fg); border-color: var(--line); }
   background: rgb(11 11 12 / 0.8); color: var(--gold); font-size: 17px; line-height: 1; }
 .flipbtn:hover, .tile.flipped .flipbtn { background: var(--gold); color: #0b0b0c; }
 html.mobile .flipbtn { width: 36px; height: 36px; font-size: 20px; }
+.card img, #cd-img { transition: transform 0.16s ease-in-out; }
+.card img.turning, html.mobile .card img.turning, #cd-img.turning { transform: perspective(900px) rotateY(90deg); }
+@media (prefers-reduced-motion: reduce) { .card img, #cd-img { transition: none; } }
 .cd-imgbox { display: grid; gap: 8px; justify-items: center; }
 .carddialog { width: min(860px, calc(100% - 24px)); max-height: calc(100vh - 32px); overflow: auto; }
 .cardpage { display: grid; grid-template-columns: minmax(0, 300px) 1fr; gap: 20px; align-items: start; }
@@ -1488,7 +1491,7 @@ function render(cards, page, pages) {
       flip.setAttribute("aria-label", `Show the other side of ${card.name}`);
       flip.addEventListener("click", () => {
         card.flipped = !card.flipped;
-        img.src = card.flipped ? card.back : card.img;
+        turnImage(img, card.flipped ? card.back : card.img);
         tile.classList.toggle("flipped", card.flipped);
       });
       tile.append(flip);
@@ -1788,16 +1791,31 @@ function setView(home) {
 
 // The card page behind the "i" on a card.
 let shownCard = null;
+// Turns a card image over: it narrows to nothing, shows the other side and widens again.
+// The other side is loaded first, so it doesn't appear half-drawn.
+async function turnImage(img, src) {
+  const turn = img.turnCount = (img.turnCount || 0) + 1;
+  const next = new Image();
+  next.src = src;
+  const loaded = next.decode().catch(() => {});
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { await loaded; img.src = src; return; }
+  img.classList.add("turning");
+  await Promise.all([loaded, new Promise(r => setTimeout(r, 160))]);
+  if (turn !== img.turnCount) return;   // clicked again meanwhile: the newer turn finishes the job
+  img.src = src;
+  img.classList.remove("turning");
+}
+
 function flipShownCard() {
   const card = shownCard;
   if (!card || !card.back) return;
   card.flipped = !card.flipped;
-  $("cd-img").src = card.flipped ? card.backLarge : card.large || card.img;
+  turnImage($("cd-img"), card.flipped ? card.backLarge : card.large || card.img);
   // keep the tile in the results on the same side
   for (const tile of document.querySelectorAll(".tile")) {
     if (tile.dataset.name !== card.name) continue;
     const img = tile.querySelector(".card img");
-    if (img) img.src = card.flipped ? card.back : card.img;
+    if (img) turnImage(img, card.flipped ? card.back : card.img);
     tile.classList.toggle("flipped", card.flipped);
   }
 }
