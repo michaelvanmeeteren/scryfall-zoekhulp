@@ -6,6 +6,9 @@
 <title>Scryfall Zoekhulp</title>
 <link rel="icon" href="data:,">
 <script>try { const t = JSON.parse(localStorage.getItem("szh.theme")); if (t) document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 /* Layout: header on top, search + card grid on the left, a sticky list column on the right; stacked on narrow screens. */
 /* Colors: black & gold when dark, ivory & bronze-gold when light. The page follows the device,
@@ -23,9 +26,10 @@
   --note-bg: #fbf0d2;
   --note-fg: #6b4a00;
   --shadow: 0 1px 2px rgb(60 45 10 / 0.08), 0 4px 12px rgb(60 45 10 / 0.08);
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
   --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
-  --radius: 10px;
+  --radius: 4px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -70,7 +74,7 @@ button { cursor: pointer; }
 code, .mono { font-family: var(--mono); font-size: 0.92em; }
 
 .top { display: flex; align-items: baseline; gap: 12px; padding: 14px max(16px, 3vw) 0; flex-wrap: wrap; }
-.top h1 { color: var(--accent); margin: 0; font-size: 20px; letter-spacing: -0.01em; }
+.top h1 { font-family: var(--serif); font-weight: 700; font-size: 27px; letter-spacing: 0.01em; color: var(--accent); margin: 0; font-size: 20px; letter-spacing: -0.01em; }
 .top p { margin: 0; color: var(--muted); font-size: 13px; }
 
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; padding: 14px max(16px, 3vw) 24px; align-items: start; }
@@ -81,8 +85,8 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 /* search */
 .search { padding: 14px; display: grid; gap: 10px; }
 .searchrow { display: flex; gap: 8px; }
-.searchrow input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
-.btn { padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); white-space: nowrap; }
+.searchrow input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); }
+.btn { padding: 9px 14px; border-radius: 4px; border: 1px solid var(--line); background: var(--surface); white-space: nowrap; }
 .btn:hover { border-color: var(--accent); }
 .btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
 .btn.small { padding: 5px 10px; font-size: 13px; }
@@ -91,15 +95,15 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 
 .querybar { display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px; }
 .queryrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.queryrow input { flex: 1 1 260px; min-width: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-family: var(--mono); font-size: 14px; }
-.chip { font-family: var(--mono); font-size: 12.5px; padding: 3px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--fg); white-space: nowrap; }
+.queryrow input { flex: 1 1 260px; min-width: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); font-family: var(--mono); font-size: 14px; }
+.chip { font-family: var(--mono); font-size: 12.5px; padding: 3px 8px; border-radius: 3px; background: var(--accent-soft); color: var(--fg); white-space: nowrap; }
 .queryrow a { font-size: 13px; color: var(--accent); white-space: nowrap; }
 .explain { margin: 0; font-size: 13px; color: var(--muted); }
 .explain a { color: var(--accent); }
 .combos { display: grid; gap: 6px; }
 .combos ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .combos li { display: flex; gap: 8px; align-items: baseline; }
-.combos li button { flex: 1; min-width: 0; text-align: left; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; display: grid; gap: 1px; }
+.combos li button { flex: 1; min-width: 0; text-align: left; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 6px 9px; display: grid; gap: 1px; }
 .combos li button:hover { border-color: var(--accent); }
 .combos .cards { font-size: 13.5px; font-weight: 600; }
 .combos .does { font-size: 12px; color: var(--muted); }
@@ -107,7 +111,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 
 .history summary { cursor: pointer; font-size: 13px; color: var(--muted); }
 .history ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; }
-.history button { width: 100%; text-align: left; background: none; border: 0; padding: 4px 6px; border-radius: 6px; display: flex; gap: 10px; justify-content: space-between; }
+.history button { width: 100%; text-align: left; background: none; border: 0; padding: 4px 6px; border-radius: 4px; display: flex; gap: 10px; justify-content: space-between; }
 .history button:hover { background: var(--accent-soft); }
 .history .q { font-family: var(--mono); font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
 
@@ -117,21 +121,21 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .toolbar .count { font-weight: 600; }
 .toolbar .controls { display: flex; gap: 14px; flex-wrap: wrap; }
 .toolbar label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
-.toolbar select { padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); }
-.note { background: var(--note-bg); color: var(--note-fg); border-radius: 8px; padding: 8px 12px; font-size: 13.5px; margin-bottom: 10px; }
+.toolbar select { padding: 4px 6px; border-radius: 4px; border: 1px solid var(--line); background: var(--surface); }
+.note { background: var(--note-bg); color: var(--note-fg); border-radius: 4px; padding: 8px 12px; font-size: 13.5px; margin-bottom: 10px; }
 .note.error { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
 .empty { padding: 40px 16px; text-align: center; color: var(--muted); }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min, 150px), 100%), 1fr)); gap: 14px; }
 .sizer { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
-.sizer button { width: 30px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-size: 16px; font-weight: 700; line-height: 1; }
+.sizer button { width: 30px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); font-size: 16px; font-weight: 700; line-height: 1; }
 .sizer button:disabled { opacity: 0.4; cursor: default; }
 .card { position: relative; display: grid; width: 100%; gap: 4px; padding: 0; border: 0; background: none; text-align: left; }
 .card img { width: 100%; aspect-ratio: 488 / 680; border-radius: 4.75% / 3.5%; display: block; background: var(--line); box-shadow: var(--shadow); transition: transform 0.12s; }
 .card:hover img { transform: translateY(-2px); }
 .tile { position: relative; min-width: 0; }
 .tile.picked .card img { outline: 3px solid var(--accent); outline-offset: 1px; }
-.picker { position: absolute; top: 6px; right: 6px; display: flex; align-items: center; border-radius: 99px; background: var(--accent); color: var(--accent-fg); box-shadow: var(--shadow); overflow: hidden; }
+.picker { position: absolute; top: 6px; right: 6px; display: flex; align-items: center; border-radius: 3px; background: var(--accent); color: var(--accent-fg); box-shadow: var(--shadow); overflow: hidden; }
 .picker .minus { width: 30px; height: 28px; padding: 0; border: 0; border-right: 1px solid color-mix(in srgb, var(--accent-fg) 30%, transparent); background: transparent; color: inherit; font-size: 17px; font-weight: 700; line-height: 1; }
 .picker .minus:hover { background: rgb(0 0 0 / 0.18); }
 .picker .badge { min-width: 28px; height: 28px; padding: 0 9px 0 7px; font-weight: 700; display: grid; place-items: center; font-variant-numeric: tabular-nums; }
@@ -141,7 +145,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .card .meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 .pager { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; margin: 14px 0; }
-.pager button { min-width: 34px; padding: 5px 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; font-variant-numeric: tabular-nums; }
+.pager button { min-width: 34px; padding: 5px 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 4px; font-variant-numeric: tabular-nums; }
 .pager button[aria-current="page"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 700; }
 .pager .gap { padding: 0 4px; color: var(--muted); }
 .pager .label { width: 100%; text-align: center; font-size: 13px; color: var(--muted); margin-top: 4px; }
@@ -153,7 +157,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .recent { padding: 14px; display: grid; gap: 8px; }
 .recent h2 { margin: 0; font-size: 16px; }
 .recent ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-.recent li button { width: 100%; text-align: left; background: none; border: 0; padding: 6px; border-radius: 6px; display: grid; gap: 1px; }
+.recent li button { width: 100%; text-align: left; background: none; border: 0; padding: 6px; border-radius: 4px; display: grid; gap: 1px; }
 .recent li button:hover { background: var(--accent-soft); }
 .recent .zin { font-size: 13.5px; overflow-wrap: anywhere; }
 .recent .q { font-family: var(--mono); font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -163,7 +167,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--line); }
 .qty { display: inline-flex; align-items: center; gap: 2px; }
-.qty button, .remove { width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); padding: 0; line-height: 1; }
+.qty button, .remove { width: 24px; height: 24px; border-radius: 4px; border: 1px solid var(--line); background: var(--surface); padding: 0; line-height: 1; }
 .qty span { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
 .list .cardname { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list .cardname small { color: var(--muted); font-family: var(--mono); font-size: 11.5px; margin-left: 4px; }
@@ -174,12 +178,12 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .listactions { display: flex; gap: 8px; flex-wrap: wrap; }
 .confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
 .confirm .btn.danger { border-color: var(--danger); color: var(--danger); }
-.list textarea { width: 100%; min-height: 140px; font-family: var(--mono); font-size: 12.5px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 8px; }
+.list textarea { width: 100%; min-height: 140px; font-family: var(--mono); font-size: 12.5px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); padding: 8px; }
 
 .foot { padding: 0 max(16px, 3vw) 20px; color: var(--muted); font-size: 12px; }
 
 #preview { position: fixed; z-index: 20; width: 300px; pointer-events: none; border-radius: 14px; box-shadow: 0 8px 30px rgb(0 0 0 / 0.35); }
-.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 14px; z-index: 30; }
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 4px; font-size: 14px; z-index: 30; }
 
 .top .topbuttons { margin-left: auto; align-self: center; display: flex; gap: 6px; }
 .settings { width: min(460px, calc(100% - 32px)); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--fg); padding: 18px; box-shadow: var(--shadow); }
@@ -187,21 +191,25 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .settings form { display: grid; gap: 10px; }
 .settings h2 { margin: 0; font-size: 17px; }
 .settings label { display: grid; gap: 4px; font-size: 13.5px; font-weight: 600; }
-.settings input { padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-weight: 400; font-family: var(--mono); font-size: 14px; }
+.settings input { padding: 9px 11px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); font-weight: 400; font-family: var(--mono); font-size: 14px; }
 .settings a { color: var(--accent); }
 .pager:empty { display: none; }
 
 /* first-visit welcome, help and clearer labels */
+h2, .help h3 { font-family: var(--serif); font-weight: 700; letter-spacing: 0.01em; }
+.list h2, .recent h2, .welcome h2, .settings h2 { font-size: 21px; }
+.help h3 { font-size: 18px; }
+.qlabel, .cmdrlabel, .tryhead, .filterbar .group > span { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
 .welcome { padding: 18px; display: grid; gap: 12px; }
 .welcome h2 { margin: 0; font-size: 18px; }
 .steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 10px; }
 .steps li { counter-increment: step; display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; }
-.steps li::before { content: counter(step); width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-fg); font-weight: 700; }
+.steps li::before { content: counter(step) "."; font-family: var(--serif); font-size: 24px; font-weight: 700; line-height: 1; color: var(--accent); }
 .tryhead { margin: 4px 0 0; font-weight: 600; }
 .examples { display: flex; flex-wrap: wrap; gap: 8px; }
-.example { padding: 8px 12px; border-radius: 99px; border: 1px solid var(--accent); background: var(--accent-soft); color: var(--fg); }
-.example:hover { background: var(--accent); color: var(--accent-fg); }
-.keynote { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--accent-soft); font-size: 13.5px; }
+.example { padding: 7px 12px; border-radius: 3px; border: 1px solid var(--line); background: transparent; color: var(--fg); }
+.example:hover { border-color: var(--accent); color: var(--accent); }
+.keynote { margin: 0; padding: 2px 0 2px 10px; border-left: 2px solid var(--accent); font-size: 13.5px; color: var(--muted); }
 .qlabel { font-size: 13px; font-weight: 600; }
 .optional { font-weight: 400; color: var(--muted); }
 .help { width: min(620px, calc(100% - 32px)); max-height: calc(100vh - 48px); overflow: auto; }
@@ -213,17 +221,17 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .cmdr { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 13.5px; }
 .cmdrlabel { font-weight: 600; }
 .cmdrform { display: flex; gap: 6px; }
-.cmdrform input { width: 190px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
-.settings textarea { width: 100%; font-family: var(--mono); font-size: 12.5px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 8px; }
+.cmdrform input { width: 190px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); }
+.settings textarea { width: 100%; font-family: var(--mono); font-size: 12.5px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); padding: 8px; }
 .deckrow { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; }
 .filterbar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-bottom: 10px; font-size: 13px; }
 .filterbar .group { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 .filterbar .group > span { color: var(--muted); margin-right: 2px; }
-.filterbar button.f { padding: 3px 9px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); font-size: 12.5px; }
+.filterbar button.f { padding: 3px 9px; border-radius: 3px; border: 1px solid var(--line); background: var(--surface); font-size: 12.5px; }
 .filterbar button.f[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
 .filterbar label { display: inline-flex; gap: 5px; align-items: center; color: var(--muted); }
 .tile.owned .card img { opacity: 0.5; }
-.ownedbadge { position: absolute; top: 6px; left: 6px; padding: 2px 8px; border-radius: 99px; background: var(--fg); color: var(--bg); font-size: 11.5px; font-weight: 700; pointer-events: none; }
+.ownedbadge { position: absolute; top: 6px; left: 6px; padding: 2px 7px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.06em; background: var(--fg); color: var(--bg); font-size: 11.5px; font-weight: 700; pointer-events: none; }
 .grid.hideowned .tile.owned { display: none; }
 html.mobile .filterbar button.f { padding: 7px 12px; font-size: 14px; }
 html.mobile .cmdrform input { width: 100%; font-size: 16px; }
@@ -284,11 +292,11 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
 
 <header class="top">
   <h1>Scryfall Zoekhulp</h1>
-  <p>Find cards for your Commander deck by describing them</p>
+  <p>Commander card search in plain words</p>
   <span class="topbuttons">
     <button id="themetoggle" class="btn small" type="button"></button>
-    <button class="btn small" type="button" data-openhelp>? Help</button>
-    <button id="opensettings" class="btn small" type="button" aria-label="Settings">⚙ Settings</button>
+    <button class="btn small" type="button" data-openhelp>Help</button>
+    <button id="opensettings" class="btn small" type="button" aria-label="Settings">Settings</button>
   </span>
 </header>
 
@@ -296,40 +304,40 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
   <form method="dialog">
     <h2 id="helptitle">How to use Scryfall Zoekhulp</h2>
 
-    <h3>🔎 Searching</h3>
+    <h3>Searching</h3>
     <p>Describe the cards you want, like <i>cheap removal in black</i> or <i>blue instants that draw a card</i>.
       Colors, card types, mana value, price, keywords and what a card does all work. Dutch works too (with the access code).
       Only Commander-legal paper cards are shown. Already know Scryfall's syntax? Start with <code>/s</code>, e.g. <code>/s t:elf mv=1</code>.</p>
 
-    <h3>👑 Your commander</h3>
+    <h3>Your commander</h3>
     <p>Type your commander's name under the search bar and pick it from the suggestions.
       From then on every search only shows cards that fit in its colors. Click <b>remove</b> to search all colors again.</p>
 
-    <h3>💬 Follow-up questions <span class="optional">(access code)</span></h3>
+    <h3>Follow-up questions <span class="optional">(access code)</span></h3>
     <p>After a search, type a change instead of starting over: <i>only under 1 euro</i>, <i>without creatures</i>, <i>nu alleen instants</i>.</p>
 
-    <h3>♾️ Combos <span class="optional">(access code)</span></h3>
+    <h3>Combos <span class="optional">(access code)</span></h3>
     <p>Ask for combos, like <i>2 card combos in dimir</i>, <i>combos with Sol Ring</i> or <i>cheap combos in boros</i>.
       The combos appear under the search with what they do and their price; click one to see only its cards.</p>
 
-    <h3>🎛️ Filters</h3>
+    <h3>Filters</h3>
     <p>Above the results you can narrow them down by card type, mana value and price with one click.</p>
 
-    <h3>📋 Your list and Moxfield</h3>
+    <h3>Your list and Moxfield</h3>
     <p>Click a card to add it to your list, click it again to remove it. Basic lands get a counter instead.
       <b>Copy for Moxfield</b> copies the list; paste it in Moxfield under <i>Import</i> or <i>Bulk Edit</i>.
       The list is saved in this browser.</p>
 
-    <h3>📥 Import your deck</h3>
+    <h3>Import your deck</h3>
     <p>In the card list, <b>Import deck</b> takes your deck list (for example copied from Moxfield).
       Cards you already have get an <b>In deck</b> label, and you can hide them.</p>
 
-    <h3>🕘 Recent searches</h3>
+    <h3>Recent searches</h3>
     <p>With the access code you see what others searched for on the right; your own searches are shared there too (without names).</p>
 
-    <h3>🔑 Access code</h3>
+    <h3>Access code</h3>
     <p>Without the code a simple built-in translator is used. With it, Claude understands your searches much better.
-      Ask the owner of this page for the code and enter it under <b>⚙ Settings</b>.</p>
+      Ask the owner of this page for the code and enter it under <b>Settings</b>.</p>
 
     <div class="listactions"><button class="btn primary" type="submit">Got it</button></div>
   </form>
@@ -373,9 +381,8 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
         <input id="zin" type="search" autocomplete="off" placeholder="Describe the cards you want, e.g. cheap removal in black" aria-label="Describe the cards you want">
         <button id="zoek" class="btn primary" type="submit">Search</button>
       </form>
-      <p class="hint">In English or Dutch. Only cards that are legal in Commander are shown.</p>
-      <p id="nokey" class="keynote" hidden>🔑 Got an access code from the owner of this page?
-        <button class="linkbtn" type="button" data-opensettings>Enter it</button> and Claude will understand your searches much better.</p>
+      <p class="hint">English or Dutch. Commander-legal paper cards only.</p>
+      <p id="nokey" class="keynote" hidden>Have the access code? <button class="linkbtn" type="button" data-opensettings>Enter it</button> for smarter translation by Claude.</p>
       <div class="cmdr">
         <span class="cmdrlabel">Commander <span class="optional">(optional)</span></span>
         <span id="cmdrchip" class="chip" hidden></span>
@@ -389,7 +396,7 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
       </div>
 
       <div id="querybar" class="querybar" hidden>
-        <label for="query" class="qlabel">Search used on Scryfall <span class="optional">(you can edit it and press Search again)</span></label>
+        <label for="query" class="qlabel">Scryfall query <span class="optional">(editable)</span></label>
         <div class="queryrow">
           <input id="query" type="text" spellcheck="false" aria-label="Scryfall query">
           <span id="filters" class="chip" title="Fixed filters, always added"></span>
@@ -443,19 +450,18 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
       <div id="start" class="panel welcome">
         <h2>How it works</h2>
         <ol class="steps">
-          <li><span><b>Describe the cards you want</b> in the search bar, in plain words. No special syntax needed.</span></li>
-          <li><span><b>Click cards to add them to your list.</b> Click again to take one out. The list is on the right (on a phone: the bar at the bottom).</span></li>
-          <li><span><b>Copy for Moxfield</b> and paste the list into your deck on Moxfield.</span></li>
+          <li><span><b>Describe what you need</b> in plain words. No syntax required.</span></li>
+          <li><span><b>Click a card</b> to add it to your list, click again to remove it.</span></li>
+          <li><span><b>Copy for Moxfield</b> and paste the list into your deck.</span></li>
         </ol>
-        <p class="tryhead">Try one of these:</p>
+        <p class="tryhead">Examples</p>
         <div class="examples">
           <button type="button" class="example">cheap removal in black</button>
           <button type="button" class="example">flying creatures under 3 mana in red</button>
           <button type="button" class="example">gruul dragons that can be my commander</button>
           <button type="button" class="example">board wipes in white</button>
         </div>
-        <p class="hint">There is more: pick your commander, ask follow-up questions, find combos, import your deck.
-          <button class="linkbtn" type="button" data-openhelp>See all features</button></p>
+        <p class="hint">Commander filter, follow-up questions, combos and deck import are explained under <button class="linkbtn" type="button" data-openhelp>Help</button>.</p>
       </div>
     </section>
   </div>
@@ -471,7 +477,7 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
       <span id="deckinfo" class="hint"></span>
       <button id="importdeck" class="btn small" type="button">Import deck</button>
     </div>
-    <p id="emptylist" class="emptylist">Your list is empty. Click a card in the results to add it here; click it again to take it out. When you're done, press <b>Copy for Moxfield</b>.</p>
+    <p id="emptylist" class="emptylist">Empty. Click cards in the results to add them.</p>
     <ul id="listitems"></ul>
     <div class="exportopts" role="radiogroup" aria-label="Export format">
       <label><input type="radio" name="fmt" value="full" checked> with set and number</label>
@@ -492,7 +498,7 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
   <section id="recent" class="panel recent" aria-label="Recent searches by everyone" hidden>
     <div class="listhead">
       <h2>Recent searches</h2>
-      <button id="refreshrecent" class="btn small" type="button" aria-label="Refresh recent searches">↻</button>
+      <button id="refreshrecent" class="btn small" type="button" aria-label="Refresh recent searches">Refresh</button>
     </div>
     <p class="hint">Searches by everyone with the access code. Click one to run it.</p>
     <ul id="recentlist"></ul>
@@ -962,7 +968,7 @@ function renderCommander() {
   const c = state.commander;
   $("cmdrchip").hidden = $("cmdrclear").hidden = !c;
   $("cmdrform").hidden = !!c;
-  $("cmdrnote").textContent = c ? "Searches stay within these colors." : "Optional: searches then stay within its colors.";
+  $("cmdrnote").textContent = c ? "Searches stay within these colors." : "Limits every search to its colors.";
   if (c) $("cmdrchip").textContent = `${c.name} · ${(c.colors || "c").toUpperCase().split("").join("")}`;
 }
 
@@ -1585,7 +1591,7 @@ $("closelist").addEventListener("click", closeList);
 $("barcopy").addEventListener("click", copyList);
 document.addEventListener("keydown", e => { if (e.key === "Escape" && $("list").classList.contains("open")) closeList(); });
 $("viewswitch").textContent = isMobile ? "Switch to desktop view" : "Switch to mobile view";
-if (isMobile) $("emptylist").textContent = "Your list is empty. Tap a card in the results to add it; tap it again to take it out. When you are done, press Copy for Moxfield.";
+if (isMobile) $("emptylist").textContent = "Empty. Tap cards in the results to add them.";
 
 // card size: minimum card width on desktop, cards per row on a phone
 const CARD_SIZES = isMobile ? ["3", "2", "1"] : ["110px", "150px", "200px", "260px", "330px"];
@@ -1645,7 +1651,7 @@ function currentTheme() {
 }
 function renderThemeButton() {
   const dark = currentTheme() === "dark";
-  $("themetoggle").textContent = dark ? "☀ Light" : "☾ Dark";
+  $("themetoggle").textContent = dark ? "Light" : "Dark";
   $("themetoggle").setAttribute("aria-label", dark ? "Switch to the light theme" : "Switch to the dark theme");
 }
 $("themetoggle").addEventListener("click", () => {
