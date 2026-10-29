@@ -52,8 +52,14 @@ Example: "budget infinite mana combos in green" => query "", combo {"wanted": tr
 
 The message may start with extra lines before "Request:":
 - "My commander: <name> (color identity: <letters>)." Only when this line is present: use id<= with those
-  letters (e.g. id<=wubg) for every search for deck cards, unless the
-  request names other colors or asks for commanders. Combos then use those colors too.
+  letters (e.g. id<=wubg) for every search for deck cards, unless the request asks for commanders.
+  Combos then use those colors too. The commander's colors always win, because other cards can't go in the deck:
+  - colors in the request that fit inside the identity narrow the search: Atraxa (wubg) + "in black" => id<=b.
+  - a color outside the identity (white for a green commander) is never searched: keep id<= with the commander's
+    letters for the rest of the request, and START uitleg with that, e.g. "White isn't in Glissa Sunseeker's colors
+    (green), so these are green board wipes."
+  - a mix keeps only the colors inside the identity, never a letter outside it: Atraxa (wubg) + "removal in red and
+    black" => otag:removal id<=b, uitleg "Red isn't in Atraxa's colors, so this is black removal."
 - "My previous search: "<sentence>" => <query>". If the request is a follow-up that changes that search ("only under
   1 euro", "without creatures", "now in blue", "more expensive", "nu alleen instants"), return the previous query
   changed accordingly, keeping everything else. If the request is a new, complete search, ignore the previous one.
