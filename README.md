@@ -63,7 +63,7 @@ browser → Worker (API-key, toegangscode, vaste instellingen) → Claude API
 | API-key vervangen | `npx wrangler secret put ANTHROPIC_API_KEY` |
 | Worker opnieuw online zetten na een wijziging in `worker/src/index.js` | `npx wrangler deploy` |
 | De taglijst verversen met nieuwe Scryfall-tags (daarna `npx wrangler deploy`) | `node update-tags.mjs` |
-| De vertaler testen met 173 vragen (kost ongeveer 10 cent) | `$env:ACCESS_CODE="<code>"; node eval.mjs` |
+| De vertaler testen met 175 vragen (kost ongeveer 10 cent) | `$env:ACCESS_CODE="<code>"; node eval.mjs` |
 | Jezelf deblokkeren na te veel foute codes | `npx wrangler d1 execute zoekhulp-log --remote --command "DELETE FROM hits"` |
 
 Plak de key nooit in een chat. Zet in de [Anthropic Console](https://console.anthropic.com) een maandlimiet, bijvoorbeeld €5.

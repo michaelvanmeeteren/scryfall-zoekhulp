@@ -10,7 +10,7 @@
 //            cmdr  commander sent along, { name, colors };  prev  previous search sent along, { zin, query }
 //            edhrec  the answer must ask for EDHREC recommendations for a commander whose name contains this
 //            empty  the answer must be an empty query (not a card search)
-//            say   the explanation must mention this (lower-cased substring)
+//            say   the explanation must mention this (lower-cased substring);  calm  the answer must not be a warning
 const WORKER = "https://scryfall-zoekhulp.michaelvanmeeteren.workers.dev/translate";
 const ORIGIN = "https://michaelvanmeeteren.github.io";
 
@@ -192,6 +192,8 @@ const CASES = [
   { zin: "board wipes in white", cmdr: { name: "Glissa Sunseeker", colors: "g" }, any: [["sweeper", "wipe"]], id: "<=g", say: "white" },
   { zin: "removal in red and black", cmdr: { name: "Atraxa, Praetors' Voice", colors: "wubg" }, any: [["removal"]], id: "<=b", say: "red" },
   { zin: "removal in black", cmdr: { name: "Atraxa, Praetors' Voice", colors: "wubg" }, any: [["removal"]], id: "<=b" },
+  { zin: "card draw in esper", cmdr: { name: "Atraxa, Praetors' Voice", colors: "wubg" }, any: [["draw", "card-advantage"]], id: "<=wub", calm: true },
+  { zin: "colorless artifacts", cmdr: { name: "Krenko, Mob Boss", colors: "r" }, any: [["t:artifact"], ["id=c", "id:c", "c=c", "c:c", "id<=c"]] },
   // follow-up questions
   { zin: "only instants", prev: { zin: "removal in black", query: "otag:removal id<=b" }, any: [["t:instant"], ["removal"]], id: "<=b" },
   { zin: "under 1 euro", prev: { zin: "green ramp", query: "otag:ramp id<=g" }, any: [["ramp"], ["eur<1"]], id: "<=g" },
@@ -253,6 +255,7 @@ for (let i = from; i <= to; i++) {
     continue;
   }
   if (!query) problems.push("no query: " + (body.error || body.uitleg));
+  if (c.calm && body.warn) problems.push("marked as a warning");
   if (c.say && !String(body.uitleg || "").toLowerCase().includes(c.say)) problems.push(`explanation doesn't mention "${c.say}"`);
   for (const group of c.any || []) if (!group.some(s => q.includes(s.toLowerCase()))) problems.push("missing " + group.join("|"));
   for (const s of c.none || []) if (q.includes(s.toLowerCase())) problems.push("has " + s);

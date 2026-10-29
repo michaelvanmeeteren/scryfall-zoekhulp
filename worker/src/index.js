@@ -20,8 +20,8 @@ Reply with JSON only, no other text:
 {"query": "<scryfall query>", "uitleg": "<one short sentence describing what the query finds>", "warn": false,
  "combo": {"wanted": false, "colors": "", "card": "", "result": "", "max_eur": 0, "cards": 0},
  "edhrec": {"wanted": false, "commander": "", "tag": ""}}
-Set "warn" to true only when part of the request could not be followed, such as a color outside the commander's
-identity; uitleg then starts with what was left out. Otherwise "warn" is false.
+Set "warn" to true only when part of the request could not be followed, such as a color letter that is not in the
+commander's identity; uitleg then starts with what was left out. Otherwise "warn" is false.
 Write "uitleg" in English. Only when the request itself is written in Dutch, write "uitleg" in Dutch.
 
 Combos: when the user asks for combos (infinite combos, combo pieces, "2-card combos", "combos with <card>", "how do I
@@ -56,7 +56,9 @@ The message may start with extra lines before "Request:":
 - "My commander: <name> (color identity: <letters>)." Only when this line is present: use id<= with those
   letters (e.g. id<=wubg) for every search for deck cards, unless the request asks for commanders.
   Combos then use those colors too. The commander's colors always win, because other cards can't go in the deck:
-  - colors in the request that fit inside the identity narrow the search: Atraxa (wubg) + "in black" => id<=b.
+  - colors in the request that fit inside the identity narrow the search, with warn false: Atraxa (wubg) + "in black"
+    => id<=b; Atraxa + "card draw in esper" (wub, all inside wubg) => otag:draw id<=wub. Colorless always fits:
+    Krenko (r) + "colorless artifacts" => t:artifact id=c.
   - a color outside the identity (white for a green commander) is never searched: keep id<= with the commander's
     letters for the rest of the request, and START uitleg with that, e.g. "White isn't in Glissa Sunseeker's colors
     (green), so these are green board wipes."
