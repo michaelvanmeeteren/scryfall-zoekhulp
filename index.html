@@ -354,6 +354,14 @@ html.mobile #listtoggle { display: none; }
   html:not(.mobile) .drawer { width: 340px; transform: none; transition: none; box-shadow: none; z-index: 20; }
   html:not(.mobile) #listtoggle, html:not(.mobile) .closelist, html:not(.mobile) .scrim { display: none !important; }
 }
+/* phone: options folded until "Filters & sort" is tapped; bigger "i" for thumbs */
+.optstoggle { display: none; }
+html.mobile .optstoggle { display: inline-block; }
+html.mobile #results:not(.opts) .controls, html.mobile #results:not(.opts) #cmdrresults,
+html.mobile #results:not(.opts) #filterbar { display: none !important; }
+html.mobile .infobtn { width: 34px; height: 34px; font-size: 18px; }
+/* nothing to search: keep the explanation, hide the result controls */
+#results.nosearch .controls, #results.nosearch .optstoggle, #results.nosearch #querybar { display: none !important; }
 </style>
 </head>
 <body>
@@ -501,12 +509,14 @@ html.mobile #listtoggle { display: none; }
         <span id="count" class="count"></span>
         <span id="uitleg" class="explain"></span>
       </div>
+      <button id="optstoggle" class="btn small optstoggle" type="button" aria-expanded="false">Filters &amp; sort</button>
       <div class="controls">
         <label>Sort by
           <select id="order">
             <option value="edhrec">EDHREC rank (most played first)</option>
             <option value="name">Name</option>
-            <option value="eur">Price</option>
+            <option value="eur">Price: low to high</option>
+            <option value="eur-desc">Price: high to low</option>
             <option value="cmc">Mana value</option>
             <option value="released">Newest</option>
           </select>
@@ -686,14 +696,33 @@ const ATTR = "(mana value|converted mana cost|mana cost|cmc|mv|mana|power|pow|to
 const attrKey = a => /^(pow|power)$/.test(a) ? "pow" : /^(tou|toughness)$/.test(a) ? "tou" : "mv";
 const ATTR_LABEL = { mv: "mana value", pow: "power", tou: "toughness" };
 const STOP = new Set(("a an the in for with that which who whose can be is are my me i want find show cards card of to and or " +
-  "deck decks some any all please that's has have having good best spells").split(" "));
+  "deck decks some any all please that's has have having good best spells ik wil alle zien die de het een van en of voor kaarten kaart").split(" "));
 
 function looksLikeSyntax(text) {
   return /(^|\s|\()-?[a-z]+(:|<=|>=|<|>|=)\S/i.test(text);
 }
 
+// Common Dutch search words, rewritten to English before the built-in translator reads the sentence.
+const DUTCH_PHRASES = [
+  [/die ik als (?:mijn )?commander kan gebruiken/g, "that can be my commander"], [/kaarten trekken/g, "card draw"],
+  [/minder dan/g, "less than"], [/meer dan/g, "more than"], [/of minder/g, "or less"], [/of meer/g, "or more"],
+  [/goedkoopste eerst/g, "cheapest first"], [/meest gespeeld/g, "most played"]
+];
+const DUTCH_WORDS = {
+  wit: "white", witte: "white", blauw: "blue", blauwe: "blue", zwart: "black", zwarte: "black", rood: "red", rode: "red",
+  groen: "green", groene: "green", kleurloos: "colorless", kleurloze: "colorless", goedkoop: "cheap", goedkope: "cheap",
+  wezens: "creatures", wezen: "creature", draken: "dragons", draak: "dragon", elfen: "elves", landen: "lands",
+  artefacten: "artifacts", artefact: "artifact", betoveringen: "enchantments", spreuken: "spells", legendarische: "legendary",
+  onder: "under", hoogstens: "at most", maximaal: "at most", minstens: "at least", vliegende: "flying", vliegen: "flying",
+  haast: "haste", met: "with", zonder: "without", munten: "euro"
+};
+function dutchToEnglish(text) {
+  for (const [re, en] of DUTCH_PHRASES) text = text.replace(re, en);
+  return text.replace(/[a-z]+/g, w => DUTCH_WORDS[w] || w);
+}
+
 function translate(input) {
-  let s = " " + input.toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, " ") + " ";
+  let s = " " + dutchToEnglish(input.toLowerCase()).replace(/[’`]/g, "'").replace(/\s+/g, " ") + " ";
   s = s.replace(/\b(?:a|one) (euro|dollar|buck)\b/g, "1 $1");
   const terms = [];
   const seen = [];
@@ -1105,7 +1134,7 @@ function allowsMultiple(c) {
 
 async function apiPage(search, p) {
   if (search.cache.has(p)) return search.cache.get(p);
-  const params = new URLSearchParams({ q: search.full, order: search.order, page: String(p) });
+  const params = new URLSearchParams({ q: search.full, ...sortParams(search.order), page: String(p) });
   const body = await scryfall("https://api.scryfall.com/cards/search?" + params);
   const cards = (body.data || []).map(normalise);
   search.cache.set(p, cards);
@@ -1131,12 +1160,20 @@ function showQuery(query, uitleg, combos) {
   renderCombos(combos);
 }
 
+// The sort menu's value as Scryfall parameters; prices go cheapest first unless "high to low" is picked.
+function sortParams(order) {
+  if (order === "eur") return { order: "eur", dir: "asc" };
+  if (order === "eur-desc") return { order: "eur", dir: "desc" };
+  return { order };
+}
+
 async function runSearch(query, page = 1) {
+  $("results").classList.remove("nosearch");
   query = query.trim();
   if (!query) return;
   const { full, extra } = withFilters(query);
   $("filters").textContent = extra ? "+ " + extra : "own filters";
-  $("scryfalllink").href = "https://scryfall.com/search?q=" + encodeURIComponent(full) + "&order=" + state.order;
+  $("scryfalllink").href = "https://scryfall.com/search?" + new URLSearchParams({ q: full, ...sortParams(state.order) });
   state.search = { query, full, order: state.order, size: state.size, total: null, cache: new Map(), page: 1 };
   $("toolbar").hidden = false;
   renderFilterbar();
@@ -1204,7 +1241,7 @@ function render(cards, page, pages) {
     if (search.details && !/didn.t match any cards/i.test(search.details)) notes.push(search.details);
   }
   if (search.warnings.length) notes.push("Scryfall: " + search.warnings.join(" "));
-  if (search.total > 500) notes.push("Lots of results. Make your search more specific, or sort by EDHREC rank or price.");
+  if (search.total > 500) notes.push("Lots of results. Add more detail to your search, or narrow it down with the filters.");
   if (notes.length) message(notes.join(" "));
 
   const counts = new Map(state.list.map(c => [c.name, c.qty]));
@@ -1594,15 +1631,16 @@ $("searchform").addEventListener("submit", async e => {
     // Nothing to search: show why, without searching, logging or adding it to the history.
     showQuery("", result.uitleg);
     state.search = null;
-    $("toolbar").hidden = true;
-    setView(true);
+    setView(false);
+    $("results").classList.add("nosearch");
     renderFilterbar();
     for (const id of ["grid", "pagertop", "pagerbottom"]) $(id).replaceChildren();
-    $("count").textContent = "";
+    $("count").textContent = "Nothing to search";
     message("");
     return;
   }
   showQuery(result.query, result.uitleg, result.combos);
+  pushSearchUrl(result.query, zin);
   addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
   // a combo result is a list of card names, which makes no sense to refine; anything else can be
   state.previous = result.combos && result.combos.length ? null : { zin, query: result.query };
@@ -1613,6 +1651,7 @@ $("searchform").addEventListener("submit", async e => {
 $("opnieuw").addEventListener("click", () => {
   $("uitleg").textContent = "Query edited by hand.";
   if (state.previous) state.previous.query = $("query").value.trim();
+  history.replaceState({}, "", location.pathname + "?" + new URLSearchParams({ q: $("query").value.trim(), s: $("zin").value.trim() }));
   runSearch($("query").value);
 });
 $("query").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("opnieuw").click(); } });
@@ -1654,9 +1693,36 @@ $("openlist").addEventListener("click", openList);
 $("closelist").addEventListener("click", closeList);
 $("barcopy").addEventListener("click", copyList);
 document.addEventListener("keydown", e => { if (e.key === "Escape" && $("drawer").classList.contains("open")) closeList(); });
+$("optstoggle").addEventListener("click", () => {
+  const open = $("results").classList.toggle("opts");
+  $("optstoggle").setAttribute("aria-expanded", String(open));
+  $("optstoggle").textContent = open ? "Hide filters & sort" : "Filters & sort";
+});
 $("listtoggle").addEventListener("click", () => $("drawer").classList.contains("open") ? closeList() : openList());
 $("scrim").addEventListener("click", closeList);
-$("home").addEventListener("click", () => { setView(true); window.scrollTo(0, 0); $("zin").focus(); });
+$("home").addEventListener("click", () => { setView(true); history.pushState({}, "", location.pathname); window.scrollTo(0, 0); $("zin").focus(); });
+
+// ?q=<Scryfall query>&s=<the sentence that was typed>. Opening such a link runs the query without asking Claude again.
+function pushSearchUrl(query, zin) {
+  const params = new URLSearchParams({ q: query });
+  if (zin && zin !== query) params.set("s", zin);
+  const url = location.pathname + "?" + params;
+  if (location.search !== "?" + params) history.pushState({}, "", url);
+}
+function searchFromUrl() {
+  const params = new URLSearchParams(location.search);
+  const query = params.get("q");
+  if (!query) return false;
+  $("zin").value = params.get("s") || query;
+  showQuery(query, params.get("s") ? "" : "Search from a link.");
+  state.previous = { zin: params.get("s") || query, query };
+  resetFilters();
+  runSearch(query);
+  return true;
+}
+window.addEventListener("popstate", () => {
+  if (!searchFromUrl()) { setView(true); window.scrollTo(0, 0); }
+});
 // a click outside a pop-up (on the dimmed backdrop) closes it, like Escape; nothing is saved
 for (const d of document.querySelectorAll("dialog")) {
   d.addEventListener("click", e => {
@@ -1773,7 +1839,9 @@ renderList();
 renderHistory();
 const last = store.get("last", "");
 setView(true);
-if (last) { showQuery(last, "Your last search from the previous session."); runSearch(last); }
+if (!searchFromUrl() && last) { showQuery(last, "Your last search from the previous session."); runSearch(last); }
+// U1: on a computer the search field is ready for typing straight away
+if (!isMobile && document.body.classList.contains("home")) $("zin").focus();
 </script>
 </body>
 </html>
