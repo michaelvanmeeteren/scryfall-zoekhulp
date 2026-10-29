@@ -1162,6 +1162,7 @@ function showEdhrec(commanderName, tag, cards, uitleg) {
   $("results").classList.add("static");
   $("toolbar").hidden = false;
   renderFilterbar();
+  store.set("lastEdhrec", { name: commanderName, tag });
   const params = new URLSearchParams({ edhrec: commanderName });
   if (tag) params.set("tag", tag);
   if (location.search !== "?" + params) history.pushState({}, "", location.pathname + "?" + params);
@@ -1296,6 +1297,7 @@ async function runSearch(query, page = 1) {
   renderFilterbar();
   applyHideOwned();
   store.set("last", query);
+  store.set("lastEdhrec", null);
   await showPage(page);
 }
 
@@ -2027,7 +2029,10 @@ fillListTypes();
 renderHistory();
 const last = store.get("last", "");
 setView(true);
-if (!searchFromUrl() && last) { showQuery(last, "Your last search from the previous session."); runSearch(last); }
+const lastEdhrec = store.get("lastEdhrec", null);
+if (searchFromUrl()) { /* the link decides */ }
+else if (lastEdhrec) runEdhrec(lastEdhrec.name, lastEdhrec.tag || "", "");
+else if (last) { showQuery(last, "Your last search from the previous session."); runSearch(last); }
 // U1: on a computer the search field is ready for typing straight away
 if (!isMobile && document.body.classList.contains("home")) $("zin").focus();
 </script>
