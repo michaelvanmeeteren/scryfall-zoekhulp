@@ -163,7 +163,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 #preview { position: fixed; z-index: 20; width: 300px; pointer-events: none; border-radius: 14px; box-shadow: 0 8px 30px rgb(0 0 0 / 0.35); }
 .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 14px; z-index: 30; }
 
-.top .gear { margin-left: auto; align-self: center; }
+.top .topbuttons { margin-left: auto; align-self: center; display: flex; gap: 6px; }
 .settings { width: min(460px, calc(100% - 32px)); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--fg); padding: 18px; box-shadow: var(--shadow); }
 .settings::backdrop { background: rgb(0 0 0 / 0.4); }
 .settings form { display: grid; gap: 10px; }
@@ -171,6 +171,26 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .settings label { display: grid; gap: 4px; font-size: 13.5px; font-weight: 600; }
 .settings input { padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-weight: 400; font-family: var(--mono); font-size: 14px; }
 .settings a { color: var(--accent); }
+.pager:empty { display: none; }
+
+/* first-visit welcome, help and clearer labels */
+.welcome { padding: 18px; display: grid; gap: 12px; }
+.welcome h2 { margin: 0; font-size: 18px; }
+.steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 10px; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; }
+.steps li::before { content: counter(step); width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-fg); font-weight: 700; }
+.tryhead { margin: 4px 0 0; font-weight: 600; }
+.examples { display: flex; flex-wrap: wrap; gap: 8px; }
+.example { padding: 8px 12px; border-radius: 99px; border: 1px solid var(--accent); background: var(--accent-soft); color: var(--fg); }
+.example:hover { background: var(--accent); color: var(--accent-fg); }
+.keynote { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--accent-soft); font-size: 13.5px; }
+.qlabel { font-size: 13px; font-weight: 600; }
+.optional { font-weight: 400; color: var(--muted); }
+.help { width: min(620px, calc(100% - 32px)); max-height: calc(100vh - 48px); overflow: auto; }
+.help h3 { margin: 6px 0 2px; font-size: 15px; }
+.help p { margin: 0; font-size: 14px; }
+.help code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+
 /* commander, deck and result filters */
 .cmdr { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 13.5px; }
 .cmdrlabel { font-weight: 600; }
@@ -246,9 +266,55 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
 
 <header class="top">
   <h1>Scryfall Zoekhulp</h1>
-  <p>Commander · paper cards</p>
-  <button id="opensettings" class="btn small gear" type="button" aria-label="Settings">⚙ Settings</button>
+  <p>Find cards for your Commander deck by describing them</p>
+  <span class="topbuttons">
+    <button class="btn small" type="button" data-openhelp>? Help</button>
+    <button id="opensettings" class="btn small" type="button" aria-label="Settings">⚙ Settings</button>
+  </span>
 </header>
+
+<dialog id="helpdialog" class="settings help" aria-labelledby="helptitle">
+  <form method="dialog">
+    <h2 id="helptitle">How to use Scryfall Zoekhulp</h2>
+
+    <h3>🔎 Searching</h3>
+    <p>Describe the cards you want, like <i>cheap removal in black</i> or <i>blue instants that draw a card</i>.
+      Colors, card types, mana value, price, keywords and what a card does all work. Dutch works too (with the access code).
+      Only Commander-legal paper cards are shown. Already know Scryfall's syntax? Start with <code>/s</code>, e.g. <code>/s t:elf mv=1</code>.</p>
+
+    <h3>👑 Your commander</h3>
+    <p>Type your commander's name under the search bar and pick it from the suggestions.
+      From then on every search only shows cards that fit in its colors. Click <b>remove</b> to search all colors again.</p>
+
+    <h3>💬 Follow-up questions <span class="optional">(access code)</span></h3>
+    <p>After a search, type a change instead of starting over: <i>only under 1 euro</i>, <i>without creatures</i>, <i>nu alleen instants</i>.</p>
+
+    <h3>♾️ Combos <span class="optional">(access code)</span></h3>
+    <p>Ask for combos, like <i>2 card combos in dimir</i>, <i>combos with Sol Ring</i> or <i>cheap combos in boros</i>.
+      The combos appear under the search with what they do and their price; click one to see only its cards.</p>
+
+    <h3>🎛️ Filters</h3>
+    <p>Above the results you can narrow them down by card type, mana value and price with one click.</p>
+
+    <h3>📋 Your list and Moxfield</h3>
+    <p>Click a card to add it to your list, click it again to remove it. Basic lands get a counter instead.
+      <b>Copy for Moxfield</b> copies the list; paste it in Moxfield under <i>Import</i> or <i>Bulk Edit</i>.
+      The list is saved in this browser.</p>
+
+    <h3>📥 Import your deck</h3>
+    <p>In the card list, <b>Import deck</b> takes your deck list (for example copied from Moxfield).
+      Cards you already have get an <b>In deck</b> label, and you can hide them.</p>
+
+    <h3>🕘 Recent searches</h3>
+    <p>With the access code you see what others searched for on the right; your own searches are shared there too (without names).</p>
+
+    <h3>🔑 Access code</h3>
+    <p>Without the code a simple built-in translator is used. With it, Claude understands your searches much better.
+      Ask the owner of this page for the code and enter it under <b>⚙ Settings</b>.</p>
+
+    <div class="listactions"><button class="btn primary" type="submit">Got it</button></div>
+  </form>
+</dialog>
 
 <dialog id="deckdialog" class="settings" aria-labelledby="decktitle">
   <form method="dialog" id="deckform">
@@ -285,13 +351,14 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
   <div>
     <section class="panel search" aria-label="Search">
       <form id="searchform" class="searchrow">
-        <input id="zin" type="search" autocomplete="off" placeholder="creatures mana value less than or equal to 5 in g/w/b" aria-label="Search in plain English or Dutch">
-        <button id="zoek" class="btn primary" type="submit">Translate &amp; search</button>
+        <input id="zin" type="search" autocomplete="off" placeholder="Describe the cards you want, e.g. cheap removal in black" aria-label="Describe the cards you want">
+        <button id="zoek" class="btn primary" type="submit">Search</button>
       </form>
-      <p class="hint">Type in plain English (or Dutch, when Claude translates), or start with <code>/s</code> or <code>!</code> to use Scryfall syntax directly. Searches are always limited to Commander-legal paper cards.</p>
-      <p id="nokey" class="hint" hidden>Using the built-in translator. <button class="linkbtn" type="button" data-opensettings>Enter the access code</button> for better translations by Claude.</p>
+      <p class="hint">In English or Dutch. Only cards that are legal in Commander are shown.</p>
+      <p id="nokey" class="keynote" hidden>🔑 Got an access code from the owner of this page?
+        <button class="linkbtn" type="button" data-opensettings>Enter it</button> and Claude will understand your searches much better.</p>
       <div class="cmdr">
-        <span class="cmdrlabel">Commander</span>
+        <span class="cmdrlabel">Commander <span class="optional">(optional)</span></span>
         <span id="cmdrchip" class="chip" hidden></span>
         <button id="cmdrclear" class="linkbtn" type="button" hidden>remove</button>
         <form id="cmdrform" class="cmdrform">
@@ -303,6 +370,7 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
       </div>
 
       <div id="querybar" class="querybar" hidden>
+        <label for="query" class="qlabel">Search used on Scryfall <span class="optional">(you can edit it and press Search again)</span></label>
         <div class="queryrow">
           <input id="query" type="text" spellcheck="false" aria-label="Scryfall query">
           <span id="filters" class="chip" title="Fixed filters, always added"></span>
@@ -323,7 +391,7 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
     </section>
 
     <section class="results" aria-label="Results">
-      <div class="toolbar">
+      <div id="toolbar" class="toolbar" hidden>
         <span id="count" class="count"></span>
         <div class="controls">
           <label>Sort by
@@ -353,7 +421,23 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
       <nav id="pagertop" class="pager" aria-label="Pages"></nav>
       <div id="grid" class="grid"></div>
       <nav id="pagerbottom" class="pager" aria-label="Pages"></nav>
-      <div id="start" class="empty">Type a search above, for example <i>flying creatures under 3 mana in red</i>.</div>
+      <div id="start" class="panel welcome">
+        <h2>How it works</h2>
+        <ol class="steps">
+          <li><span><b>Describe the cards you want</b> in the search bar, in plain words. No special syntax needed.</span></li>
+          <li><span><b>Click cards to add them to your list.</b> Click again to take one out. The list is on the right (on a phone: the bar at the bottom).</span></li>
+          <li><span><b>Copy for Moxfield</b> and paste the list into your deck on Moxfield.</span></li>
+        </ol>
+        <p class="tryhead">Try one of these:</p>
+        <div class="examples">
+          <button type="button" class="example">cheap removal in black</button>
+          <button type="button" class="example">flying creatures under 3 mana in red</button>
+          <button type="button" class="example">gruul dragons that can be my commander</button>
+          <button type="button" class="example">board wipes in white</button>
+        </div>
+        <p class="hint">There is more: pick your commander, ask follow-up questions, find combos, import your deck.
+          <button class="linkbtn" type="button" data-openhelp>See all features</button></p>
+      </div>
     </section>
   </div>
 
@@ -368,7 +452,7 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
       <span id="deckinfo" class="hint"></span>
       <button id="importdeck" class="btn small" type="button">Import deck</button>
     </div>
-    <p id="emptylist" class="emptylist">Click a card to add it, click it again to take it out. Basic lands and cards that allow more copies get a counter with −.</p>
+    <p id="emptylist" class="emptylist">Your list is empty. Click a card in the results to add it here; click it again to take it out. When you're done, press <b>Copy for Moxfield</b>.</p>
     <ul id="listitems"></ul>
     <div class="exportopts" role="radiogroup" aria-label="Export format">
       <label><input type="radio" name="fmt" value="full" checked> with set and number</label>
@@ -1000,7 +1084,7 @@ async function apiPage(search, p) {
 function setBusy(busy, label) {
   $("zoek").disabled = busy;
   $("opnieuw").disabled = busy;
-  $("zoek").textContent = busy ? (label || "Working…") : "Translate & search";
+  $("zoek").textContent = busy ? (label || "Working…") : "Search";
 }
 
 function showQuery(query, uitleg, combos) {
@@ -1017,6 +1101,7 @@ async function runSearch(query, page = 1) {
   $("filters").textContent = extra ? "+ " + extra : "own filters";
   $("scryfalllink").href = "https://scryfall.com/search?q=" + encodeURIComponent(full) + "&order=" + state.order;
   state.search = { query, full, order: state.order, size: state.size, total: null, cache: new Map(), page: 1 };
+  $("toolbar").hidden = false;
   renderFilterbar();
   applyHideOwned();
   store.set("last", query);
@@ -1419,6 +1504,8 @@ $("searchform").addEventListener("submit", async e => {
     // Nothing to search: show why, without searching, logging or adding it to the history.
     showQuery("", result.uitleg);
     state.search = null;
+    $("toolbar").hidden = true;
+    $("start").hidden = false;
     renderFilterbar();
     for (const id of ["grid", "pagertop", "pagerbottom"]) $(id).replaceChildren();
     $("count").textContent = "";
@@ -1479,7 +1566,7 @@ $("closelist").addEventListener("click", closeList);
 $("barcopy").addEventListener("click", copyList);
 document.addEventListener("keydown", e => { if (e.key === "Escape" && $("list").classList.contains("open")) closeList(); });
 $("viewswitch").textContent = isMobile ? "Switch to desktop view" : "Switch to mobile view";
-if (isMobile) $("emptylist").textContent = "Tap a card to add it, tap it again to take it out. Basic lands and cards that allow more copies get a counter with −.";
+if (isMobile) $("emptylist").textContent = "Your list is empty. Tap a card in the results to add it; tap it again to take it out. When you are done, press Copy for Moxfield.";
 
 // card size: minimum card width on desktop, cards per row on a phone
 const CARD_SIZES = isMobile ? ["3", "2", "1"] : ["110px", "150px", "200px", "260px", "330px"];
@@ -1533,6 +1620,15 @@ $("cmdrform").addEventListener("submit", e => {
   if (name) setCommander(name);
 });
 $("cmdrinput").addEventListener("input", suggestCommanders);
+// help window and the example searches on the welcome panel
+document.querySelectorAll("[data-openhelp]").forEach(b => b.addEventListener("click", () => {
+  $("helpdialog").showModal();
+  $("helpdialog").scrollTop = 0;   // the "Got it" button gets focus, which would scroll to the bottom
+}));
+document.querySelectorAll(".example").forEach(b => b.addEventListener("click", () => {
+  $("zin").value = b.textContent;
+  $("searchform").requestSubmit();
+}));
 $("cmdrclear").addEventListener("click", () => {
   state.commander = null;
   store.set("commander", null);
