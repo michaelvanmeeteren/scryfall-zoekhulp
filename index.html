@@ -156,6 +156,12 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .list .cardname { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list .cardname small { color: var(--muted); font-family: var(--mono); font-size: 11.5px; margin-left: 4px; }
 .remove { color: var(--muted); }
+.list li.grouphead { display: block; padding: 10px 0 3px; border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.list li.grouphead:first-child { padding-top: 2px; }
+.curve { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; height: 74px; align-items: end; }
+.curve .bar { display: grid; grid-template-rows: auto 1fr auto; height: 100%; text-align: center; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.curve .bar i { align-self: end; display: block; border-radius: 2px 2px 0 0; background: var(--accent); }
+.curve .bar b { font-weight: 600; padding-top: 2px; border-top: 1px solid var(--line); }
 .list .emptylist { color: var(--muted); font-size: 13.5px; margin: 0; }
 .exportopts { display: flex; gap: 12px; font-size: 13px; flex-wrap: wrap; }
 .exportopts label { display: inline-flex; gap: 5px; align-items: center; }
@@ -454,6 +460,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
     <p>Click a card to add it to your list, click it again to remove it. Basic lands get a counter instead.
       <b>Copy for Moxfield</b> copies the list; paste it in Moxfield under <i>Import</i> or <i>Bulk Edit</i>.
       Open it with <b>List</b> at the top (on a phone: the bar at the bottom). The list is saved in this browser.
+      It is grouped by card type, with the mana curve of your spells at the top.
       The <i>i</i> on a card opens its details: rules text, price and links to Scryfall and EDHREC.</p>
 
     <h3>Import your deck</h3>
@@ -599,6 +606,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
       <button id="closelist" class="btn small closelist" type="button">Close</button>
     </div>
     <div id="totals" class="totals"></div>
+    <div id="curve" class="curve" aria-label="Mana curve" hidden></div>
     <div class="deckrow">
       <span id="deckinfo" class="hint"></span>
       <button id="importdeck" class="btn small" type="button">Import deck</button>
@@ -1224,6 +1232,7 @@ function normalise(c) {
     pt: f.power != null ? `${f.power}/${f.toughness}` : f.loyalty != null ? `Loyalty ${f.loyalty}` : ""
   }));
   return { id: c.id, name: sameFaces ? face.name : c.name, set: c.set, cn: c.collector_number, eur, usd, multi: allowsMultiple(c), img: img.normal || img.small || "", large: img.large || img.normal || "",
+    group: cardGroup((face || c).type_line || c.type_line || ""), mv: c.cmc != null ? c.cmc : (face && face.cmc) || 0,
     faces: facesInfo, setName: c.set_name || "", rarity: c.rarity || "", uri: c.scryfall_uri || "", edhrec: (c.related_uris && c.related_uris.edhrec) || "" };
 }
 
@@ -1501,8 +1510,41 @@ function addToList(card) {
   const found = state.list.find(c => c.name === card.name);
   if (found && found.multi) found.qty += 1;
   else if (found) state.list = state.list.filter(c => c.name !== card.name);   // singleton: second click takes it out
-  else state.list.push({ id: card.id, name: card.name, set: card.set, cn: card.cn, eur: card.eur, usd: card.usd, multi: card.multi, qty: 1 });
+  else state.list.push({ id: card.id, name: card.name, set: card.set, cn: card.cn, eur: card.eur, usd: card.usd, multi: card.multi, group: card.group, mv: card.mv, qty: 1 });
   saveList();
+}
+
+// The list is grouped like a Moxfield deck. A card goes in the first group its (front) type line matches,
+// so an artifact creature is a creature and an artifact land is a land.
+const LIST_GROUPS = ["Creatures", "Planeswalkers", "Battles", "Instants", "Sorceries", "Artifacts", "Enchantments", "Lands", "Other"];
+function cardGroup(typeLine) {
+  const t = typeLine.split(" — ")[0];
+  for (const [word, group] of [["Creature", "Creatures"], ["Planeswalker", "Planeswalkers"], ["Battle", "Battles"], ["Land", "Lands"],
+    ["Instant", "Instants"], ["Sorcery", "Sorceries"], ["Artifact", "Artifacts"], ["Enchantment", "Enchantments"]]) {
+    if (t.includes(word)) return group;
+  }
+  return "Other";
+}
+
+// Lists saved before grouping existed have no type or mana value: look those cards up once (75 per request).
+async function fillListTypes() {
+  const missing = state.list.filter(c => !c.group && c.id);
+  for (let i = 0; i < missing.length; i += 75) {
+    const chunk = missing.slice(i, i + 75);
+    try {
+      const res = await fetch("https://api.scryfall.com/cards/collection", {
+        method: "POST", headers: { "content-type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ identifiers: chunk.map(c => ({ id: c.id })) })
+      });
+      if (!res.ok) return;
+      const byId = new Map(((await res.json()).data || []).map(c => [c.id, normalise(c)]));
+      for (const item of chunk) {
+        const card = byId.get(item.id);
+        if (card) { item.group = card.group; item.mv = card.mv; }
+      }
+    } catch { return; }   // offline: the cards stay under "Other" until the next visit
+  }
+  if (missing.length) saveList();
 }
 
 function changeQty(name, delta) {
@@ -1545,35 +1587,68 @@ function renderList() {
   $("openlist").textContent = items.length ? `List: ${plural(total, "card")} · ${priceLabel}` : "List is empty";
   $("listcount").textContent = total;
   $("barcopy").disabled = items.length === 0;
-  for (const c of items) {
-    const li = document.createElement("li");
-    if (!c.multi) li.className = "single";
-    const qty = document.createElement("span");
-    qty.className = "qty";
-    const minus = document.createElement("button");
-    minus.type = "button"; minus.textContent = "−"; minus.setAttribute("aria-label", `One fewer ${c.name}`);
-    minus.addEventListener("click", () => changeQty(c.name, -1));
-    const n = document.createElement("span");
-    n.textContent = c.qty;
-    const plus = document.createElement("button");
-    plus.type = "button"; plus.textContent = "+"; plus.setAttribute("aria-label", `One more ${c.name}`);
-    plus.addEventListener("click", () => changeQty(c.name, 1));
-    qty.append(minus, n, plus);
-    const name = document.createElement("span");
-    name.className = "cardname";
-    name.title = c.name;
-    name.textContent = c.name;
-    const set = document.createElement("small");
-    set.textContent = `${c.set.toUpperCase()} ${c.cn}`;
-    name.append(set);
-    const remove = document.createElement("button");
-    remove.type = "button"; remove.className = "remove"; remove.textContent = "×";
-    remove.setAttribute("aria-label", `Remove ${c.name}`);
-    remove.addEventListener("click", () => changeQty(c.name, -c.qty));
-    if (c.multi) li.append(qty, name, remove);
-    else li.append(name, remove);
-    ul.append(li);
+  renderCurve(items);
+  for (const group of LIST_GROUPS) {
+    const inGroup = items.filter(c => (c.group || "Other") === group);
+    if (!inGroup.length) continue;
+    const head = document.createElement("li");
+    head.className = "grouphead";
+    head.textContent = `${group} (${inGroup.reduce((n, c) => n + c.qty, 0)})`;
+    ul.append(head);
+    for (const c of inGroup) ul.append(listRow(c));
   }
+}
+
+function listRow(c) {
+  const li = document.createElement("li");
+  if (!c.multi) li.className = "single";
+  const qty = document.createElement("span");
+  qty.className = "qty";
+  const minus = document.createElement("button");
+  minus.type = "button"; minus.textContent = "−"; minus.setAttribute("aria-label", `One fewer ${c.name}`);
+  minus.addEventListener("click", () => changeQty(c.name, -1));
+  const n = document.createElement("span");
+  n.textContent = c.qty;
+  const plus = document.createElement("button");
+  plus.type = "button"; plus.textContent = "+"; plus.setAttribute("aria-label", `One more ${c.name}`);
+  plus.addEventListener("click", () => changeQty(c.name, 1));
+  qty.append(minus, n, plus);
+  const name = document.createElement("span");
+  name.className = "cardname";
+  name.title = c.name;
+  name.textContent = c.name;
+  const set = document.createElement("small");
+  set.textContent = `${c.set.toUpperCase()} ${c.cn}`;
+  name.append(set);
+  const remove = document.createElement("button");
+  remove.type = "button"; remove.className = "remove"; remove.textContent = "×";
+  remove.setAttribute("aria-label", `Remove ${c.name}`);
+  remove.addEventListener("click", () => changeQty(c.name, -c.qty));
+  if (c.multi) li.append(qty, name, remove);
+  else li.append(name, remove);
+  return li;
+}
+
+// Mana curve of the nonland cards: one bar per mana value, 7 and up together.
+function renderCurve(items) {
+  const box = $("curve");
+  const counts = Array(8).fill(0);
+  for (const c of items) if (c.group && c.group !== "Lands") counts[Math.min(7, Math.floor(c.mv || 0))] += c.qty;
+  const max = Math.max(...counts);
+  box.hidden = max === 0;
+  box.replaceChildren(...counts.map((n, mv) => {
+    const col = document.createElement("div");
+    col.className = "bar";
+    col.title = `Mana value ${mv === 7 ? "7+" : mv}: ${plural(n, "card")}`;
+    const count = document.createElement("span");
+    count.textContent = n || "";
+    const fill = document.createElement("i");
+    fill.style.height = n ? `max(3px, ${Math.round(100 * n / max)}%)` : "0";
+    const label = document.createElement("b");
+    label.textContent = mv === 7 ? "7+" : mv;
+    col.append(count, fill, label);
+    return col;
+  }));
 }
 
 function exportText() {
@@ -1948,6 +2023,7 @@ renderCommander();
 renderDeck();
 
 renderList();
+fillListTypes();
 renderHistory();
 const last = store.get("last", "");
 setView(true);

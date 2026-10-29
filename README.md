@@ -62,7 +62,7 @@ browser → Worker (API-key, toegangscode, vaste instellingen) → Claude API
 | API-key vervangen | `npx wrangler secret put ANTHROPIC_API_KEY` |
 | Worker opnieuw online zetten na een wijziging in `worker/src/index.js` | `npx wrangler deploy` |
 | De taglijst verversen met nieuwe Scryfall-tags (daarna `npx wrangler deploy`) | `node update-tags.mjs` |
-| De vertaler testen met 68 vragen (kost minder dan 5 cent) | `$env:ACCESS_CODE="<code>"; node eval.mjs` |
+| De vertaler testen met 70 vragen (kost minder dan 5 cent) | `$env:ACCESS_CODE="<code>"; node eval.mjs` |
 | Alle gelogde zoekopdrachten bekijken | `npx wrangler d1 execute zoekhulp-log --remote --command "SELECT * FROM searches ORDER BY id DESC"` |
 | Het logboek leegmaken | `npx wrangler d1 execute zoekhulp-log --remote --command "DELETE FROM searches"` |
 
@@ -88,6 +88,7 @@ Wijzigingen in de Worker zet je online met `npx wrangler deploy` (zie hierboven)
 - Met **Card size − / +** maak je de kaartplaatjes kleiner of groter (pc: 5 standen, telefoon: 3, 2 of 1 kaart per rij). De app onthoudt je keuze.
 - Commander is singleton: klik op een kaart om hem toe te voegen (er verschijnt een ✓), klik nog eens om hem weer weg te halen. Een andere print van dezelfde kaart telt als dezelfde kaart.
 - Uitzonderingen herkent de app zelf: basic lands en kaarten met "A deck can have any number of / up to … cards named" (zoals Relentless Rats en Seven Dwarves). Die krijgen een teller: klikken = +1, **−** op de kaart = één eraf.
+- De lijst is ingedeeld per type (Creatures, Instants, Lands …), met bovenaan de mana curve van je spells (lands tellen niet mee).
 - **Copy for Moxfield** zet de lijst op het klembord. Plak in Moxfield via *Import* of *Bulk Edit*.
 
 De app zelf is in het Engels; deze README is in het Nederlands.
