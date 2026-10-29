@@ -201,6 +201,7 @@ const CASES = [
   { zin: "nu alleen blauw-wit", prev: { zin: "counterspells", query: "otag:counterspell" }, any: [["counterspell"]], id: "<=wu" },
   { zin: "sort by newest", prev: { zin: "elves", query: "t:elf" }, any: [["t:elf"], ["order:released"]] },
   { zin: "the cheap ones", prev: { zin: "board wipes in white", query: "otag:sweeper id<=w" }, any: [["sweeper"], ["mv<=2", "mv<3", "mv<=3", "mv<4"]], none: ["eur"], id: "<=w" },
+  { zin: "that make additional creatures", prev: { zin: "flying guys → that are small → and cheap to play", query: "t:creature kw:flying id<=bg pow<=2 mv<=2" }, any: [["kw:flying"], ["pow<=2", "pow<3"], ["mv<=2", "mv<3"], ["token", "create"]], id: "<=bg", say: "flying" },
   // combos
   { zin: "combos with Thassa's Oracle", any: [['!"thassa']], min: 3 },
   { zin: "infinite combos in boros", any: [['!"']], min: 3 },

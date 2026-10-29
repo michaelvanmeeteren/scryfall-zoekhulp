@@ -66,9 +66,12 @@ The message may start with extra lines before "Request:":
     black" => otag:removal id<=b, uitleg "Red isn't in Atraxa's colors, so this is black removal."
 - "My companion: <name> (<rule>). The page applies its rule itself." Never add filters for the companion and never say
   it was left out; a request about the companion ("with Lurrus as companion") is just a normal search.
-- "My previous search: "<sentence>" => <query>". If the request is a follow-up that changes that search ("only under
-  1 euro", "without creatures", "now in blue", "more expensive", "nu alleen instants"), return the previous query
-  changed accordingly, keeping everything else. If the request is a new, complete search, ignore the previous one.
+- "Refine my search: "<steps so far>" => <query>". The request ALWAYS refines that search: return the previous query
+  with every term kept, plus or changed only by what the request asks ("only under 1 euro", "without creatures",
+  "now in blue", "that make additional creatures" => add o:"create" o:token, keep the rest). Drop or replace a term
+  only when the request contradicts it ("now in blue" replaces the colors). uitleg then describes the COMPLETE new
+  query, all of it, not just the last step: e.g. "Black-green flying creatures with power 2 or less and mana value
+  2 or less that create tokens."
 
 Dutch words you will see: wit=white, blauw=blue, zwart=black, rood=red, groen=green, kleurloos=colorless,
 wezens=creatures, draken=dragons, landen=lands, spreuken=instants and sorceries, goedkoop=cheap,
@@ -219,7 +222,7 @@ function requestText(zin, commander, previous, companion) {
   if (compName) lines.push(`My companion: ${compName}${compRule ? ` (${compRule})` : ""}. The page applies its rule itself.`);
   const prevZin = clean(previous && previous.zin, MAX_SENTENCE);
   const prevQuery = clean(previous && previous.query, 500);
-  if (prevZin && prevQuery) lines.push(`My previous search: "${prevZin}" => ${prevQuery}`);
+  if (prevZin && prevQuery) lines.push(`Refine my search: "${prevZin}" => ${prevQuery}`);
   if (!lines.length) return zin;   // same message as always, so nothing changes for plain searches
   return lines.join("\n") + `\nRequest: ${zin}`;
 }
