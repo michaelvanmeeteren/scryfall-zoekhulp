@@ -205,6 +205,7 @@ h2, .help h3 { font-family: var(--serif); font-weight: 700; letter-spacing: 0.01
 .help { width: min(620px, calc(100% - 32px)); max-height: calc(100vh - 48px); overflow: auto; }
 .help h3 { margin: 6px 0 2px; font-size: 15px; }
 .help p { margin: 0; font-size: 14px; }
+.help ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 14px; }
 .help code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
 
 /* commander, deck and result filters */
@@ -460,55 +461,31 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
     <h2 id="helptitle">How to use SpellSeekr</h2>
 
     <h3>Searching</h3>
-    <p>Describe the cards you want, like <i>cheap removal in black</i> or <i>blue instants that draw a card</i>.
-      Colors, card types, mana value, price, keywords and what a card does all work. Dutch works too (with the access code).
-      <i>Cheap</i> means a low mana value (2 or less) and <i>expensive</i> a high one (6 or more); for price use
-      <i>budget</i> (under €2) or an amount, like <i>under 1 euro</i>.
-      Only Commander-legal paper cards are shown. Already know Scryfall's syntax? Start with <code>/s</code>, e.g. <code>/s t:elf mv=1</code>.</p>
+    <ul>
+      <li>Describe what you need: <i>cheap removal in black</i>, <i>blue instants that draw a card</i>. Dutch works with the access code.</li>
+      <li><b>Cheap</b> = mana value 2 or less, <b>expensive</b> = 6 or more. For price: <i>budget</i> (under €2) or <i>under 1 euro</i>.</li>
+      <li>Know Scryfall's syntax? Start with <code>/s</code>: <code>/s t:elf mv=1</code>. Only Commander-legal paper cards are shown.</li>
+      <li>With the access code: follow-ups like <i>only under 1 euro</i>, and combos like <i>2 card combos in dimir</i>.</li>
+    </ul>
 
-    <h3>Your commander</h3>
-    <p>Type your commander's name under the search bar and pick it from the suggestions.
-      From then on every search only shows cards that fit in its colors. Ask for a color outside them and the explanation
-      turns red to say it was left out. Click <b>remove</b> to search all colors again.</p>
-    <p>Two commanders? If yours has Partner, Friends forever, Choose a Background or Doctor's companion, click <b>+ add partner</b>
-      (or background, Doctor) and pick the second one; the suggestions only show cards that may join it. Searches then use the colors of both.
-      You can also pick a <b>Companion</b>: its deck rule is added to every search, like Lurrus: permanents of 2 mana or less.</p>
+    <h3>Commander</h3>
+    <ul>
+      <li>Set it under the search bar: every search stays in its colors. A color outside them is left out (in red).</li>
+      <li>Partner, Background or Doctor? <b>+ add partner</b> adds the second one.</li>
+      <li>A <b>Companion</b> adds its deck rule to every search, e.g. Lurrus: permanents of 2 mana or less.</li>
+      <li><b>EDHREC top cards</b> shows the cards most played with it, or type <i>recommended ramp for my commander</i>.</li>
+    </ul>
 
-    <h3>Follow-up questions <span class="optional">(access code)</span></h3>
-    <p>After a search, type a change instead of starting over: <i>only under 1 euro</i>, <i>without creatures</i>, <i>nu alleen instants</i>.</p>
-
-    <h3>Combos <span class="optional">(access code)</span></h3>
-    <p>Ask for combos, like <i>2 card combos in dimir</i>, <i>combos with Sol Ring</i> or <i>budget combos in boros</i>.
-      The combos appear under the search with what they do and their price; click one to see only its cards.</p>
-
-    <h3>Filters</h3>
-    <p>Above the results you can narrow them down by card type, mana value and price with one click.</p>
-
-    <h3>EDHREC recommendations</h3>
-    <p>Set your commander and press <b>EDHREC top cards</b>: you get the cards most played with that commander on EDHREC,
-      most played first, with the share of decks on each card ("in 85% of decks"). Basic lands are left out.</p>
-    <p>With the access code you can also type it. Use a word like <i>recommended</i>, <i>edhrec</i>, <i>top</i>, <i>best</i>,
-      <i>staples</i> or <i>aanbevolen</i>, plus a commander or "my commander":
-      <i>recommended cards for Atraxa</i>, <i>edhrec Krenko</i>, <i>top ramp for my commander</i>, <i>aanbevolen removal voor Prosper</i>.
-      Without such a word (<i>removal for my commander</i>) you get a normal search within your commander's colors.</p>
-    <p>Cards that are already in your imported deck get the <b>In deck</b> label. Loading takes a few seconds.</p>
-
-    <h3>Your list</h3>
-    <p>Click a card to add it to your list, click it again to remove it. Basic lands get a counter instead.
-      <b>Copy decklist</b> copies the list; paste it in Moxfield (<i>Import</i> or <i>Bulk Edit</i>), Archidekt or any other deck site.
-      Open it with <b>List</b> at the top right; it slides in from the side (on a phone: the bar at the bottom). The list is saved in this browser.
-      It is grouped by card type, with the mana curve of your spells at the top.
-      The <i>i</i> on a card opens its details: rules text, price and links to Scryfall and EDHREC.
-      Double-faced cards have a <b>⟲</b> button to turn them over.</p>
-
-    <h3>Import your deck</h3>
-    <p><b>Import deck</b> at the top (or in the card list) takes your deck list (copied from Moxfield, Archidekt, MTG Arena and the like).
-      Cards you already have get an <b>In deck</b> label, and you can hide them.</p>
-
+    <h3>Your list and deck</h3>
+    <ul>
+      <li>Click a card to add it, click again to remove it. <b>List</b> (top right) shows it grouped by type, with a mana curve.</li>
+      <li><b>Copy decklist</b> puts it on the clipboard for Moxfield, Archidekt and other deck sites.</li>
+      <li><b>Import deck</b> marks the cards you already have (<b>In deck</b>), and you can hide them.</li>
+      <li>The <i>i</i> on a card shows its details; <b>⟲</b> turns a double-faced card over.</li>
+    </ul>
 
     <h3>Access code</h3>
-    <p>Without the code a simple built-in translator is used. With it, Claude understands your searches much better.
-      Ask the owner of this page for the code and enter it under <b>Settings</b>.</p>
+    <p>Without it a simple built-in translator is used; with it, Claude understands you much better. Enter it under <b>Settings</b>.</p>
 
     <div class="listactions"><button class="btn primary" type="submit">Got it</button></div>
   </form>
@@ -1306,7 +1283,8 @@ function showNothing(title, uitleg) {
 
 // ---------- EDHREC recommendations for a commander ----------
 // EDHREC has no official API; its pages load this JSON and it may be read from other sites (it sends CORS headers).
-// Scryfall takes about 40 card names per search, so the cards are fetched in batches and kept in EDHREC's order.
+// Scryfall cuts a search off after about 1000 characters, so the names are fetched in batches that stay under that
+// (with the tag and companion rule added), and kept in EDHREC's order.
 const edhrecSlug = name => name.split(" // ")[0].toLowerCase().replace(/\u00e6/g, "ae").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
   .replace(/[^a-z0-9\s-]/g, "").trim().replace(/[\s-]+/g, "-");
 
@@ -1335,11 +1313,18 @@ async function runEdhrec(name, tag, uitleg) {
     const names = [...stats.keys()].sort((a, b) => stats.get(b).pct - stats.get(a).pct);
     const cleanTag = String(tag || "").replace(/[^a-z0-9-]/gi, "").toLowerCase();
     const cards = [];
-    for (let i = 0; i < names.length; i += 40) {
-      const chunk = names.slice(i, i + 40).map(n => `!"${n.replace(/"/g, "")}"`).join(" OR ");
-      // the companion's deck rule applies to recommendations too
-      const q = `(${chunk})` + (cleanTag ? ` otag:${cleanTag}` : "") + " game:paper" + (companionRule() ? " " + companionRule() : "");
-      const body = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q }));
+    // the companion's deck rule applies to recommendations too
+    const tail = (cleanTag ? ` otag:${cleanTag}` : "") + " game:paper" + (companionRule() ? " " + companionRule() : "");
+    const batches = [[]];
+    for (const n of names) {
+      const term = `!"${n.replace(/"/g, "")}"`;
+      const batch = batches[batches.length - 1];
+      if (batch.length && (batch.join(" OR ").length + term.length + tail.length > 900)) batches.push([term]);
+      else batch.push(term);
+    }
+    for (const batch of batches) {
+      if (!batch.length) continue;
+      const body = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q: `(${batch.join(" OR ")})${tail}` }));
       cards.push(...(body.data || []).map(normalise));
     }
     for (const c of cards) {
