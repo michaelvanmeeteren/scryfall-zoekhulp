@@ -64,6 +64,8 @@ The message may start with extra lines before "Request:":
     (green), so these are green board wipes."
   - a mix keeps only the colors inside the identity, never a letter outside it: Atraxa (wubg) + "removal in red and
     black" => otag:removal id<=b, uitleg "Red isn't in Atraxa's colors, so this is black removal."
+- "My companion: <name> (<rule>). The page applies its rule itself." Never add filters for the companion and never say
+  it was left out; a request about the companion ("with Lurrus as companion") is just a normal search.
 - "My previous search: "<sentence>" => <query>". If the request is a follow-up that changes that search ("only under
   1 euro", "without creatures", "now in blue", "more expensive", "nu alleen instants"), return the previous query
   changed accordingly, keeping everything else. If the request is a new, complete search, ignore the previous one.
@@ -206,12 +208,15 @@ function readAnswer(response) {
 }
 
 // ---------- the user message: the request, plus the chosen commander and the previous search ----------
-function requestText(zin, commander, previous) {
+function requestText(zin, commander, previous, companion) {
   const clean = (s, max) => typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, max) : "";
   const lines = [];
   const name = clean(commander && commander.name, 100);
   const colors = clean(commander && commander.colors, 5).toLowerCase().replace(/[^wubrg]/g, "");
   if (name) lines.push(`My commander: ${name} (color identity: ${colors || "colorless"}).`);
+  const compName = clean(companion && companion.name, 60);
+  const compRule = clean(companion && companion.rule, 120);
+  if (compName) lines.push(`My companion: ${compName}${compRule ? ` (${compRule})` : ""}. The page applies its rule itself.`);
   const prevZin = clean(previous && previous.zin, MAX_SENTENCE);
   const prevQuery = clean(previous && previous.query, 500);
   if (prevZin && prevQuery) lines.push(`My previous search: "${prevZin}" => ${prevQuery}`);
@@ -471,7 +476,7 @@ export default {
       ctx.waitUntil(recordUsage(env, kind, r.usage));
       return r;
     };
-    const messages = [{ role: "user", content: requestText(zin, input.commander, input.previous) }];
+    const messages = [{ role: "user", content: requestText(zin, input.commander, input.previous, input.companion) }];
     let response, answer;
     try {
       response = await ask(messages, "search");

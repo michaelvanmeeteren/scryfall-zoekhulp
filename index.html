@@ -962,7 +962,8 @@ async function translateWithClaude(zin) {
     res = await fetch(WORKER_URL + "/translate", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ zin, code: settings.code, commander: state.commander, previous: state.previous })
+      body: JSON.stringify({ zin, code: settings.code, commander: state.commander, previous: state.previous,
+        companion: state.companion ? { name: state.companion, rule: $("compnote").textContent } : null })
     });
   } catch {
     throw new Error("Can't reach the translator. Check your internet connection.");
@@ -1329,7 +1330,8 @@ async function runEdhrec(name, tag, uitleg) {
     const cards = [];
     for (let i = 0; i < names.length; i += 40) {
       const chunk = names.slice(i, i + 40).map(n => `!"${n.replace(/"/g, "")}"`).join(" OR ");
-      const q = `(${chunk})` + (cleanTag ? ` otag:${cleanTag}` : "") + " game:paper";
+      // the companion's deck rule applies to recommendations too
+      const q = `(${chunk})` + (cleanTag ? ` otag:${cleanTag}` : "") + " game:paper" + (companionRule() ? " " + companionRule() : "");
       const body = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q }));
       cards.push(...(body.data || []).map(normalise));
     }
@@ -1358,6 +1360,7 @@ function showEdhrec(commanderName, tag, cards, uitleg) {
   state.previous = null;
   showQuery("", uitleg || `Most played cards in ${commanderName} decks on EDHREC${tag ? ` (${tag})` : ""}.`);
   $("uitleg").textContent += " Percentages: share of EDHREC decks with this commander that play the card.";
+  if (companionRule()) $("uitleg").textContent += ` Only cards that fit your companion (${$("compnote").textContent}).`;
   setView(false);
   $("results").classList.add("static");
   $("toolbar").hidden = false;
