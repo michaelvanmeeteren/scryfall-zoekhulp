@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SpellSeekr</title>
-<link rel="icon" href="data:,">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
 <script>try { const t = JSON.parse(localStorage.getItem("szh.theme")); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -282,7 +282,8 @@ html:not(.mobile) .mobilebar { display: none !important; }
 :root { --bar: #0d0c0e; --bar-fg: #f2efe6; --bar-line: #3a3220; --gold: #d4a73a; }
 .topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 14px; padding: 10px max(16px, 2vw);
   background: var(--bar); color: var(--bar-fg); border-bottom: 1px solid var(--bar-line); }
-.brandbtn { background: none; border: 0; padding: 0; color: var(--gold); font-family: var(--serif); font-weight: 700; font-size: 22px; letter-spacing: 0.01em; white-space: nowrap; }
+.brandbtn { background: none; border: 0; padding: 0; color: var(--gold); font-family: var(--serif); font-weight: 700; font-size: 22px; letter-spacing: 0.01em; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.3em; }
+.brandlogo { width: 1.25em; height: 1.25em; }
 .tagline { display: none; margin: 0; color: #a39d8c; font-size: 14px; }
 .topbar .searchrow { flex: 1; max-width: 760px; }
 .topbar .searchrow input { background: #1b1a1d; border-color: #3a3220; color: var(--bar-fg); }
@@ -413,7 +414,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 <body>
 
 <header class="topbar">
-  <button id="home" class="brandbtn" type="button" title="Back to the start">SpellSeekr</button>
+  <button id="home" class="brandbtn" type="button" title="Back to the start"><img class="brandlogo" src="logo.svg" alt="">SpellSeekr</button>
   <p class="tagline">Commander card search in plain words</p>
   <form id="searchform" class="searchrow">
     <input id="zin" type="search" autocomplete="off" placeholder="Describe the cards you want, e.g. cheap removal in black" aria-label="Describe the cards you want">

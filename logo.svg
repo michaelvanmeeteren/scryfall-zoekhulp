@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- SpellSeekr: a tilted card with a spell spark, under a magnifying glass -->
+  <rect x="9" y="5" width="30" height="42" rx="4" transform="rotate(-12 24 26)" fill="#141216" stroke="#d4a73a" stroke-width="3.5"/>
+  <path d="M23 15 L25.2 21.8 L32 24 L25.2 26.2 L23 33 L20.8 26.2 L14 24 L20.8 21.8 Z" fill="#d4a73a"/>
+  <line x1="49" y1="49" x2="59" y2="59" stroke="#d4a73a" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="40" cy="40" r="12" fill="#141216" fill-opacity="0.85" stroke="#d4a73a" stroke-width="4.5"/>
+  <path d="M34.5 36.5 A7 7 0 0 1 40 33" fill="none" stroke="#f2e2b0" stroke-width="2.2" stroke-linecap="round"/>
+</svg>
