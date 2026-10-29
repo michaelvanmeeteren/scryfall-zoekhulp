@@ -1952,6 +1952,7 @@ function renderHistory() {
       $("zin").value = h.zin;
       showQuery(h.query, h.uitleg, h.combos);
       state.previous = h.combos && h.combos.length ? null : { zin: h.zin, query: h.query };
+      pushSearchUrl(h.query, h.zin);
       runSearch(h.query);
     });
     li.append(b);
