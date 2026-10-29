@@ -362,6 +362,7 @@ html.mobile #results:not(.opts) #filterbar { display: none !important; }
 html.mobile .infobtn { width: 34px; height: 34px; font-size: 18px; }
 /* nothing to search: keep the explanation, hide the result controls */
 #results.nosearch .controls, #results.nosearch .optstoggle, #results.nosearch #querybar { display: none !important; }
+#results.static #querybar, #results.static #filterbar, #results.static .controls label:first-child { display: none !important; }
 </style>
 </head>
 <body>
@@ -422,6 +423,15 @@ html.mobile .infobtn { width: 34px; height: 34px; font-size: 18px; }
     <h3>Filters</h3>
     <p>Above the results you can narrow them down by card type, mana value and price with one click.</p>
 
+    <h3>EDHREC recommendations</h3>
+    <p>Set your commander and press <b>EDHREC top cards</b>: you get the cards most played with that commander on EDHREC,
+      most played first, with the share of decks on each card ("in 85% of decks"). Basic lands are left out.</p>
+    <p>With the access code you can also type it. Use a word like <i>recommended</i>, <i>edhrec</i>, <i>top</i>, <i>best</i>,
+      <i>staples</i> or <i>aanbevolen</i>, plus a commander or "my commander":
+      <i>recommended cards for Atraxa</i>, <i>edhrec Krenko</i>, <i>top ramp for my commander</i>, <i>aanbevolen removal voor Prosper</i>.
+      Without such a word (<i>removal for my commander</i>) you get a normal search within your commander's colors.</p>
+    <p>Cards that are already in your imported deck get the <b>In deck</b> label. Loading takes a few seconds.</p>
+
     <h3>Your list and Moxfield</h3>
     <p>Click a card to add it to your list, click it again to remove it. Basic lands get a counter instead.
       <b>Copy for Moxfield</b> copies the list; paste it in Moxfield under <i>Import</i> or <i>Bulk Edit</i>.
@@ -478,6 +488,7 @@ html.mobile .infobtn { width: 34px; height: 34px; font-size: 18px; }
     <div id="cmdrhome"><div id="cmdrrow" class="cmdr">
         <span class="cmdrlabel">Commander <span class="optional">(optional)</span></span>
         <span id="cmdrchip" class="chip" hidden></span>
+        <button id="cmdredhrec" class="btn small" type="button" hidden>EDHREC top cards</button>
         <button id="cmdrclear" class="linkbtn" type="button" hidden>remove</button>
         <form id="cmdrform" class="cmdrform">
           <input id="cmdrinput" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. Atraxa" aria-label="Commander name" list="cmdrlist">
@@ -854,6 +865,7 @@ async function translateWithClaude(zin) {
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.error || `The translator returned an error (${res.status}).`);
   // An empty query is an answer, not a failure: Claude says this isn't a card search (or no combos match).
+  if (body.edhrec) return { query: "", uitleg: body.uitleg || "", edhrec: body.edhrec };
   if (!body.query) return { query: "", uitleg: body.uitleg || "This isn't a search for Magic cards." };
   return { query: body.query, uitleg: body.uitleg || "", combos: body.combos || [] };
 }
@@ -1002,27 +1014,33 @@ function renderFilterbar() {
 // ---------- commander as the starting point ----------
 function renderCommander() {
   const c = state.commander;
+  $("cmdredhrec").hidden = !c;
   $("cmdrchip").hidden = $("cmdrclear").hidden = !c;
   $("cmdrform").hidden = !!c;
   $("cmdrnote").textContent = c ? "Searches stay within these colors." : "Limits every search to its colors.";
   if (c) $("cmdrchip").textContent = `${c.name} · ${(c.colors || "c").toUpperCase().split("").join("")}`;
 }
 
+// The commander card for a (partial) name; ambiguous names ("atraxa") give the most played commander containing it.
+async function findCommander(name) {
+  let card = await scryfall("https://api.scryfall.com/cards/named?" + new URLSearchParams({ fuzzy: name }));
+  if (!card || card.object !== "card") {
+    const found = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q: `is:commander name:"${name.replace(/"/g, "")}"`, order: "edhrec" }));
+    card = found.data && found.data[0];
+  }
+  if (!card || card.object !== "card") throw new Error(`No commander found named "${name}".`);
+  return card;
+}
+
 async function setCommander(name) {
   $("cmdrnote").textContent = "Looking it up…";
   try {
-    let card = await scryfall("https://api.scryfall.com/cards/named?" + new URLSearchParams({ fuzzy: name }));
-    if (!card || card.object !== "card") {
-      // ambiguous names ("atraxa"): take the most played commander whose name contains it
-      const found = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q: `is:commander name:"${name.replace(/"/g, "")}"`, order: "edhrec" }));
-      card = found.data && found.data[0];
-    }
-    if (!card || card.object !== "card") throw new Error(`No commander found named "${name}".`);
+    const card = await findCommander(name);
     const colors = "wubrg".split("").filter(c => (card.color_identity || []).map(x => x.toLowerCase()).includes(c)).join("");
     state.commander = { name: card.name, colors };
     store.set("commander", state.commander);
     renderCommander();
-    if (state.search) runSearch(state.search.query);
+    if (state.search && !state.search.static) runSearch(state.search.query);
   } catch (err) {
     $("cmdrnote").textContent = err.message;
   }
@@ -1050,6 +1068,70 @@ function suggestCommanders() {
       }));
     } catch { /* no suggestions this time */ }
   }, 300);
+}
+
+// ---------- EDHREC recommendations for a commander ----------
+// EDHREC has no official API; its pages load this JSON and it may be read from other sites (it sends CORS headers).
+// Scryfall takes about 40 card names per search, so the cards are fetched in batches and kept in EDHREC's order.
+const edhrecSlug = name => name.split(" // ")[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .replace(/[^a-z0-9\s-]/g, "").trim().replace(/[\s-]+/g, "-");
+
+async function runEdhrec(name, tag, uitleg) {
+  setBusy(true, "Asking EDHREC…");
+  message("");
+  try {
+    const commander = await findCommander(name);
+    const res = await fetch(`https://json.edhrec.com/pages/commanders/${edhrecSlug(commander.name)}.json`);
+    if (!res.ok) throw new Error(`EDHREC has no page for ${commander.name}.`);
+    const page = await res.json();
+    const views = ((page.container && page.container.json_dict && page.container.json_dict.cardlists) || []).flatMap(l => l.cardviews || []);
+    const stats = new Map();
+    for (const v of views) {
+      if (stats.has(v.name) || !v.potential_decks) continue;
+      stats.set(v.name, { pct: Math.round(100 * v.num_decks / v.potential_decks), syn: Math.round(100 * (v.synergy || 0)) });
+    }
+    // basic lands are in every deck, so they are no recommendation
+    for (const basic of ["Plains", "Island", "Swamp", "Mountain", "Forest", "Wastes"]) { stats.delete(basic); stats.delete("Snow-Covered " + basic); }
+    const names = [...stats.keys()].sort((a, b) => stats.get(b).pct - stats.get(a).pct);
+    const cleanTag = String(tag || "").replace(/[^a-z0-9-]/gi, "").toLowerCase();
+    const cards = [];
+    for (let i = 0; i < names.length; i += 40) {
+      const chunk = names.slice(i, i + 40).map(n => `!"${n.replace(/"/g, "")}"`).join(" OR ");
+      const q = `(${chunk})` + (cleanTag ? ` otag:${cleanTag}` : "") + " game:paper";
+      const body = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q }));
+      cards.push(...(body.data || []).map(normalise));
+    }
+    for (const c of cards) {
+      const st = stats.get(c.name) || stats.get(c.name.split(" // ")[0]);
+      c.edh = st ? st.pct : 0;
+    }
+    cards.sort((a, b) => b.edh - a.edh);
+    showEdhrec(commander.name, cleanTag, cards, uitleg);
+  } catch (err) {
+    message(err.message, true);
+  } finally {
+    setBusy(false);
+  }
+}
+
+// EDHREC results are a fixed list, so they skip Scryfall's paging: every 175 cards are one cached "page".
+function showEdhrec(commanderName, tag, cards, uitleg) {
+  const label = `EDHREC: ${commanderName}${tag ? " · " + tag : ""}`;
+  state.edhrecFor = commanderName;
+  const cache = new Map();
+  for (let i = 0; i < cards.length; i += API_PAGE) cache.set(i / API_PAGE + 1, cards.slice(i, i + API_PAGE));
+  state.search = { query: label, full: label, order: state.order, size: state.size, total: cards.length, cache, page: 1, static: true, warnings: [], details: null };
+  state.previous = null;
+  showQuery("", uitleg || `Most played cards in ${commanderName} decks on EDHREC${tag ? ` (${tag})` : ""}.`);
+  $("uitleg").textContent += " Percentages: share of EDHREC decks with this commander that play the card.";
+  setView(false);
+  $("results").classList.add("static");
+  $("toolbar").hidden = false;
+  renderFilterbar();
+  const params = new URLSearchParams({ edhrec: commanderName });
+  if (tag) params.set("tag", tag);
+  if (location.search !== "?" + params) history.pushState({}, "", location.pathname + "?" + params);
+  showPage(1);
 }
 
 // ---------- imported deck: mark cards you already have ----------
@@ -1168,7 +1250,7 @@ function sortParams(order) {
 }
 
 async function runSearch(query, page = 1) {
-  $("results").classList.remove("nosearch");
+  $("results").classList.remove("nosearch", "static");
   query = query.trim();
   if (!query) return;
   const { full, extra } = withFilters(query);
@@ -1230,7 +1312,7 @@ function render(cards, page, pages) {
   const search = state.search;
   const grid = $("grid");
   grid.replaceChildren();
-  $("count").textContent = `${plural(search.total, "card")} found`;
+  $("count").textContent = search.static ? `${plural(search.total, "card")} on EDHREC for ${state.edhrecFor}` : `${plural(search.total, "card")} found`;
 
   const notes = [];
   if (search.total === 0) {
@@ -1264,7 +1346,7 @@ function render(cards, page, pages) {
     name.title = card.name;
     const meta = document.createElement("span");
     meta.className = "meta";
-    meta.textContent = `${card.set.toUpperCase()} · ${priceText(card)}`;
+    meta.textContent = `${card.set.toUpperCase()} · ${priceText(card)}` + (card.edh ? ` · in ${card.edh}% of decks` : "");
     btn.append(img, name, meta);
     btn.addEventListener("click", () => addToList(card));
     const info = document.createElement("button");
@@ -1627,6 +1709,7 @@ $("searchform").addEventListener("submit", async e => {
     }
   }
   else result = translate(zin);
+  if (result.edhrec) { runEdhrec(result.edhrec.commander, result.edhrec.tag, result.uitleg); return; }
   if (!result.query) {
     // Nothing to search: show why, without searching, logging or adding it to the history.
     showQuery("", result.uitleg);
@@ -1659,6 +1742,7 @@ $("query").addEventListener("keydown", e => { if (e.key === "Enter") { e.prevent
 $("order").value = state.order;
 $("size").value = String(state.size);
 $("order").addEventListener("change", () => {
+  if (state.search && state.search.static) return;
   state.order = $("order").value;
   store.set("order", state.order);
   if (state.search) runSearch(state.search.query);
@@ -1711,6 +1795,7 @@ function pushSearchUrl(query, zin) {
 }
 function searchFromUrl() {
   const params = new URLSearchParams(location.search);
+  if (params.get("edhrec")) { runEdhrec(params.get("edhrec"), params.get("tag") || "", ""); return true; }
   const query = params.get("q");
   if (!query) return false;
   $("zin").value = params.get("s") || query;
@@ -1783,6 +1868,7 @@ $("cmdrform").addEventListener("submit", e => {
   if (name) setCommander(name);
 });
 $("cmdrinput").addEventListener("input", suggestCommanders);
+$("cmdredhrec").addEventListener("click", () => { if (state.commander) runEdhrec(state.commander.name, "", ""); });
 // light / dark switch: follows the device until clicked, then remembers the choice
 function currentTheme() {
   return document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
@@ -1815,7 +1901,7 @@ $("cmdrclear").addEventListener("click", () => {
   store.set("commander", null);
   $("cmdrinput").value = "";
   renderCommander();
-  if (state.search) runSearch(state.search.query);
+  if (state.search && !state.search.static) runSearch(state.search.query);
 });
 $("importdeck").addEventListener("click", () => { $("decktext").value = ""; $("deckdialog").showModal(); $("decktext").focus(); });
 $("deckform").addEventListener("submit", e => {

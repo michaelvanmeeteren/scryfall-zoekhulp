@@ -16,7 +16,8 @@ The page adds "f:commander game:paper" itself: never add f: or game: yourself.
 
 Reply with JSON only, no other text:
 {"query": "<scryfall query>", "uitleg": "<one short sentence describing what the query finds>",
- "combo": {"wanted": false, "colors": "", "card": "", "result": "", "max_eur": 0, "cards": 0}}
+ "combo": {"wanted": false, "colors": "", "card": "", "result": "", "max_eur": 0, "cards": 0},
+ "edhrec": {"wanted": false, "commander": "", "tag": ""}}
 Write "uitleg" in English. Only when the request itself is written in Dutch, write "uitleg" in Dutch.
 
 Combos: when the user asks for combos (infinite combos, combo pieces, "2-card combos", "combos with <card>", "how do I
@@ -30,6 +31,19 @@ cards itself, so leave "query" empty. Fill in:
 - max_eur: the most the whole combo may cost in euro ("cheap combos" = 20), or 0 for no limit;
 - cards: the exact number of cards the user asks for ("2 card combos" / "two-card combos" = 2), or 0 for any number.
 For every other request combo.wanted = false, with "" and 0 in the other fields.
+
+EDHREC recommendations: only when the user asks for recommendations for a specific commander, with words like
+edhrec, recommended, recommendations, aanbevolen, top, best, most played, staples, "what do <commander> decks play"
+("recommended cards for Atraxa", "edhrec Atraxa", "best cards for my commander", "top cards for Krenko",
+"recommended ramp for my commander", "removal that Atraxa decks play", "aanbevolen kaarten voor Atraxa"), set edhrec.wanted = true
+and leave "query" empty. The page then fetches EDHREC's list itself. Fill in:
+- commander: the commander's name as the user wrote it, or the name from "My commander:" when they say "my commander";
+- tag: when they ask for one kind of card, the Scryfall Tagger tag without "otag:" (ramp, removal, draw, tutor,
+  counterspell, sweeper, mana-rock, land-ramp, protects-creature, ...), or "" for all recommended cards.
+Without a commander name and without "My commander:", do not use edhrec; search normally instead.
+When the request names colors or a guild/shard instead of a commander ("best ramp in green"), search normally.
+Without such a recommendation word ("removal for my commander", "ramp in green") search normally, within the commander's colors.
+For every other request edhrec.wanted = false, with "" in the other fields.
 Example: "cheap infinite mana combos in green" => query "", combo {"wanted": true, "colors": "g", "card": "",
 "result": "Infinite mana", "max_eur": 20, "cards": 0}; "infinite combos in dimir" => combo {"wanted": true, "colors": "ub",
 "card": "", "result": "", "max_eur": 0, "cards": 0}.
@@ -301,9 +315,19 @@ const ANSWER_SCHEMA = {
       },
       required: ["wanted", "colors", "card", "result", "max_eur", "cards"],
       additionalProperties: false
+    },
+    edhrec: {
+      type: "object",
+      properties: {
+        wanted: { type: "boolean" },
+        commander: { type: "string" },
+        tag: { type: "string" }
+      },
+      required: ["wanted", "commander", "tag"],
+      additionalProperties: false
     }
   },
-  required: ["query", "uitleg", "combo"],
+  required: ["query", "uitleg", "combo", "edhrec"],
   additionalProperties: false
 };
 const OUTPUT_CONFIG = { effort: "low", format: { type: "json_schema", schema: ANSWER_SCHEMA } };
@@ -393,7 +417,7 @@ export default {
       answer = readAnswer(response);
       // Self-check: one correction round when the query uses a tag that doesn't exist,
       // makes Scryfall warn, or finds no cards at all.
-      const wantsCombos = answer && answer.combo && answer.combo.wanted;
+      const wantsCombos = answer && ((answer.combo && answer.combo.wanted) || (answer.edhrec && answer.edhrec.wanted));
       const problem = answer && answer.query && !wantsCombos ? await checkQuery(String(answer.query)) : null;
       if (problem) {
         messages.push({ role: "assistant", content: response.content });
@@ -418,6 +442,14 @@ export default {
     console.log(JSON.stringify(response.usage));
     if (response.stop_reason === "refusal") return reply(422, { error: "Claude declined to translate this request." });
     if (!answer) return reply(502, { error: "Claude's answer wasn't the expected JSON." });
+    // EDHREC: the page fetches the recommendations itself (EDHREC allows that from the browser)
+    if (answer.edhrec && answer.edhrec.wanted && String(answer.edhrec.commander || "").trim()) {
+      return reply(200, {
+        query: "",
+        uitleg: String(answer.uitleg || ""),
+        edhrec: { commander: String(answer.edhrec.commander).trim().slice(0, 100), tag: String(answer.edhrec.tag || "").replace(/^otag:/, "").trim().slice(0, 60) }
+      });
+    }
     if (answer.combo && answer.combo.wanted) {
       console.log("combo " + JSON.stringify(answer.combo));
       let combos = await findCombos(answer.combo);

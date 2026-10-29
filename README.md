@@ -42,6 +42,10 @@ browser → Worker (API-key, toegangscode, vaste instellingen) → Claude API
   zoekt de Worker de 10 meest gespeelde combo's op bij [Commander Spellbook](https://commanderspellbook.com) (de bron
   van EDHREC's combo-pagina's). Hun kaarten verschijnen als zoekresultaat; de combo's zelf staan onder de zoekopdracht,
   met wat ze doen, de prijs en een link. Klik op een combo om alleen die kaarten te zien.
+- **EDHREC-aanbevelingen:** met een commander ingesteld toont **EDHREC top cards** de kaarten die het meest met die
+  commander gespeeld worden (percentage van de decks op elke kaart, basic lands weggelaten). Met de code werkt ook typen:
+  "recommended cards for Atraxa", "top ramp for my commander". EDHREC heeft geen officiële API: de pagina leest dezelfde
+  gegevens als edhrec.com zelf, dus dit kan ooit veranderen.
 - **Kostenoverzicht:** de Worker telt per dag de aanroepen en tokens (D1-tabel `usage`). Op
   [stats.html](https://michaelvanmeeteren.github.io/scryfall-zoekhulp/stats.html) zie je met je eigen beheercode
   (secret `ADMIN_CODE`) het aantal zoekopdrachten, de geschatte kosten en hoe lang je tegoed nog meegaat.
