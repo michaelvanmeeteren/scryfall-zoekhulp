@@ -1,4 +1,4 @@
--- Shared "Recent searches": every search made with the access code. No names or IP addresses.
+-- No longer used: held the shared "Recent searches", which were removed (table kept empty).
 CREATE TABLE IF NOT EXISTS searches (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   at TEXT NOT NULL,       -- ISO time

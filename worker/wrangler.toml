@@ -9,7 +9,7 @@ name = "LIMITER"
 namespace_id = "1001"
 simple = { limit = 20, period = 60 }
 
-# Logging searches and reading "Recent searches": cheaper, so a higher limit.
+# The cost overview (/stats): cheap, so a higher limit.
 [[ratelimits]]
 name = "LOG_LIMITER"
 namespace_id = "1002"

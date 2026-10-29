@@ -1,7 +1,7 @@
 // Scryfall Zoekhulp translator: turns an English sentence into Scryfall syntax with Claude.
 // The Anthropic API key lives only here, as a Worker secret (ANTHROPIC_API_KEY).
 // Friends get in with a shared access code (ACCESS_CODE secret); the page sends it with each request.
-// Endpoints (all POST, all need the code): /translate, /log (store a search), /recent (the last searches by everyone).
+// Endpoints (all POST): /translate (needs the access code) and /stats (needs the separate admin code).
 // Model, system prompt and output size are fixed here, so the key can't be used for anything else.
 import Anthropic from "@anthropic-ai/sdk";
 import { ORACLE_TAGS } from "./tags.js";   // refresh with: node update-tags.mjs
@@ -345,7 +345,7 @@ export default {
 
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
     const path = new URL(request.url).pathname;
-    if (request.method !== "POST" || !["/translate", "/log", "/recent", "/stats"].includes(path)) {
+    if (request.method !== "POST" || !["/translate", "/stats"].includes(path)) {
       return reply(404, { error: "Not found." });
     }
 
@@ -369,14 +369,6 @@ export default {
 
     if (!env.ACCESS_CODE || !(await sameText(code, env.ACCESS_CODE))) {
       return reply(401, { error: "Access code invalid. Check it in Settings." });
-    }
-
-    if (path === "/recent") return reply(200, { searches: await recentSearches(env) });
-    if (path === "/log") {
-      const query = typeof input.query === "string" ? input.query.trim() : "";
-      if (!zin || !query) return reply(400, { error: "Nothing to log." });
-      await logSearch(env, zin.slice(0, MAX_SENTENCE), query.slice(0, 500));
-      return reply(200, { ok: true });
     }
 
     if (!zin) return reply(400, { error: "Type a search first." });
@@ -447,22 +439,6 @@ export default {
     return reply(200, { query, uitleg });
   }
 };
-
-// ---------- shared "Recent searches" (D1 table in schema.sql; no names or IP addresses) ----------
-const KEEP_SEARCHES = 1000;
-const SHOW_SEARCHES = 30;
-
-async function logSearch(env, zin, query) {
-  await env.DB.batch([
-    env.DB.prepare("INSERT INTO searches (at, zin, query) VALUES (?, ?, ?)").bind(new Date().toISOString(), zin, query),
-    env.DB.prepare("DELETE FROM searches WHERE id <= (SELECT MAX(id) FROM searches) - ?").bind(KEEP_SEARCHES)
-  ]);
-}
-
-async function recentSearches(env) {
-  const { results } = await env.DB.prepare("SELECT at, zin, query FROM searches ORDER BY id DESC LIMIT ?").bind(SHOW_SEARCHES).all();
-  return results;
-}
 
 // Compares two strings without leaking how many characters matched.
 async function sameText(a, b) {
