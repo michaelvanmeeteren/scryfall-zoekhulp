@@ -104,7 +104,7 @@ De app zelf is in het Engels; deze README is in het Nederlands.
 | Prijs (euro) | `budget` (< €2), `under 1 euro`, `less than €5`, `by price` |
 | Sortering | `most played`, `popular`, `by edhrec`, `cheapest first`, `by price`, `newest` |
 | Keywords | `flying`, `trample`, `lifelink`, `first strike`, ... |
-| Functies | `removal`, `ramp`, `card draw`, `board wipes`, `tutors`, `counterspells`, `mana rocks`, `burn` |
+| Functies | `removal`, `artifact removal`, `ramp`, `card draw`, `board wipes`, `tutors`, `counterspells`, `mana rocks`, `burn`, `sacrifice outlets`, `token makers`, `extra turns`, `haste enablers`, `reanimation`, `blink`, `mill`, `lifegain`, `wheels`, `lords` |
 | Overig | `that can be my commander`, `draw a card`, `make any color`, `rare`, tekst tussen `"aanhalingstekens"` |
 
 Wat niet herkend wordt, staat onder de zoekopdracht bij *Not used*. Met een API-key neemt Claude het vertalen over.

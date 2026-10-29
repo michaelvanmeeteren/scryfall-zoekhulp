@@ -202,7 +202,7 @@ h2, .help h3 { font-family: var(--serif); font-weight: 700; letter-spacing: 0.01
 .steps li::before { content: counter(step) "."; font-family: var(--serif); font-size: 24px; font-weight: 700; line-height: 1; color: var(--accent); }
 .tryhead { margin: 4px 0 0; font-weight: 600; }
 .examples { display: flex; flex-wrap: wrap; gap: 8px; }
-.example { padding: 7px 12px; border-radius: 3px; border: 1px solid var(--line); background: transparent; color: var(--fg); }
+.example { max-width: 100%; padding: 7px 12px; border-radius: 3px; border: 1px solid var(--line); background: transparent; color: var(--fg); }
 .example:hover { border-color: var(--accent); color: var(--accent); }
 .keynote { margin: 0; padding: 2px 0 2px 10px; border-left: 2px solid var(--accent); font-size: 13.5px; color: var(--muted); }
 .qlabel { font-size: 13px; font-weight: 600; }
@@ -304,7 +304,8 @@ body.home .topbar .btn { color: var(--fg); border-color: var(--line); }
 .home { max-width: 760px; margin: 0 auto; display: grid; gap: 22px; }
 .homeline { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; align-items: center; color: var(--muted); font-size: 13.5px; text-align: center; }
 .home .cmdr { justify-content: center; }
-.cmdrpick { display: inline-flex; align-items: center; gap: 8px; }   /* the commander and its remove link stay together */
+.cmdrpick { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; min-width: 0; }   /* the commander and its remove link stay together */
+.cmdrpick .chip { min-width: 0; max-width: calc(100vw - 110px); overflow: hidden; text-overflow: ellipsis; }   /* very long names are cut off with … (vw: a % would not stop the page from widening) */
 .cmdrpick[hidden] { display: none; }
 .examples { justify-content: center; }
 .welcome { padding: 0; border: 0; background: none; }
@@ -396,7 +397,7 @@ html.mobile body.home .brandbtn { font-size: 40px; text-align: center; }
 html.mobile body.home .topbuttons { right: 12px; top: 10px; }
 /* phones: a bigger, gold-edged search bar, the main thing on the page */
 html.mobile .topbar .searchrow { gap: 0; }
-html.mobile .topbar .searchrow input { font-size: 17px; padding: 15px 14px; border: 2px solid var(--gold); border-right: 0; border-radius: 6px 0 0 6px; min-height: 56px; }
+html.mobile .topbar .searchrow input { width: 0; font-size: 17px; padding: 15px 14px; border: 2px solid var(--gold); border-right: 0; border-radius: 6px 0 0 6px; min-height: 56px; }
 html.mobile .topbar .searchrow .btn { border-radius: 0 6px 6px 0; min-height: 56px; padding: 0 18px; font-size: 16px; border: 2px solid var(--gold); }
 html.mobile body.home .topbar { padding-top: 56px; gap: 14px; }
 html.mobile body.home .brandbtn { font-size: 34px; }
