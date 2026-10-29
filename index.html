@@ -238,6 +238,7 @@ html.mobile .searchrow input { flex-basis: 100%; font-size: 16px; padding: 12px;
 html.mobile .hint { font-size: 13.5px; }
 html.mobile .queryrow input { flex-basis: 100%; font-size: 15px; padding: 10px; }
 html.mobile .btn.small { min-height: 42px; padding: 8px 14px; font-size: 14px; }
+@media (max-width: 360px) { html.mobile .topbuttons .btn.small { padding: 8px 10px; } }   /* four buttons in one row on small phones */
 html.mobile .queryrow a { font-size: 14px; padding: 8px 0; }
 html.mobile .history button { padding: 10px 6px; }
 html.mobile .toolbar label { font-size: 14px; }
@@ -420,7 +421,8 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
     <button id="zoek" class="btn primary" type="submit">Search</button>
   </form>
   <nav class="topbuttons" aria-label="Page">
-    <button id="listtoggle" class="btn small" type="button" aria-controls="drawer" title="Your card list. Import your own deck here to see which cards you already have.">List &amp; your deck<span id="listcount">0</span></button>
+    <button id="deckbutton" class="btn small" type="button" title="Import your own deck to see which cards you already have">Import deck</button>
+    <button id="listtoggle" class="btn small" type="button" aria-controls="drawer">List<span id="listcount">0</span></button>
     <button id="themetoggle" class="btn small" type="button"></button>
     <button class="btn small" type="button" data-openhelp>Help</button>
     <button id="opensettings" class="btn small" type="button" aria-label="Settings">Settings</button>
@@ -492,7 +494,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
       Double-faced cards have a <b>⟲</b> button to turn them over.</p>
 
     <h3>Import your deck</h3>
-    <p>In the card list, <b>Import deck</b> takes your deck list (copied from Moxfield, Archidekt, MTG Arena and the like).
+    <p><b>Import deck</b> at the top (or in the card list) takes your deck list (copied from Moxfield, Archidekt, MTG Arena and the like).
       Cards you already have get an <b>In deck</b> label, and you can hide them.</p>
 
 
@@ -616,7 +618,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 <aside id="drawer" class="drawer" aria-label="Card list">
   <div id="list" class="list">
     <div class="listhead">
-      <h2>List &amp; your deck</h2>
+      <h2>Card list</h2>
       <button id="closelist" class="btn small closelist" type="button">Close</button>
     </div>
     <div id="totals" class="totals"></div>
@@ -1287,6 +1289,8 @@ function ownsCard(name) {
 function renderDeck() {
   $("deckinfo").textContent = state.deck.size ? `My deck: ${plural(state.deck.size, "card")} imported` : "Import your own deck to see which cards you already have.";
   $("importdeck").textContent = state.deck.size ? "Replace deck" : "Import deck";
+  $("deckbutton").textContent = state.deck.size ? `Your deck · ${state.deck.size}` : "Import deck";
+  $("deckbutton").title = state.deck.size ? "Replace or remove your imported deck" : "Import your own deck to see which cards you already have";
   renderFilterbar();
   refreshOwned();
 }
@@ -2200,7 +2204,9 @@ $("cmdrclear").addEventListener("click", () => {
   renderCommander();
   rerunForCommander();
 });
-$("importdeck").addEventListener("click", () => { $("decktext").value = ""; $("deckdialog").showModal(); $("decktext").focus(); });
+function openDeckImport() { $("decktext").value = ""; $("deckdialog").showModal(); $("decktext").focus(); }
+$("importdeck").addEventListener("click", openDeckImport);
+$("deckbutton").addEventListener("click", openDeckImport);
 $("deckform").addEventListener("submit", e => {
   if (!e.submitter || e.submitter.value !== "save") return;
   state.deck = parseDeck($("decktext").value);
