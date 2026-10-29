@@ -207,6 +207,9 @@ h2, .help h3 { font-family: var(--serif); font-weight: 700; letter-spacing: 0.01
 .help p { margin: 0; font-size: 14px; }
 .refinetoggle { flex: none; padding: 0 12px; border: 1px solid #3a3220; border-radius: 4px; background: transparent; color: var(--bar-fg); font-weight: 600; }
 .refinetoggle[hidden], body.home .refinetoggle { display: none; }
+.refinechain { align-self: center; flex: 0 1 auto; max-width: 45%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  color: var(--gold); font-size: 14px; font-weight: 600; }
+.refinechain[hidden], body.home .refinechain, html.mobile .refinechain { display: none; }
 .refinetoggle[aria-pressed="true"] { background: var(--gold); border-color: var(--gold); color: #0b0b0c; }
 html.mobile .refinetoggle { margin-right: 6px; border-radius: 6px; }
 .help ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 14px; }
@@ -429,6 +432,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
   <form id="searchform" class="searchrow">
     <button id="refinetoggle" class="refinetoggle" type="button" aria-pressed="false" hidden
       title="On: the search bar changes the results on screen. Tip: start with + to refine once.">Refine</button>
+    <span id="refinechain" class="refinechain" hidden></span>
     <input id="zin" type="search" autocomplete="off" placeholder="Describe the cards you want, e.g. cheap removal in black" aria-label="Describe the cards you want">
     <button id="zoek" class="btn primary" type="submit">Search</button>
   </form>
@@ -2112,7 +2116,13 @@ function setRefining(on) {
   refining = on;
   $("refinetoggle").setAttribute("aria-pressed", on ? "true" : "false");
   const chain = state.previous && state.previous.zin;
-  $("zin").placeholder = on && chain ? `${chain} → refine, e.g. ${refineExamples(state.previous.query)}` : NEW_SEARCH_HINT;
+  // the steps so far stay in the bar, the next one is typed after them (on a phone they go in the hint instead)
+  const shown = chain && chain.length > 48 ? "…" + chain.slice(-47) : chain;
+  $("refinechain").hidden = !(on && chain);
+  $("refinechain").textContent = shown ? shown + " →" : "";
+  $("refinechain").title = chain || "";
+  const examples = chain ? "e.g. " + refineExamples(state.previous.query) : "";
+  $("zin").placeholder = on && chain ? (isMobile ? `${chain} → ${examples}` : examples) : NEW_SEARCH_HINT;
 }
 
 // Two refinements that make sense for this query: nothing it already has, nothing that contradicts it.
