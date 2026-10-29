@@ -6,17 +6,60 @@
 <title>Zoekhulp Costs</title>
 <link rel="icon" href="data:,">
 <meta name="robots" content="noindex">
+<script>try { const t = JSON.parse(localStorage.getItem("szh.theme")); if (t) document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
 <style>
 /* Owner-only cost overview for the Scryfall Zoekhulp translator. Same look as index.html. */
+/* Colors: black & gold when dark, ivory & bronze-gold when light. The page follows the device,
+   unless the theme button in the header picked one (data-theme on <html>, saved in localStorage). */
 :root {
-  --bg: #f4f6f5; --surface: #ffffff; --fg: #1b2420; --muted: #5b6863; --line: #d9e0dd;
-  --accent: #1f6f5c; --accent-fg: #ffffff; --danger: #b42318;
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --bg: #f6f3ea;
+  --surface: #fffdf7;
+  --fg: #1a1712;
+  --muted: #6b6352;
+  --line: #e2d9c3;
+  --accent: #8a6a12;
+  --accent-fg: #ffffff;
+  --accent-soft: #f2e8cc;
+  --danger: #b42318;
+  --note-bg: #fbf0d2;
+  --note-fg: #6b4a00;
+  --shadow: 0 1px 2px rgb(60 45 10 / 0.08), 0 4px 12px rgb(60 45 10 / 0.08);
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --radius: 10px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #111614; --surface: #1a211e; --fg: #e4ebe8; --muted: #97a59f; --line: #2b3531;
-    --accent: #4fbf9f; --accent-fg: #062118; --danger: #f97066; color-scheme: dark; }
+  :root:not([data-theme="light"]) {
+    --bg: #0b0b0c;
+    --surface: #151517;
+    --fg: #f2efe6;
+    --muted: #a39d8c;
+    --line: #3a3220;
+    --accent: #d4a73a;
+    --accent-fg: #0b0b0c;
+    --accent-soft: #262012;
+    --danger: #f07167;
+    --note-bg: #2a2312;
+    --note-fg: #ecc96b;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(212 167 58 / 0.06);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b0b0c;
+  --surface: #151517;
+  --fg: #f2efe6;
+  --muted: #a39d8c;
+  --line: #3a3220;
+  --accent: #d4a73a;
+  --accent-fg: #0b0b0c;
+  --accent-soft: #262012;
+  --danger: #f07167;
+  --note-bg: #2a2312;
+  --note-fg: #ecc96b;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(212 167 58 / 0.06);
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--font); }
