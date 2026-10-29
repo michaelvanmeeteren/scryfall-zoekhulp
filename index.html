@@ -1158,6 +1158,10 @@ async function setCommander(name) {
     const colors = "wubrg".split("").filter(c => (card.color_identity || []).map(x => x.toLowerCase()).includes(c)).join("");
     state.commander = { name: card.name, colors };
     store.set("commander", state.commander);
+    // close the suggestion list first: the browser may leave it floating where the (now hidden) field was
+    $("cmdrinput").blur();
+    $("cmdrlist").replaceChildren();
+    clearTimeout(suggestTimer);
     renderCommander();
     if (state.search && !state.search.static) runSearch(state.search.query);
   } catch (err) {
