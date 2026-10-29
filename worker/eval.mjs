@@ -143,7 +143,7 @@ const CASES = [
   { zin: "protection spells for my creatures in white", any: [["protect", "indestructible", "hexproof"]], id: "<=w" },
   { zin: "cards that copy creatures", any: [["clone", "copy"]] },
   { zin: "discard outlets", any: [["discard"]] },
-  { zin: "graveyard recursion for artifacts", any: [["recursion", "reanimat", "return"], ["artifact"]] },
+  { zin: "graveyard recursion for artifacts", any: [["recursion", "reanimat", "return", "regrowth"], ["artifact"]] },
   { zin: "counterspells that cost 2 or less", any: [["counterspell"], ["mv<=2", "mv<3"]] },
   { zin: "cards that put +1/+1 counters on creatures in green", any: [["counter"]], id: "<=g" },
   { zin: "evasion for my whole team", any: [["evasion", "flying", "unblockable", "can't be blocked", "trample", "menace"]] },
