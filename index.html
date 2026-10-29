@@ -5,10 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SpellSeekr</title>
 <link rel="icon" href="logo.svg" type="image/svg+xml">
-<script>try { const t = JSON.parse(localStorage.getItem("szh.theme")); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
+<script>try { const t = JSON.parse(localStorage.getItem("szh.theme")); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }
+// trial styles (temporary): applied before the page draws, so it doesn't flash in the old look
+try { const st = JSON.parse(localStorage.getItem("szh.style")); if (["tool", "scryfall", "magic"].includes(st)) document.documentElement.dataset.style = st; } catch { /* storage unavailable */ }</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Source+Sans+3:wght@400;600;700&family=Inter:wght@400;600;700&family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
 <style>
 /* Layout: header on top, search + card grid on the left, a sticky list column on the right; stacked on narrow screens. */
 /* Colors: black & gold when dark, ivory & bronze-gold when light. The page follows the device,
@@ -432,6 +434,106 @@ html.mobile body.home .brandbtn { font-size: 34px; }
 html.mobile body.home .tagline { font-size: 14px; margin-top: -6px; }
 html.mobile body.home .topbar .searchrow input { font-size: 18px; min-height: 64px; box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 18%, transparent); }
 html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 18%, transparent); }
+
+/* ===== Trial styles (temporary): html[data-style] = tool | scryfall | magic, picked with the switch bottom left.
+   The current black & gold look is what you get without data-style. ===== */
+
+/* shared by all three: no tiny spaced-out capitals, no serif-for-luxury, calmer buttons */
+html[data-style] .qlabel, html[data-style] .cmdrlabel, html[data-style] .filterbar .group > span {
+  text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 600; }
+html[data-style] #themetoggle { display: none; }
+html[data-style] .tagline { color: var(--muted); }
+html[data-style] .topbar .searchrow input::placeholder { color: var(--muted); }
+html[data-style] .topbar .btn.primary, html[data-style] #listcount, html[data-style] .modeswitch button[aria-pressed="true"],
+html[data-style] .flipbtn:hover, html[data-style] .tile.flipped .flipbtn { color: var(--accent-fg); }
+html[data-style] .infobtn, html[data-style] .flipbtn { background: var(--surface); color: var(--accent); border-color: var(--line); }
+
+/* ---------- 1. Tool: dark slate, one blue accent, plain sans, like Moxfield ---------- */
+html:root[data-style="tool"] {
+  --bg: #16171b; --surface: #1f2128; --fg: #e7e9ee; --muted: #9298a6; --line: #2d3039;
+  --accent: #4f8cf0; --accent-fg: #ffffff; --accent-soft: #1d2a44; --danger: #f2706a;
+  --note-bg: #1b2538; --note-fg: #aac6ff; --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  --bar: #1f2128; --bar-fg: #e7e9ee; --bar-line: #2d3039; --gold: #4f8cf0;
+  --font: "Inter", system-ui, "Segoe UI", sans-serif; --serif: "Inter", system-ui, sans-serif; --radius: 8px;
+  color-scheme: dark;
+}
+html[data-style="tool"] .brandbtn { color: var(--fg); font-weight: 700; letter-spacing: -0.02em; }
+html[data-style="tool"] body.home .brandbtn { font-size: clamp(34px, 4.5vw, 46px); }
+html[data-style="tool"] .brandlogo { filter: hue-rotate(178deg) saturate(1.3); }
+html[data-style="tool"] .topbar .searchrow input { background: #272a33; border-color: #2d3039; border-radius: 8px; }
+html[data-style="tool"] .topbar .btn, html[data-style="tool"] .btn { background: #272a33; border-color: transparent; border-radius: 8px; color: var(--fg); }
+html[data-style="tool"] .btn:hover, html[data-style="tool"] .topbar .btn:hover { background: #30343f; border-color: transparent; }
+html[data-style="tool"] .btn.primary, html[data-style="tool"] .topbar .btn.primary { background: var(--accent); color: #fff; }
+html[data-style="tool"] .modeswitch { border-color: #2d3039; background: #272a33; border-radius: 8px; }
+html[data-style="tool"] .chip { background: #272a33; color: var(--fg); border-radius: 6px; font-family: var(--font); }
+html[data-style="tool"] .card img { border-radius: 4.75% / 3.5%; box-shadow: none; }
+html[data-style="tool"] h2, html[data-style="tool"] .count { font-family: var(--font); font-weight: 700; letter-spacing: -0.01em; }
+
+/* ---------- 2. Scryfall-like: light, plain, blue links, the cards do the talking ---------- */
+html:root[data-style="scryfall"] {
+  --bg: #ffffff; --surface: #f6f7f9; --fg: #1f1f23; --muted: #6b6f78; --line: #dcdfe5;
+  --accent: #2a6fd6; --accent-fg: #ffffff; --accent-soft: #e8f0fc; --danger: #c0352b;
+  --note-bg: #f1f5fd; --note-fg: #234e93; --shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+  --bar: #343242; --bar-fg: #ffffff; --bar-line: #343242; --gold: #2a6fd6;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --serif: var(--font); --radius: 4px;
+  color-scheme: light;
+}
+html[data-style="scryfall"] .brandbtn { color: #ffffff; font-weight: 700; }
+html[data-style="scryfall"] body.home .brandbtn { color: var(--fg); font-size: clamp(32px, 4vw, 42px); }
+html[data-style="scryfall"] .brandlogo { filter: hue-rotate(178deg) saturate(1.4) brightness(0.9); }
+html[data-style="scryfall"] .topbar .searchrow input { background: #ffffff; border-color: #ffffff; color: var(--fg); border-radius: 4px; }
+html[data-style="scryfall"] body.home .topbar .searchrow input { border-color: var(--line); box-shadow: 0 1px 3px rgb(0 0 0 / 0.08); }
+html[data-style="scryfall"] .topbar .btn { color: #ffffff; border-color: rgb(255 255 255 / 0.25); }
+html[data-style="scryfall"] body.home .topbar .btn { color: var(--fg); border-color: var(--line); }
+html[data-style="scryfall"] .btn { background: #ffffff; border-color: var(--line); }
+html[data-style="scryfall"] .topbar .btn:not(.primary) { background: transparent; }
+html[data-style="scryfall"] body.home .topbar .btn:not(.primary) { background: #ffffff; }
+html[data-style="scryfall"] .btn.primary, html[data-style="scryfall"] .topbar .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+html[data-style="scryfall"] .modeswitch { border-color: rgb(255 255 255 / 0.25); }
+html[data-style="scryfall"] .modeswitch button { color: #ffffff; }
+html[data-style="scryfall"] .refinechain { color: #ffffff; }
+html[data-style="scryfall"] .chip { background: var(--accent-soft); color: var(--note-fg); font-family: var(--font); }
+html[data-style="scryfall"] h2, html[data-style="scryfall"] .count { font-family: var(--font); font-weight: 700; }
+html[data-style="scryfall"] .drawer { background: #ffffff; }
+
+/* ---------- 3. Magic: parchment and a dark leather bar, card-frame borders, Cinzel titles ---------- */
+html:root[data-style="magic"] {
+  --bg: #ece2cc; --surface: #f6eedb; --fg: #2a2016; --muted: #6e5d45; --line: #c8b48c;
+  --accent: #9b2f1d; --accent-fg: #fff6e4; --accent-soft: #ead9b4; --danger: #9b2f1d;
+  --note-bg: #f1e3c1; --note-fg: #5b3d12; --shadow: 0 1px 0 rgb(255 255 255 / 0.5) inset, 0 2px 6px rgb(60 40 10 / 0.25);
+  --bar: #2b2019; --bar-fg: #f3e6c8; --bar-line: #6d5432; --gold: #c9a24a;
+  --font: "Source Sans 3", system-ui, sans-serif; --serif: "Cinzel", Georgia, serif; --radius: 3px;
+  color-scheme: light;
+}
+html[data-style="magic"] body {
+  background: radial-gradient(ellipse at top, #f4ecd8 0%, transparent 60%), radial-gradient(ellipse at bottom, #e2d3b2 0%, transparent 70%), var(--bg);
+  background-attachment: fixed;
+}
+html[data-style="magic"] .topbar { border-bottom: 3px double var(--bar-line); }
+html[data-style="magic"] body.home .topbar { border-bottom: 0; }
+html[data-style="magic"] .brandbtn { font-family: "Cinzel", Georgia, serif; letter-spacing: 0.04em; }
+html[data-style="magic"] body.home .brandbtn { color: #6b1f12; text-shadow: 0 1px 0 rgb(255 255 255 / 0.6); }
+html[data-style="magic"] .topbar .searchrow input { background: #f6eedb; border-color: var(--gold); color: var(--fg); }
+html[data-style="magic"] .topbar .btn { color: var(--bar-fg); border-color: var(--bar-line); }
+html[data-style="magic"] body.home .topbar .btn { color: var(--fg); border-color: var(--line); }
+html[data-style="magic"] .btn { background: linear-gradient(#fbf4e3, #eadcbc); border-color: var(--line); box-shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset; }
+html[data-style="magic"] .topbar .btn:not(.primary) { background: transparent; box-shadow: none; }
+html[data-style="magic"] body.home .topbar .btn:not(.primary) { background: linear-gradient(#fbf4e3, #eadcbc); color: var(--fg); }
+html[data-style="magic"] .btn.primary, html[data-style="magic"] .topbar .btn.primary {
+  background: linear-gradient(#b23a24, #8a2716); border-color: #6b1f12; color: #fff6e4; }
+html[data-style="magic"] .modeswitch { border-color: var(--bar-line); }
+html[data-style="magic"] .modeswitch::before { background: var(--gold); }
+html[data-style="magic"] .modeswitch button[aria-pressed="true"] { color: #2b2019; }
+html[data-style="magic"] .chip { background: #2b2019; color: #f3e6c8; border: 1px solid var(--gold); }
+html[data-style="magic"] h2, html[data-style="magic"] .count, html[data-style="magic"] .help h3 { font-family: "Cinzel", Georgia, serif; }
+html[data-style="magic"] .drawer { background: var(--surface); border-left: 3px double var(--line); }
+html[data-style="magic"] .card img { box-shadow: 0 2px 8px rgb(60 40 10 / 0.35); }
+
+/* the temporary switch */
+.styleswitch { position: fixed; left: 12px; bottom: 12px; z-index: 60; display: flex; gap: 6px; align-items: center; padding: 6px 8px;
+  background: #111; color: #fff; border-radius: 8px; font: 12px system-ui, sans-serif; box-shadow: 0 2px 10px rgb(0 0 0 / 0.4); }
+.styleswitch select { font: inherit; padding: 2px 4px; color: #111; background: #fff; }
+html.mobile .styleswitch { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
 </style>
 </head>
 <body>
@@ -664,6 +766,10 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 </aside>
 
 
+<label class="styleswitch">Style
+  <select id="styleswitch" aria-label="Trial style">
+    <option value="">Current</option><option value="tool">Tool</option><option value="scryfall">Scryfall</option><option value="magic">Magic</option>
+  </select></label>
 <footer class="foot">Card data and images via Scryfall. Magic: The Gathering is © Wizards of the Coast. · <button id="viewswitch" class="linkbtn" type="button">Switch view</button></footer>
 
 <div id="mobilebar" class="mobilebar">
@@ -2403,6 +2509,14 @@ $("themetoggle").addEventListener("click", () => {
 });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderThemeButton);
 renderThemeButton();
+
+// trial styles (temporary)
+$("styleswitch").value = document.documentElement.dataset.style || "";
+$("styleswitch").addEventListener("change", () => {
+  const v = $("styleswitch").value;
+  if (v) document.documentElement.dataset.style = v; else delete document.documentElement.dataset.style;
+  store.set("style", v);
+});
 
 // help window
 document.querySelectorAll("[data-openhelp]").forEach(b => b.addEventListener("click", () => {
