@@ -2112,7 +2112,25 @@ function setRefining(on) {
   refining = on;
   $("refinetoggle").setAttribute("aria-pressed", on ? "true" : "false");
   const chain = state.previous && state.previous.zin;
-  $("zin").placeholder = on && chain ? `${chain} → refine, e.g. only instants` : NEW_SEARCH_HINT;
+  $("zin").placeholder = on && chain ? `${chain} → refine, e.g. ${refineExamples(state.previous.query)}` : NEW_SEARCH_HINT;
+}
+
+// Two refinements that make sense for this query: nothing it already has, nothing that contradicts it.
+function refineExamples(query) {
+  const q = query.toLowerCase();
+  const has = re => re.test(q);
+  const creatures = has(/t:creature|is:commander/), spells = has(/t:(instant|sorcery)/);
+  const options = [
+    [!has(/t:|is:commander/), "only instants"],
+    [creatures && !has(/flying/), "with flying"],
+    [creatures && !has(/pow/), "power 4 or more"],
+    [spells && !has(/t:instant/), "only instants"],
+    [!has(/eur|usd/), "under 1 euro"],
+    [!has(/mv|cmc/), "2 mana or less"],
+    [!has(/order:/), "newest first"],
+    [true, "sorted by price"]
+  ];
+  return options.filter(([fits]) => fits).map(([, text]) => text).slice(0, 2).join(", ");
 }
 
 // ---------- wiring ----------
