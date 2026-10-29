@@ -89,7 +89,7 @@ Wijzigingen in de Worker zet je online met `npx wrangler deploy` (zie hierboven)
 - Commander is singleton: klik op een kaart om hem toe te voegen (er verschijnt een ✓), klik nog eens om hem weer weg te halen. Een andere print van dezelfde kaart telt als dezelfde kaart.
 - Uitzonderingen herkent de app zelf: basic lands en kaarten met "A deck can have any number of / up to … cards named" (zoals Relentless Rats en Seven Dwarves). Die krijgen een teller: klikken = +1, **−** op de kaart = één eraf.
 - De lijst is ingedeeld per type (Creatures, Instants, Lands …), met bovenaan de mana curve van je spells (lands tellen niet mee).
-- **Copy for Moxfield** zet de lijst op het klembord. Plak in Moxfield via *Import* of *Bulk Edit*.
+- **Copy decklist** zet de lijst op het klembord. Plak in Moxfield via *Import* of *Bulk Edit*, of op een andere decksite.
 
 De app zelf is in het Engels; deze README is in het Nederlands.
 

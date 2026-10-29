@@ -485,7 +485,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 
     <h3>Your list and Moxfield</h3>
     <p>Click a card to add it to your list, click it again to remove it. Basic lands get a counter instead.
-      <b>Copy for Moxfield</b> copies the list; paste it in Moxfield under <i>Import</i> or <i>Bulk Edit</i>.
+      <b>Copy decklist</b> copies the list; paste it in Moxfield (<i>Import</i> or <i>Bulk Edit</i>), Archidekt or any other deck site.
       Open it with <b>List</b> at the top (on a phone: the bar at the bottom). The list is saved in this browser.
       It is grouped by card type, with the mana curve of your spells at the top.
       The <i>i</i> on a card opens its details: rules text, price and links to Scryfall and EDHREC.
@@ -563,7 +563,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
     <ol class="steps">
       <li><span><b>Describe what you need</b> in plain words. No syntax required.</span></li>
       <li><span><b>Click a card</b> to add it to your list. The <i>i</i> on a card shows its details.</span></li>
-      <li><span><b>Copy for Moxfield</b> from your list and paste it into your deck.</span></li>
+      <li><span><b>Copy decklist</b> from your list and paste it into Moxfield or another deck site.</span></li>
     </ol>
     <p class="homeline">Commander filter, follow-up questions, combos and deck import: <button class="linkbtn" type="button" data-openhelp>Help</button></p>
   </section>
@@ -647,7 +647,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
       <label><input type="radio" name="fmt" value="names"> names only</label>
     </div>
     <div class="listactions">
-      <button id="copy" class="btn primary copybtn" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg><span>Copy for Moxfield</span></button>
+      <button id="copy" class="btn primary copybtn" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg><span>Copy decklist</span></button>
       <button id="clear" class="btn" type="button">Clear list</button>
     </div>
     <div id="confirm" class="confirm" hidden>
@@ -664,7 +664,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 
 <div id="mobilebar" class="mobilebar">
   <button id="openlist" class="btn" type="button">List is empty</button>
-  <button id="barcopy" class="btn primary copybtn" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg><span>Copy for Moxfield</span></button>
+  <button id="barcopy" class="btn primary copybtn" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg><span>Copy decklist</span></button>
 </div>
 
 <img id="preview" alt="" hidden>
@@ -1819,7 +1819,7 @@ function showCopied(total) {
   }
   copiedTimer = setTimeout(() => {
     for (const id of ["copy", "barcopy"]) {
-      $(id).querySelector("span").textContent = "Copy for Moxfield";
+      $(id).querySelector("span").textContent = "Copy decklist";
       $(id).classList.remove("done");
     }
   }, 2200);
