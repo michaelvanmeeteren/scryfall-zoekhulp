@@ -159,7 +159,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .remove { color: var(--muted); }
 .list li.grouphead { display: block; padding: 10px 0 3px; border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
 .list li.grouphead:first-child { padding-top: 2px; }
-.picker.pop { animation: pop 0.22s ease-out; }
+.picker.pop, #listcount.pop { animation: pop 0.22s ease-out; }
 @keyframes pop { 0% { transform: scale(0.4); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
 .list li.flash { animation: flash 1.2s ease-out; }
 @keyframes flash { from { background: color-mix(in srgb, var(--accent) 30%, transparent); } to { background: transparent; } }
@@ -373,27 +373,23 @@ body.home .topbar { padding-bottom: 18px; }
 /* phone: the bar scrolls away with the page, and the bottom bar already opens the list */
 html.mobile .topbar { position: static; }
 html.mobile #listtoggle { display: none; }
-/* wide screens: the card list is always visible in a column on the right; the page makes room for it */
+/* wide screens: the card list hides behind the List button and slides in from the right */
 @media (min-width: 900px) {
-  html:not(.mobile) body { padding-right: 340px; }
-  html:not(.mobile) body.home .topbuttons { right: calc(340px + max(16px, 2vw)); }   /* left of the card list, not under it */
-  html:not(.mobile) .drawer { width: 340px; transform: none; transition: none; box-shadow: none; z-index: 20; }
-  html:not(.mobile) #listtoggle, html:not(.mobile) .closelist, html:not(.mobile) .scrim { display: none !important; }
+  html:not(.mobile) .drawer { width: 380px; visibility: hidden;
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s linear 0.3s; }
+  html:not(.mobile) .drawer.open { visibility: visible; transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  /* the start screen sits in the middle of the window */
+  html:not(.mobile) body.home { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+  html:not(.mobile) body.home .topbar { padding-top: 24px; }
 }
 /* big screens: the start screen grows with the window instead of staying a small column in the middle */
 @media (min-width: 1500px) {
   html:not(.mobile) body.home .topbar > :not(.topbuttons), html:not(.mobile) body.home main { zoom: 1.2; }
-  html:not(.mobile) body.home .topbar { padding-top: 14vh; }
-}
-@media (min-width: 1500px) {
   html:not(.mobile) .topbuttons > * { zoom: 1.15; }
 }
 @media (min-width: 1900px) {
   html:not(.mobile) body.home .topbar > :not(.topbuttons), html:not(.mobile) body.home main { zoom: 1.4; }
-  /* a wider card list with bigger text, on the start screen and with results */
-  html:not(.mobile) body { padding-right: 420px; }
-  html:not(.mobile) body.home .topbuttons { right: calc(420px + max(16px, 2vw)); }
-  html:not(.mobile) .drawer { width: 420px; }
+  html:not(.mobile) .drawer { width: 460px; }
   html:not(.mobile) .drawer .list { zoom: 1.2; }
   html:not(.mobile) .topbuttons > * { zoom: 1.3; }
 }
@@ -502,10 +498,10 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
       Without such a word (<i>removal for my commander</i>) you get a normal search within your commander's colors.</p>
     <p>Cards that are already in your imported deck get the <b>In deck</b> label. Loading takes a few seconds.</p>
 
-    <h3>Your list and Moxfield</h3>
+    <h3>Your list</h3>
     <p>Click a card to add it to your list, click it again to remove it. Basic lands get a counter instead.
       <b>Copy decklist</b> copies the list; paste it in Moxfield (<i>Import</i> or <i>Bulk Edit</i>), Archidekt or any other deck site.
-      Open it with <b>List</b> at the top (on a phone: the bar at the bottom). The list is saved in this browser.
+      Open it with <b>List</b> at the top right; it slides in from the side (on a phone: the bar at the bottom). The list is saved in this browser.
       It is grouped by card type, with the mana curve of your spells at the top.
       The <i>i</i> on a card opens its details: rules text, price and links to Scryfall and EDHREC.
       Double-faced cards have a <b>⟲</b> button to turn them over.</p>
@@ -1598,6 +1594,7 @@ function refreshBadges() {
     markPicked(tile, counts.get(tile.dataset.name) || 0);
     if (justAdded && tile.dataset.name === justAdded) replay(tile.querySelector(".picker"), "pop");
   }
+  if (justAdded) replay($("listcount"), "pop");
   justAdded = "";
 }
 
