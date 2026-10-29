@@ -205,13 +205,23 @@ h2, .help h3 { font-family: var(--serif); font-weight: 700; letter-spacing: 0.01
 .help { width: min(620px, calc(100% - 32px)); max-height: calc(100vh - 48px); overflow: auto; }
 .help h3 { margin: 6px 0 2px; font-size: 15px; }
 .help p { margin: 0; font-size: 14px; }
-.refinetoggle { flex: none; padding: 0 12px; border: 1px solid #3a3220; border-radius: 4px; background: transparent; color: var(--bar-fg); font-weight: 600; }
-.refinetoggle[hidden], body.home .refinetoggle { display: none; }
+/* Search | Refine slider: a gold block slides under the chosen side */
+.modeswitch { position: relative; flex: none; display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border: 1px solid #3a3220; border-radius: 6px; }
+.modeswitch[hidden], body.home .modeswitch { display: none; }
+.modeswitch::before { content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); border-radius: 4px;
+  background: var(--gold); transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.modeswitch.refining::before { transform: translateX(100%); }
+.modeswitch button { position: relative; padding: 0 12px; border: 0; background: none; color: var(--bar-fg); font-weight: 600; font-size: 13px; transition: color 0.22s; }
+.modeswitch button[aria-pressed="true"] { color: #0b0b0c; }
+@media (prefers-reduced-motion: reduce) { .modeswitch::before { transition: none; } }
 .refinechain { align-self: center; flex: 0 1 auto; max-width: 45%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
   color: var(--gold); font-size: 14px; font-weight: 600; }
 .refinechain[hidden], body.home .refinechain, html.mobile .refinechain { display: none; }
-.refinetoggle[aria-pressed="true"] { background: var(--gold); border-color: var(--gold); color: #0b0b0c; }
-html.mobile .refinetoggle { margin-right: 6px; border-radius: 6px; }
+/* phone: the slider gets its own full-width line above the search field */
+html.mobile .topbar .searchrow { flex-wrap: wrap; }
+html.mobile .topbar .searchrow input { flex: 1 1 0; }   /* field and Search button stay on one line */
+html.mobile .modeswitch { flex: 1 1 100%; margin-bottom: 6px; }
+html.mobile .modeswitch button { padding: 7px 0; font-size: 14px; }
 .help ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 14px; }
 .help code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
 
@@ -430,8 +440,11 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
   <button id="home" class="brandbtn" type="button" title="Back to the start"><img class="brandlogo" src="logo.svg" alt="">SpellSeekr</button>
   <p class="tagline">Commander card search in plain words</p>
   <form id="searchform" class="searchrow">
-    <button id="refinetoggle" class="refinetoggle" type="button" aria-pressed="false" hidden
-      title="On: the search bar changes the results on screen. Tip: start with + to refine once.">Refine</button>
+    <div id="modeswitch" class="modeswitch" role="group" aria-label="What the search bar does" hidden
+      title="Refine changes the results on screen. Tip: start with + to refine once.">
+      <button type="button" data-mode="search" aria-pressed="true">Search</button>
+      <button type="button" data-mode="refine" aria-pressed="false">Refine</button>
+    </div>
     <span id="refinechain" class="refinechain" hidden></span>
     <input id="zin" type="search" autocomplete="off" placeholder="Describe the cards you want, e.g. cheap removal in black" aria-label="Describe the cards you want">
     <button id="zoek" class="btn primary" type="submit">Search</button>
@@ -475,7 +488,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
       <li>Describe what you need: <i>cheap removal in black</i>, <i>blue instants that draw a card</i>. Dutch works with the access code.</li>
       <li><b>Cheap</b> = mana value 2 or less, <b>expensive</b> = 6 or more. For price: <i>budget</i> (under €2) or <i>under 1 euro</i>.</li>
       <li>Know Scryfall's syntax? Start with <code>/s</code>: <code>/s t:elf mv=1</code>. Only Commander-legal paper cards are shown.</li>
-      <li>To change the results instead of searching again, switch on <b>Refine</b> in the search bar (or start with <b>+</b>): <i>only instants</i>, <i>under 1 euro</i>.</li>
+      <li>To change the results instead of searching again, slide the search bar to <b>Refine</b> (or start with <b>+</b>): <i>only instants</i>, <i>under 1 euro</i>.</li>
       <li>With the access code you can ask for combos: <i>2 card combos in dimir</i>.</li>
     </ul>
 
@@ -2105,7 +2118,7 @@ function renderHistory() {
 // The search on screen that the Refine field changes; null for combos, EDHREC lists and "nothing to search".
 function setPrevious(p) {
   state.previous = p;
-  $("refinetoggle").hidden = !p;
+  $("modeswitch").hidden = !p;
   setRefining(refining && !!p);
 }
 
@@ -2114,7 +2127,8 @@ let refining = false;
 const NEW_SEARCH_HINT = $("zin").placeholder;
 function setRefining(on) {
   refining = on;
-  $("refinetoggle").setAttribute("aria-pressed", on ? "true" : "false");
+  $("modeswitch").classList.toggle("refining", on);
+  for (const b of $("modeswitch").querySelectorAll("button")) b.setAttribute("aria-pressed", String((b.dataset.mode === "refine") === on));
   const chain = state.previous && state.previous.zin;
   // the steps so far stay in the bar, the next one is typed after them (on a phone they go in the hint instead)
   const shown = chain && chain.length > 48 ? "…" + chain.slice(-47) : chain;
@@ -2214,9 +2228,10 @@ async function refineSearch(text) {
   resetFilters();
   runSearch(result.query);
 }
-$("refinetoggle").addEventListener("click", () => {
-  setRefining(!refining);
-  $("zin").value = "";
+for (const b of $("modeswitch").querySelectorAll("button")) b.addEventListener("click", () => {
+  const on = b.dataset.mode === "refine";
+  if (on !== refining) $("zin").value = "";
+  setRefining(on);
   $("zin").focus();
 });
 
