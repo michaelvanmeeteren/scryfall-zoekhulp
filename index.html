@@ -163,7 +163,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 @keyframes pop { 0% { transform: scale(0.4); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
 .list li.flash { animation: flash 1.2s ease-out; }
 @keyframes flash { from { background: color-mix(in srgb, var(--accent) 30%, transparent); } to { background: transparent; } }
-@media (prefers-reduced-motion: reduce) { .curve .bar i { transition: none; } .picker.pop, .list li.flash { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .curve .bar i { transition: none; } .picker.pop, .list li.flash, .copybtn.copied { animation: none; } }
 .curve { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; height: 74px; align-items: end; }
 .curve .bar { display: grid; grid-template-rows: auto 1fr auto; height: 100%; text-align: center; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .curve .bar i { align-self: end; display: block; height: 0; border-radius: 2px 2px 0 0; background: var(--accent); transition: height 0.3s ease-out; }
@@ -171,6 +171,10 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .list .emptylist { color: var(--muted); font-size: 13.5px; margin: 0; }
 .exportopts { display: flex; gap: 12px; font-size: 13px; flex-wrap: wrap; }
 .exportopts label { display: inline-flex; gap: 5px; align-items: center; }
+.copybtn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.copybtn .ico { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.copybtn.done .ico { display: none; }
+.copybtn.copied { animation: pop 0.22s ease-out; }
 .listactions { display: flex; gap: 8px; flex-wrap: wrap; }
 .confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
 .confirm .btn.danger { border-color: var(--danger); color: var(--danger); }
@@ -643,7 +647,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
       <label><input type="radio" name="fmt" value="names"> names only</label>
     </div>
     <div class="listactions">
-      <button id="copy" class="btn primary" type="button">Copy for Moxfield</button>
+      <button id="copy" class="btn primary copybtn" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg><span>Copy for Moxfield</span></button>
       <button id="clear" class="btn" type="button">Clear list</button>
     </div>
     <div id="confirm" class="confirm" hidden>
@@ -660,7 +664,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 
 <div id="mobilebar" class="mobilebar">
   <button id="openlist" class="btn" type="button">List is empty</button>
-  <button id="barcopy" class="btn primary" type="button">Copy for Moxfield</button>
+  <button id="barcopy" class="btn primary copybtn" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg><span>Copy for Moxfield</span></button>
 </div>
 
 <img id="preview" alt="" hidden>
@@ -1804,6 +1808,23 @@ function exportText() {
     .join("\n");
 }
 
+let copiedTimer;
+function showCopied(total) {
+  clearTimeout(copiedTimer);
+  for (const id of ["copy", "barcopy"]) {
+    const btn = $(id);
+    btn.querySelector("span").textContent = `✓ Copied ${plural(total, "card")}`;
+    replay(btn, "copied");
+    btn.classList.add("done");
+  }
+  copiedTimer = setTimeout(() => {
+    for (const id of ["copy", "barcopy"]) {
+      $(id).querySelector("span").textContent = "Copy for Moxfield";
+      $(id).classList.remove("done");
+    }
+  }, 2200);
+}
+
 async function copyList() {
   const text = exportText();
   const total = state.list.reduce((n, c) => n + c.qty, 0);
@@ -1811,7 +1832,7 @@ async function copyList() {
   try {
     await navigator.clipboard.writeText(text);
     area.hidden = true;
-    toast(`Copied: ${plural(total, "card")}`);
+    showCopied(total);
     return;
   } catch { /* clipboard blocked, e.g. a page served over plain http; try the older copy command */ }
   const temp = document.createElement("textarea");
@@ -1826,7 +1847,7 @@ async function copyList() {
   temp.remove();
   if (copied) {
     area.hidden = true;
-    toast(`Copied: ${plural(total, "card")}`);
+    showCopied(total);
     return;
   }
   if (isMobile) openList();
