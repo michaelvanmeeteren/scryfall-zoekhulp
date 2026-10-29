@@ -17,9 +17,11 @@ The request is in English or Dutch. The user always builds Commander decks with 
 The page adds "f:commander game:paper" itself: never add f: or game: yourself.
 
 Reply with JSON only, no other text:
-{"query": "<scryfall query>", "uitleg": "<one short sentence describing what the query finds>",
+{"query": "<scryfall query>", "uitleg": "<one short sentence describing what the query finds>", "warn": false,
  "combo": {"wanted": false, "colors": "", "card": "", "result": "", "max_eur": 0, "cards": 0},
  "edhrec": {"wanted": false, "commander": "", "tag": ""}}
+Set "warn" to true only when part of the request could not be followed, such as a color outside the commander's
+identity; uitleg then starts with what was left out. Otherwise "warn" is false.
 Write "uitleg" in English. Only when the request itself is written in Dutch, write "uitleg" in Dutch.
 
 Combos: when the user asks for combos (infinite combos, combo pieces, "2-card combos", "combos with <card>", "how do I
@@ -346,6 +348,7 @@ const ANSWER_SCHEMA = {
   properties: {
     query: { type: "string" },
     uitleg: { type: "string" },
+    warn: { type: "boolean" },
     combo: {
       type: "object",
       properties: {
@@ -370,7 +373,7 @@ const ANSWER_SCHEMA = {
       additionalProperties: false
     }
   },
-  required: ["query", "uitleg", "combo", "edhrec"],
+  required: ["query", "uitleg", "warn", "combo", "edhrec"],
   additionalProperties: false
 };
 const OUTPUT_CONFIG = { effort: "low", format: { type: "json_schema", schema: ANSWER_SCHEMA } };
@@ -531,7 +534,7 @@ export default {
     let uitleg = String(answer.uitleg || "");
     const unknown = unknownTags(query);
     if (unknown.length) uitleg += ` (Scryfall may not know the tag ${unknown.join(", ")}.)`;
-    return reply(200, { query, uitleg });
+    return reply(200, { query, uitleg, warn: answer.warn === true });
   }
 };
 

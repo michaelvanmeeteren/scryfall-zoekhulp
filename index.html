@@ -117,6 +117,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .toolbar label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
 .toolbar select { padding: 4px 6px; border-radius: 4px; border: 1px solid var(--line); background: var(--surface); }
 .note { background: var(--note-bg); color: var(--note-fg); border-radius: 4px; padding: 8px 12px; font-size: 13.5px; margin-bottom: 10px; }
+#uitleg.warn { color: var(--danger); font-weight: 600; }
 .note.error { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
 .empty { padding: 40px 16px; text-align: center; color: var(--muted); }
 
@@ -912,7 +913,7 @@ async function translateWithClaude(zin) {
   // An empty query is an answer, not a failure: Claude says this isn't a card search (or no combos match).
   if (body.edhrec) return { query: "", uitleg: body.uitleg || "", edhrec: body.edhrec };
   if (!body.query) return { query: "", uitleg: body.uitleg || "This isn't a search for Magic cards." };
-  return { query: body.query, uitleg: body.uitleg || "", combos: body.combos || [] };
+  return { query: body.query, uitleg: body.uitleg || "", combos: body.combos || [], warn: body.warn === true };
 }
 
 // Search query for exactly these card names.
@@ -1308,10 +1309,12 @@ function setBusy(busy, label) {
   $("zoek").textContent = busy ? (label || "Working…") : "Search";
 }
 
-function showQuery(query, uitleg, combos) {
+// warn: part of the request was left out (e.g. a color outside the commander's), shown in red
+function showQuery(query, uitleg, combos, warn) {
   $("querybar").hidden = false;
   $("query").value = query;
   $("uitleg").textContent = uitleg || "";
+  $("uitleg").classList.toggle("warn", !!warn);
   renderCombos(combos);
 }
 
@@ -1862,7 +1865,7 @@ $("searchform").addEventListener("submit", async e => {
     showNothing("Nothing to search", result.uitleg);
     return;
   }
-  showQuery(result.query, result.uitleg, result.combos);
+  showQuery(result.query, result.uitleg, result.combos, result.warn);
   pushSearchUrl(result.query, zin);
   addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
   // a combo result is a list of card names, which makes no sense to refine; anything else can be
@@ -1873,6 +1876,7 @@ $("searchform").addEventListener("submit", async e => {
 
 $("opnieuw").addEventListener("click", () => {
   $("uitleg").textContent = "Query edited by hand.";
+  $("uitleg").classList.remove("warn");
   if (state.previous) state.previous.query = $("query").value.trim();
   history.replaceState({}, "", location.pathname + "?" + new URLSearchParams({ q: $("query").value.trim(), s: $("zin").value.trim() }));
   runSearch($("query").value);
