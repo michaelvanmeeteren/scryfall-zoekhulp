@@ -335,6 +335,11 @@ body.home .topbar .btn { color: var(--fg); border-color: var(--line); }
   background: rgb(11 11 12 / 0.8); color: var(--gold); font-family: var(--serif); font-weight: 700; font-style: italic; font-size: 15px; line-height: 1;
   opacity: 0; transition: opacity 0.12s; }
 .tile:hover .infobtn, .infobtn:focus-visible, html.mobile .infobtn { opacity: 1; }
+.flipbtn { position: absolute; right: 6px; bottom: 30%; width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 1px solid var(--gold);
+  background: rgb(11 11 12 / 0.8); color: var(--gold); font-size: 17px; line-height: 1; }
+.flipbtn:hover, .tile.flipped .flipbtn { background: var(--gold); color: #0b0b0c; }
+html.mobile .flipbtn { width: 36px; height: 36px; font-size: 20px; }
+.cd-imgbox { display: grid; gap: 8px; justify-items: center; }
 .carddialog { width: min(860px, calc(100% - 24px)); max-height: calc(100vh - 32px); overflow: auto; }
 .cardpage { display: grid; grid-template-columns: minmax(0, 300px) 1fr; gap: 20px; align-items: start; }
 @media (max-width: 640px) { .cardpage { grid-template-columns: 1fr; } }
@@ -412,7 +417,10 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 <dialog id="carddialog" class="settings carddialog" aria-label="Card details">
   <form method="dialog">
     <div class="cardpage">
-      <img id="cd-img" alt="">
+      <div class="cd-imgbox">
+        <img id="cd-img" alt="">
+        <button id="cd-flip" class="btn small" type="button" hidden>⟲ Turn over</button>
+      </div>
       <div>
         <div id="cd-faces"></div>
         <p id="cd-meta" class="meta2"></p>
@@ -464,7 +472,8 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
       <b>Copy for Moxfield</b> copies the list; paste it in Moxfield under <i>Import</i> or <i>Bulk Edit</i>.
       Open it with <b>List</b> at the top (on a phone: the bar at the bottom). The list is saved in this browser.
       It is grouped by card type, with the mana curve of your spells at the top.
-      The <i>i</i> on a card opens its details: rules text, price and links to Scryfall and EDHREC.</p>
+      The <i>i</i> on a card opens its details: rules text, price and links to Scryfall and EDHREC.
+      Double-faced cards have a <b>⟲</b> button to turn them over.</p>
 
     <h3>Import your deck</h3>
     <p>In the card list, <b>Import deck</b> takes your deck list (for example copied from Moxfield).
@@ -1270,7 +1279,9 @@ function normalise(c) {
     name: f.name, cost: f.mana_cost || "", type: f.type_line || c.type_line || "", text: f.oracle_text || "",
     pt: f.power != null ? `${f.power}/${f.toughness}` : f.loyalty != null ? `Loyalty ${f.loyalty}` : ""
   }));
+  const backImg = !c.image_uris && faces[1] && faces[1].image_uris;
   return { id: c.id, name: sameFaces ? face.name : c.name, set: c.set, cn: c.collector_number, eur, usd, multi: allowsMultiple(c), img: img.normal || img.small || "", large: img.large || img.normal || "",
+    back: backImg ? backImg.normal || backImg.small || "" : "", backLarge: backImg ? backImg.large || backImg.normal || "" : "",
     group: cardGroup((face || c).type_line || c.type_line || ""), mv: c.cmc != null ? c.cmc : (face && face.cmc) || 0,
     faces: facesInfo, setName: c.set_name || "", rarity: c.rarity || "", uri: c.scryfall_uri || "", edhrec: (c.related_uris && c.related_uris.edhrec) || "" };
 }
@@ -1421,7 +1432,8 @@ function render(cards, page, pages) {
     const img = document.createElement("img");
     img.loading = "lazy";
     img.alt = card.name;
-    img.src = card.img;
+    img.src = card.flipped && card.back ? card.back : card.img;   // a turned-over card stays turned over when the page redraws
+    if (card.flipped) tile.classList.add("flipped");
     const name = document.createElement("span");
     name.className = "name";
     name.textContent = card.name;
@@ -1467,6 +1479,20 @@ function render(cards, page, pages) {
     }
 
     tile.append(btn, info, picker);
+    if (card.back) {
+      const flip = document.createElement("button");
+      flip.type = "button";
+      flip.className = "flipbtn";
+      flip.textContent = "⟲";
+      flip.title = "Turn over";
+      flip.setAttribute("aria-label", `Show the other side of ${card.name}`);
+      flip.addEventListener("click", () => {
+        card.flipped = !card.flipped;
+        img.src = card.flipped ? card.back : card.img;
+        tile.classList.toggle("flipped", card.flipped);
+      });
+      tile.append(flip);
+    }
     markOwned(tile);
     markPicked(tile, counts.get(card.name) || 0);
     grid.append(tile);
@@ -1532,7 +1558,7 @@ const canHover = matchMedia("(hover: hover)").matches;
 function showPreview(card, e) {
   if (!canHover || !card.large) return;
   const p = $("preview");
-  p.src = card.large;
+  p.src = card.flipped && card.backLarge ? card.backLarge : card.large;
   p.alt = card.name;
   p.hidden = false;
   movePreview(e);
@@ -1762,9 +1788,24 @@ function setView(home) {
 
 // The card page behind the "i" on a card.
 let shownCard = null;
+function flipShownCard() {
+  const card = shownCard;
+  if (!card || !card.back) return;
+  card.flipped = !card.flipped;
+  $("cd-img").src = card.flipped ? card.backLarge : card.large || card.img;
+  // keep the tile in the results on the same side
+  for (const tile of document.querySelectorAll(".tile")) {
+    if (tile.dataset.name !== card.name) continue;
+    const img = tile.querySelector(".card img");
+    if (img) img.src = card.flipped ? card.back : card.img;
+    tile.classList.toggle("flipped", card.flipped);
+  }
+}
+
 function openCard(card) {
   shownCard = card;
-  $("cd-img").src = card.large || card.img;
+  $("cd-img").src = card.flipped && card.backLarge ? card.backLarge : card.large || card.img;
+  $("cd-flip").hidden = !card.back;
   $("cd-img").alt = card.name;
   $("cd-faces").replaceChildren(...card.faces.map(f => {
     const d = document.createElement("div");
@@ -1960,6 +2001,7 @@ for (const d of document.querySelectorAll("dialog")) {
     if (e.target === d && !inside) d.close();
   });
 }
+$("cd-flip").addEventListener("click", flipShownCard);
 $("cd-add").addEventListener("click", () => { if (shownCard) { addToList(shownCard); renderCardButton(); } });
 $("viewswitch").textContent = isMobile ? "Switch to desktop view" : "Switch to mobile view";
 if (isMobile) $("emptylist").textContent = "Empty. Tap cards in the results to add them.";
