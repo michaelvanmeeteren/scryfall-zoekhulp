@@ -744,6 +744,18 @@ const PLURAL = { elf: "elves", dwarf: "dwarves", wolf: "wolves", werewolf: "were
 const KEYWORDS = ["first strike", "double strike", "flying", "trample", "lifelink", "deathtouch", "haste", "vigilance", "menace",
   "reach", "hexproof", "indestructible", "flash", "ward", "defender", "infect", "prowess", "cascade", "convoke", "flashback",
   "cycling", "landfall", "storm", "persist", "undying", "shroud", "toxic", "partner"];
+// Functions whose names contain a card type or keyword ("artifact removal", "haste enablers"): these are read
+// before the types and keywords, so the words stay together.
+const EARLY_FUNCTIONS = [
+  [/\b(?:artifact (?:removal|hate)|removal for artifacts)\b/, "otag:removal-artifact", "artifact removal"],
+  [/\b(?:enchantment (?:removal|hate)|removal for enchantments)\b/, "otag:removal-enchantment", "enchantment removal"],
+  [/\b(?:creature removal|removal for creatures|spot removal)\b/, "otag:removal-creature", "creature removal"],
+  [/\b(?:land destruction|land removal|destroy lands)\b/, "otag:land-removal", "land destruction"],
+  [/\b(?:haste enablers?|give haste|gives haste|grant haste)\b/, "otag:gives-haste", "gives haste"],
+  [/\b(?:graveyard hate|graveyard removal)\b/, "otag:graveyard-hate", "graveyard hate"],
+  [/\b(?:token (?:makers?|generators?|producers?)|makes? tokens|create tokens|tokens)\b/, "o:create o:token", "makes tokens"],
+  [/\b(?:creature lands?|man ?lands?)\b/, "otag:manland", "creature land"]
+];
 const FUNCTIONS = [
   [/\b(?:card draw|card advantage|draw engines?|draw cards|card drawers?)\b/, "otag:draw", "card draw"],
   [/\b(?:board ?wipes?|wipes?|wraths?|sweepers?|mass removal)\b/, "otag:board-wipe", "board wipe"],
@@ -752,7 +764,20 @@ const FUNCTIONS = [
   [/\btutors?\b/, "otag:tutor", "tutor"],
   [/\bcounter ?spells?\b|\bcounters\b/, "otag:counterspell", "counterspell"],
   [/\bmana rocks?\b/, "otag:mana-rock", "mana rock"],
-  [/\bburn\b/, "otag:burn", "burn"]
+  [/\bburn\b/, "otag:burn", "burn"],
+  [/\bsac(?:rifice)? outlets?\b/, "otag:sacrifice-outlet", "sacrifice outlet"],
+  [/\bdiscard outlets?\b/, "otag:discard-outlet", "discard outlet"],
+  [/\bextra turns?\b/, "otag:extra-turn", "extra turn"],
+  [/\bwheels?\b/, "otag:wheel", "wheel"],
+  [/\breanimat(?:e|ion|or)\b/, "otag:reanimate", "reanimation"],
+  [/\b(?:blink|flicker)(?: effects?)?\b/, "otag:blink", "blink"],
+  [/\bmill\b/, "otag:mill", "mill"],
+  [/\b(?:life ?gain|gain life)\b/, "otag:lifegain", "lifegain"],
+  [/\bfogs?\b/, "otag:fog", "fog"],
+  [/\bclones?\b/, "otag:clone", "clone"],
+  [/\bcost reducers?\b/, "otag:cost-reducer", "cost reducer"],
+  [/\b(?:anthems?|lords?)\b/, "otag:anthem", "anthem"],
+  [/\btreasures?\b/, "o:treasure", "treasure"]
 ];
 const COMP = "(less than or equal to|equal to or less than|greater than or equal to|equal to or greater than|no more than|no less than|at most|at least|less than|fewer than|more than|greater than|under|below|over|above|exactly|equal to|<=|>=|<|>|=)";
 const COMP_OP = {
@@ -839,6 +864,9 @@ function translate(input) {
   // colours: always colour identity
   const colors = new Set();
   let colorless = false;
+  for (const [re, term, label] of EARLY_FUNCTIONS) {
+    take(new RegExp(re.source, "g"), () => { terms.push(term); seen.push(label); });
+  }
   take(/\bcolou?rless\b/g, () => { colorless = true; });
   take(/\b(?:five|5)[- ]colou?r(?:ed)?\b|\bwubrg\b/g, () => "wubrg".split("").forEach(c => colors.add(c)));
   take(new RegExp(`\\b(${Object.keys(GROUPS).join("|")})\\b`, "g"), (_, g) => GROUPS[g].split("").forEach(c => colors.add(c)));
