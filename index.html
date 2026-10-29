@@ -363,6 +363,15 @@ html.mobile .infobtn { width: 34px; height: 34px; font-size: 18px; }
 /* nothing to search: keep the explanation, hide the result controls */
 #results.nosearch .controls, #results.nosearch .optstoggle, #results.nosearch #querybar { display: none !important; }
 #results.static #querybar, #results.static #filterbar, #results.static .controls label:first-child { display: none !important; }
+/* phones: a closed drawer must not exist in the layout, or Android Chrome widens the page to include it */
+html.mobile .drawer:not(.open) { display: none; }
+@media (max-width: 899px) { .drawer:not(.open) { display: none; } }
+html, body { overflow-x: clip; }
+/* phones: the start-screen search bar is a normal row, full width (flex-basis 100% made it as tall as the header) */
+html.mobile body.home .topbar .searchrow { flex-basis: auto; width: 100%; order: 0; }
+html.mobile body.home .topbar { padding-top: 64px; }
+html.mobile body.home .brandbtn { font-size: 40px; text-align: center; }
+html.mobile body.home .topbuttons { right: 12px; top: 10px; }
 </style>
 </head>
 <body>
