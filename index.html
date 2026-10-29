@@ -305,6 +305,7 @@ section.home { max-width: 760px; margin: 0 auto; display: grid; gap: 22px; }
 .cmdrpick[hidden] { display: none; }
 .compwrap { display: inline-flex; align-items: center; gap: 8px; }
 .compwrap[hidden] { display: none; }
+.compwrap select[hidden] { display: none; }
 .compwrap select { padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
 #compnote:not(:empty) { color: var(--accent); }
 
@@ -561,7 +562,11 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
         </form>
         <span id="cmdrnote" class="hint"></span>
         <label id="compwrap" class="compwrap" hidden><span class="cmdrlabel">Companion</span>
-          <select id="compselect" aria-label="Companion"><option value="">none</option></select></label>
+          <select id="compselect" aria-label="Companion"><option value="">none</option></select>
+          <select id="umoritype" aria-label="Card type for Umori" hidden>
+            <option value="">card type…</option><option>artifact</option><option>creature</option><option>enchantment</option>
+            <option>instant</option><option>sorcery</option><option>planeswalker</option><option>battle</option>
+          </select></label>
         <span id="compnote" class="hint"></span>
       </div></div>
   </section>
@@ -698,6 +703,7 @@ const state = {
   size: store.get("size", 50),
   search: null,  // { query, full, order, size, total, cache: Map(apiPage -> cards), page }
   companion: store.get("companion", ""),        // name of the companion, see COMPANIONS
+  umoriType: store.get("umoritype", ""),        // the card type Umori's deck shares
   commander: validCommander(store.get("commander", null)),        // { name, colors } chosen as the starting point
   deck: new Set(store.get("deck", [])),            // lower-case card names of the imported deck
   hideOwned: store.get("hideowned", false),
@@ -1050,11 +1056,13 @@ const COMPANIONS = {
   "Jegantha, the Wellspring": { colors: "rg", rule: "-m:{W}{W} -m:{U}{U} -m:{B}{B} -m:{R}{R} -m:{G}{G} -m:{C}{C}",
     text: "no mana symbol twice in a cost" },
   "Zirda, the Dawnwaker": { colors: "rw", rule: "(-is:permanent OR t:land OR otag:activated-ability)", text: "permanents with an activated ability" },
-  "Umori, the Collector": { colors: "bg", rule: "", text: "all nonland cards share a card type: pick it with the filters" },
+  "Umori, the Collector": { colors: "bg", rule: "", text: "all nonland cards share a card type: pick it" },   // rule: see companionRule
   "Lutri, the Spellchaser": { colors: "ur", rule: "", text: "no extra rule in Commander" },
   "Yorion, Sky Nomad": { colors: "wu", rule: "", text: "no extra rule in Commander" }
 };
-const companionRule = () => (COMPANIONS[state.companion] || {}).rule || "";
+const companionRule = () => state.companion === "Umori, the Collector"
+  ? (state.umoriType ? `(t:land OR t:${state.umoriType})` : "")
+  : (COMPANIONS[state.companion] || {}).rule || "";
 
 function renderCompanion() {
   const c = state.commander;
@@ -1072,7 +1080,11 @@ function renderCompanion() {
   if (!COMPANIONS[state.companion]) state.companion = "";
   store.set("companion", state.companion);
   sel.value = state.companion;
-  $("compnote").textContent = state.companion ? COMPANIONS[state.companion].text : "";
+  const umori = state.companion === "Umori, the Collector";
+  $("umoritype").hidden = !umori;
+  $("umoritype").value = state.umoriType;
+  $("compnote").textContent = umori && state.umoriType ? `all nonland cards are ${state.umoriType === "sorcery" ? "sorceries" : state.umoriType + "s"}`
+    : state.companion ? COMPANIONS[state.companion].text : "";
 }
 
 function withFilters(query) {
@@ -2290,6 +2302,12 @@ document.querySelectorAll("[data-openhelp]").forEach(b => b.addEventListener("cl
   $("helpdialog").showModal();
   $("helpdialog").scrollTop = 0;   // the "Got it" button gets focus, which would scroll to the bottom
 }));
+$("umoritype").addEventListener("change", () => {
+  state.umoriType = $("umoritype").value;
+  store.set("umoritype", state.umoriType);
+  renderCompanion();
+  rerunForCommander();
+});
 $("compselect").addEventListener("change", () => {
   state.companion = $("compselect").value;
   store.set("companion", state.companion);
