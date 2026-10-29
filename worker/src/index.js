@@ -28,7 +28,7 @@ cards itself, so leave "query" empty. Fill in:
 - result: only when the user names a specific effect, in Commander Spellbook's words: "Infinite mana", "Win the game",
   "Infinite damage", "Infinite tokens", "Infinite card draw", "Infinite lifegain", "Infinite mill". Otherwise "".
   "infinite combos" or "combos" alone = "" (any combo; nearly all of them are infinite);
-- max_eur: the most the whole combo may cost in euro ("cheap combos" = 20), or 0 for no limit;
+- max_eur: the most the whole combo may cost in euro, only with price words ("budget combos" = 20, "combos under 50 euro"), or 0;
 - cards: the exact number of cards the user asks for ("2 card combos" / "two-card combos" = 2), or 0 for any number.
 For every other request combo.wanted = false, with "" and 0 in the other fields.
 
@@ -44,12 +44,13 @@ Without a commander name and without "My commander:", do not use edhrec; search 
 When the request names colors or a guild/shard instead of a commander ("best ramp in green"), search normally.
 Without such a recommendation word ("removal for my commander", "ramp in green") search normally, within the commander's colors.
 For every other request edhrec.wanted = false, with "" in the other fields.
-Example: "cheap infinite mana combos in green" => query "", combo {"wanted": true, "colors": "g", "card": "",
+Example: "budget infinite mana combos in green" => query "", combo {"wanted": true, "colors": "g", "card": "",
 "result": "Infinite mana", "max_eur": 20, "cards": 0}; "infinite combos in dimir" => combo {"wanted": true, "colors": "ub",
 "card": "", "result": "", "max_eur": 0, "cards": 0}.
 
 The message may start with extra lines before "Request:":
-- "My commander: <name> (color identity: <letters>)." Use id<=<letters> for every search for deck cards, unless the
+- "My commander: <name> (color identity: <letters>)." Only when this line is present: use id<= with those
+  letters (e.g. id<=wubg) for every search for deck cards, unless the
   request names other colors or asks for commanders. Combos then use those colors too.
 - "My previous search: "<sentence>" => <query>". If the request is a follow-up that changes that search ("only under
   1 euro", "without creatures", "now in blue", "more expensive", "nu alleen instants"), return the previous query
@@ -58,7 +59,8 @@ The message may start with extra lines before "Request:":
 Dutch words you will see: wit=white, blauw=blue, zwart=black, rood=red, groen=green, kleurloos=colorless,
 wezens=creatures, draken=dragons, landen=lands, spreuken=instants and sorceries, goedkoop=cheap,
 "die ik als commander kan gebruiken" = is:commander, "kaarten trekken" = card draw, "hoogstens"/"of minder" = <=,
-"minder dan"/"onder" = <, "minstens"/"of meer" = >=, "meest gespeeld" = order:edhrec, "goedkoopste eerst" = order:eur dir:asc.
+"minder dan"/"onder" = <, "minstens"/"of meer" = >=, "meest gespeeld" = order:edhrec, "goedkoopste eerst" = order:cmc dir:asc,
+duur=expensive, betaalbaar=budget.
 
 Syntax:
 - Color identity (default for any colors the user names): id<=bgw, id<=r, id<=esper
@@ -85,7 +87,10 @@ Rules:
 - Use only real Scryfall syntax. Never invent filters.
 - "less than or equal to" / "or less" / "at most" = <=, "under" / "less than" = <,
   "at least" / "or more" / "5+" = >=.
-- "cheap" = eur<2 unless an amount is given. Prices are always in euro (eur), also when the user writes $ or dollar.
+- "cheap" / "goedkoop" ALWAYS means a low mana value: mv<=2. "expensive" / "duur" means a high mana value: mv>=6.
+  "cheapest first" = order:cmc dir:asc, "most expensive first" = order:cmc dir:desc.
+  Filter on price only with price words: "budget" / "betaalbaar" = eur<2 unless an amount is given; "under 1 euro",
+  "€5 or less", "by price", "price" = eur. Prices are always in euro (eur), also when the user writes $ or dollar.
 - "removal" = otag:removal, "ramp" = otag:ramp, "card draw" = otag:draw, "board wipe" = otag:sweeper.
 - Prefer a Tagger tag whenever the request describes what a card does (an effect or role): tags find cards by
   function even when their rules text is worded differently. Pick the tag from the list at the end whose name fits
@@ -137,19 +142,24 @@ Commander knowledge (all syntax and tags below are checked against Scryfall):
   Fetchlands are colorless in color identity, so filter them with o:plains / o:island etc., not with id.
 - Commanders: is:commander; partners = is:partner; backgrounds = t:background, and commanders that take one =
   is:commander o:"choose a background". Devotion: devotion:rr.
-- "budget / cheap <colors> commander" means a cheap commander card: is:commander id=<colors> eur<2.
+- "budget <colors> commander" = is:commander id=<colors> eur<2; "cheap <colors> commander" = is:commander id=<colors> mv<=2.
   Only "budget cards for my <colors> deck" means deck cards (id<=).
 - Commander deck cards use id<= (they may have fewer colors). Only the commander itself uses id= (see rules above).
 
 Examples (request => query):
 creatures mana value less than or equal to 5 in g/w/b => t:creature mv<=5 id<=bgw
 flying creatures under 3 mana in red => t:creature kw:flying mv<3 id<=r
-cheap removal in b/g => otag:removal eur<2 id<=bg
+cheap removal in b/g => otag:removal mv<=2 id<=bg
+budget removal in black => otag:removal eur<2 id<=b
+most expensive commanders => is:commander order:cmc dir:desc
+creatures with more toughness than power => t:creature tou>pow
+beste kaarten voor een golgari deck => id<=bg order:edhrec
+expensive dragons in red => t:dragon mv>=6 id<=r
 dragons that can be my commander => is:commander t:dragon
 gruul dragons I can use as my commander => is:commander t:dragon id=rg
 blue instants that draw a card => t:instant o:"draw a card" id<=u
 lands for w/u that make any color, no basics => t:land o:"any color" -t:basic id<=wu
-green creatures with 5+ power for 4 mana or less, cheapest first => t:creature pow>=5 mv<=4 id<=g order:eur dir:asc
+green creatures with 5+ power for 4 mana or less, cheapest first => t:creature pow>=5 mv<=4 id<=g order:cmc dir:asc
 ramp for 2 mana or less in green => otag:ramp mv<=2 id<=g
 burn spells under 1 euro in mono red => (t:instant OR t:sorcery) o:damage eur<1 id<=r
 cards that boost the power of my creatures in green => (otag:anthem OR otag:power-boost-to-all) id<=g
@@ -160,7 +170,7 @@ aristocrats payoffs in orzhov => (otag:death-trigger OR otag:synergy-sacrifice) 
 mana rocks under 3 mana => otag:mana-rock mv<3
 shocklands for my esper deck => is:shockland id<=wub
 ik wil alle gruul draken zien die ik als commander kan gebruiken => is:commander t:dragon id=rg
-goedkope removal in zwart groen => otag:removal eur<2 id<=bg
+goedkope removal in zwart groen => otag:removal mv<=2 id<=bg
 vliegende wezens van hoogstens 3 mana in wit => t:creature kw:flying mv<=3 id<=w`;
 
 // The prompt plus every Tagger tag (about 20k tokens). It never changes between requests, so it is cached:
@@ -418,7 +428,14 @@ export default {
       // Self-check: one correction round when the query uses a tag that doesn't exist,
       // makes Scryfall warn, or finds no cards at all.
       const wantsCombos = answer && ((answer.combo && answer.combo.wanted) || (answer.edhrec && answer.edhrec.wanted));
-      const problem = answer && answer.query && !wantsCombos ? await checkQuery(String(answer.query)) : null;
+      // EDHREC without a commander is not possible: ask for a normal search instead
+      const edhrecWithoutCommander = answer && answer.edhrec && answer.edhrec.wanted && !String(answer.edhrec.commander || "").trim();
+      const problem = edhrecWithoutCommander
+        ? "There is no commander for EDHREC here. Set edhrec.wanted to false and give a normal Scryfall query for the request."
+        : answer && !answer.query && !wantsCombos
+          // an empty query is right for requests that aren't about cards, but sometimes Claude drops a real one
+          ? "The query is empty. If this request is about finding Magic cards, give the Scryfall query; if it is not, keep it empty."
+          : answer && answer.query && !wantsCombos ? await checkQuery(String(answer.query)) : null;
       if (problem) {
         messages.push({ role: "assistant", content: response.content });
         messages.push({ role: "user", content: `${problem} Fix the query so it finds what I asked for. Reply with the corrected JSON.` });

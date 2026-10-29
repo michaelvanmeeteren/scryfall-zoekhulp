@@ -99,8 +99,9 @@ De app zelf is in het Engels; deze README is in het Nederlands.
 | Kleuren (color identity) | `in g/w/b`, `in gwb`, `green and white`, `golgari`, `abzan`, `mono red`, `colorless` |
 | Types | `creatures`, `instants or sorceries`, `legendary`, `lands`, `no basics`, `noncreature`, `dragons`, `elves` |
 | Mana value, power, toughness | `mana value less than or equal to 5`, `under 3 mana`, `4 mana or less`, `5+ power`, `2-drops` |
-| Prijs (euro) | `cheap` (< €2), `under 1 euro`, `less than €5`, `cheapest first` |
-| Sortering | `most played`, `popular`, `by edhrec`, `cheapest first`, `newest` |
+| Mana value | `cheap` (mana value ≤ 2), `expensive` (≥ 6), `cheapest first` (laagste mana value eerst) |
+| Prijs (euro) | `budget` (< €2), `under 1 euro`, `less than €5`, `by price` |
+| Sortering | `most played`, `popular`, `by edhrec`, `cheapest first`, `by price`, `newest` |
 | Keywords | `flying`, `trample`, `lifelink`, `first strike`, ... |
 | Functies | `removal`, `ramp`, `card draw`, `board wipes`, `tutors`, `counterspells`, `mana rocks`, `burn` |
 | Overig | `that can be my commander`, `draw a card`, `make any color`, `rare`, tekst tussen `"aanhalingstekens"` |

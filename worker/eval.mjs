@@ -34,9 +34,10 @@ const CASES = [
   // price and sorting
   { zin: "cards under 5 dollars in red", any: [["eur<5"]], none: ["usd"], id: "<=r" },
   { zin: "cards between 1 and 3 euro in black", any: [["eur>=1", "eur>1"], ["eur<=3", "eur<3"]], id: "<=b" },
-  { zin: "most expensive commanders", any: [["is:commander"], ["order:eur", "order:usd"], ["dir:desc"]] },
+  { zin: "most expensive commanders", any: [["is:commander"], ["order:cmc", "order:mv"], ["dir:desc"]] },
   { zin: "newest dragons", any: [["t:dragon"], ["order:released"]] },
-  { zin: "cheap tutors", any: [["otag:tutor"], ["eur<2"]] },
+  { zin: "cheap tutors", any: [["otag:tutor"], ["mv<=2", "mv<3"]], none: ["eur"] },
+  { zin: "budget tutors", any: [["otag:tutor"], ["eur<2"]] },
   // functions (Tagger)
   { zin: "counterspells in blue under 2 euro", any: [["otag:counterspell"], ["eur<2"]], id: "<=u" },
   { zin: "tutors that find creatures", any: [["tutor-creature"]], none: ["t:creature"] },
@@ -60,7 +61,7 @@ const CASES = [
   { zin: "full art basic lands", any: [["is:full"], ["t:basic"], ["unique:prints", "unique:art"]], min: 100 },
   { zin: "green cards released in 2024", any: [["year=2024", "year:2024"], ["id<=g", "c:g", "c=g"]] },
   // Dutch
-  { zin: "goedkope tegenspreuken in blauw", any: [["otag:counterspell"], ["eur<2"]], id: "<=u" },
+  { zin: "goedkope tegenspreuken in blauw", any: [["otag:counterspell"], ["mv<=2", "mv<3"]], none: ["eur"], id: "<=u" },
   { zin: "kleurloze artefacten van hoogstens 2 mana", any: [["t:artifact"], ["mv<=2"]] },
   { zin: "elfen die mana maken in groen", any: [["t:elf"], ["mana-dork", "mana-producer", "add", "ramp"]], id: "<=g" },
   { zin: "draken met vliegen en haast in rood", any: [["t:dragon"], ["kw:flying"], ["kw:haste"]], id: "<=r" },
@@ -69,7 +70,7 @@ const CASES = [
   { zin: "tutors for lands in green", any: [["tutor-land", "land-ramp"]], none: ["t:land"], id: "<=g" },
   { zin: "removal for enchantments in white", any: [["removal-enchantment", "enchantment-removal"]], id: "<=w" },
   { zin: "lands that make any color", any: [["t:land"], ["any color", "produces:wubrg"]] },
-  { zin: "best ramp in green", any: [["ramp"], ["order:edhrec"]], id: "<=g" },
+  { zin: "best ramp in green", any: [["ramp"]], id: "<=g" },   // the page sorts by EDHREC rank anyway
   { zin: "cards that give my team trample", any: [["trample"]], none: ["kw:trample"] },
   { zin: "cards that draw when a creature dies", any: [["death-trigger", "dies"], ["draw"]] },
   { zin: "showcase versions of Lightning Bolt", any: [["lightning bolt"], ["unique:prints", "unique:art"]] },
@@ -83,7 +84,8 @@ const CASES = [
   { zin: "graveyard hate artifacts", any: [["hate-graveyard", "graveyard-hate"], ["t:artifact"]] },
   { zin: "cards that make my creatures indestructible", any: [["indestructible"]] },
   { zin: "commanders voor een draken deck", any: [["is:commander"], ["dragon"]] },
-  { zin: "goedkope board wipes", any: [["sweeper"], ["eur<2"]] },
+  { zin: "goedkope board wipes", any: [["sweeper"], ["mv<=2", "mv<3"]], none: ["eur"] },
+  { zin: "expensive dragons in red", any: [["t:dragon"], ["mv>=6", "mv>5"]], none: ["eur"], id: "<=r" },
   // combos (Commander Spellbook): the query is a list of exact card names
   { zin: "infinite combos in dimir", any: [['!"']], min: 5 },
   { zin: "combos with Sol Ring", any: [['!"sol ring"']], min: 5 }

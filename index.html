@@ -741,7 +741,7 @@ const DUTCH_PHRASES = [
 ];
 const DUTCH_WORDS = {
   wit: "white", witte: "white", blauw: "blue", blauwe: "blue", zwart: "black", zwarte: "black", rood: "red", rode: "red",
-  groen: "green", groene: "green", kleurloos: "colorless", kleurloze: "colorless", goedkoop: "cheap", goedkope: "cheap",
+  groen: "green", groene: "green", kleurloos: "colorless", kleurloze: "colorless", goedkoop: "cheap", goedkope: "cheap", duur: "expensive", dure: "expensive", tegenspreuk: "counterspell", tegenspreuken: "counterspells", trekken: "draw", betaalbaar: "budget", betaalbare: "budget",
   wezens: "creatures", wezen: "creature", draken: "dragons", draak: "dragon", elfen: "elves", landen: "lands",
   artefacten: "artifacts", artefact: "artifact", betoveringen: "enchantments", spreuken: "spells", legendarische: "legendary",
   onder: "under", hoogstens: "at most", maximaal: "at most", minstens: "at least", vliegende: "flying", vliegen: "flying",
@@ -769,8 +769,9 @@ function translate(input) {
   // sorting
   let order = null;
   take(/\b(?:most (?:played|popular)|popular|popularity|by edhrec(?: rank)?|edhrec(?: rank)?)(?: first)?\b/, () => { order = "order:edhrec"; seen.push("most played first"); });
-  take(/\b(?:cheapest(?: first| ones?)?|sorted by price|by price)\b/, () => { order = "order:eur dir:asc"; seen.push("cheapest first"); });
-  take(/\bmost expensive(?: first)?\b/, () => { order = "order:eur dir:desc"; seen.push("most expensive first"); });
+  take(/\b(?:sorted by price|by price)\b/, () => { order = "order:eur dir:asc"; seen.push("cheapest price first"); });
+  take(/\bcheapest(?: first| ones?)?\b/, () => { order = "order:cmc dir:asc"; seen.push("lowest mana value first"); });
+  take(/\bmost expensive(?: first)?\b/, () => { order = "order:cmc dir:desc"; seen.push("highest mana value first"); });
   take(/\b(?:newest|most recent)(?: first)?\b/, () => { order = "order:released dir:desc"; seen.push("newest first"); });
 
   // price, always in euro
@@ -778,7 +779,7 @@ function translate(input) {
   const addPrice = (c, n) => { const op = COMP_OP[c]; terms.push(`eur${op}${n.replace(",", ".")}`); seen.push(`price ${op} €${n}`); price = true; };
   take(new RegExp(`${COMP}\\s*(?:€|\\$)\\s*(\\d+(?:[.,]\\d+)?)`, "g"), (_, c, n) => addPrice(c, n));
   take(new RegExp(`${COMP}\\s*(\\d+(?:[.,]\\d+)?)\\s*(?:€|\\$|euros?|eur|dollars?|bucks)`, "g"), (_, c, n) => addPrice(c, n));
-  take(/\b(?:cheap|budget|inexpensive)\b/g, () => { if (!price) { terms.push("eur<2"); seen.push("cheap (< €2)"); price = true; } });
+  take(/\b(?:budget|affordable)\b/g, () => { if (!price) { terms.push("eur<2"); seen.push("budget (< €2)"); price = true; } });
 
   // mana value, power, toughness
   const num = (k, op, n) => { terms.push(`${k}${op}${n}`); seen.push(`${ATTR_LABEL[k]} ${op} ${n}`); };
@@ -789,6 +790,11 @@ function translate(input) {
   take(new RegExp(`\\b(\\d+)\\+\\s*${ATTR}\\b`, "g"), (_, n, a) => num(attrKey(a), ">=", n));
   take(/\b(\d+)[- ]drops?\b/g, (_, n) => num("mv", "=", n));
   take(new RegExp(`\\b(\\d+)\\s*${ATTR}\\b`, "g"), (_, n, a) => num(attrKey(a), "=", n));
+
+  // "cheap" and "expensive" are about mana value, not price
+  const hasMv = () => terms.some(t => t.startsWith("mv"));
+  take(/\b(?:cheap|inexpensive|low[- ]cost)\b/g, () => { if (!hasMv()) { terms.push("mv<=2"); seen.push("cheap (mana value <= 2)"); } });
+  take(/\bexpensive\b/g, () => { if (!hasMv()) { terms.push("mv>=6"); seen.push("expensive (mana value >= 6)"); } });
 
   // colours: always colour identity
   const colors = new Set();
