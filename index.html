@@ -159,9 +159,14 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .remove { color: var(--muted); }
 .list li.grouphead { display: block; padding: 10px 0 3px; border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
 .list li.grouphead:first-child { padding-top: 2px; }
+.picker.pop { animation: pop 0.22s ease-out; }
+@keyframes pop { 0% { transform: scale(0.4); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+.list li.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { from { background: color-mix(in srgb, var(--accent) 30%, transparent); } to { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .curve .bar i { transition: none; } .picker.pop, .list li.flash { animation: none; } }
 .curve { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; height: 74px; align-items: end; }
 .curve .bar { display: grid; grid-template-rows: auto 1fr auto; height: 100%; text-align: center; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.curve .bar i { align-self: end; display: block; border-radius: 2px 2px 0 0; background: var(--accent); }
+.curve .bar i { align-self: end; display: block; height: 0; border-radius: 2px 2px 0 0; background: var(--accent); transition: height 0.3s ease-out; }
 .curve .bar b { font-weight: 600; padding-top: 2px; border-top: 1px solid var(--line); }
 .list .emptylist { color: var(--muted); font-size: 13.5px; margin: 0; }
 .exportopts { display: flex; gap: 12px; font-size: 13px; flex-wrap: wrap; }
@@ -1513,7 +1518,20 @@ function markPicked(tile, qty) {
 
 function refreshBadges() {
   const counts = new Map(state.list.map(c => [c.name, c.qty]));
-  for (const tile of $("grid").querySelectorAll(".tile")) markPicked(tile, counts.get(tile.dataset.name) || 0);
+  for (const tile of $("grid").querySelectorAll(".tile")) {
+    markPicked(tile, counts.get(tile.dataset.name) || 0);
+    if (justAdded && tile.dataset.name === justAdded) replay(tile.querySelector(".picker"), "pop");
+  }
+  justAdded = "";
+}
+
+// Restarts a one-off CSS animation (class) on an element.
+function replay(el, cls) {
+  if (!el) return;
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+  el.addEventListener("animationend", () => el.classList.remove(cls), { once: true });
 }
 
 function renderPager(nav, page, pages) {
@@ -1579,8 +1597,10 @@ function hidePreview() { $("preview").hidden = true; }
 function saveList() { store.set("list", state.list); renderList(); refreshBadges(); }
 
 // The list is keyed by card name, so another printing of a card already in the list counts as the same card.
+let justAdded = "";   // name of the card added by the last click, animated once
 function addToList(card) {
   const found = state.list.find(c => c.name === card.name);
+  justAdded = found && !found.multi ? "" : card.name;
   if (found && found.multi) found.qty += 1;
   else if (found) state.list = state.list.filter(c => c.name !== card.name);   // singleton: second click takes it out
   else state.list.push({ id: card.id, name: card.name, set: card.set, cn: card.cn, eur: card.eur, usd: card.usd, multi: card.multi, group: card.group, mv: card.mv, qty: 1 });
@@ -1670,7 +1690,11 @@ function renderList() {
     head.className = "grouphead";
     head.textContent = `${group} (${inGroup.reduce((n, c) => n + c.qty, 0)})`;
     ul.append(head);
-    for (const c of inGroup) ul.append(listRow(c));
+    for (const c of inGroup) {
+      const row = listRow(c);
+      ul.append(row);
+      if (c.name === justAdded) replay(row, "flash");
+    }
   }
 }
 
@@ -1711,19 +1735,22 @@ function renderCurve(items) {
   for (const c of items) if (c.group && c.group !== "Lands") counts[Math.min(7, Math.floor(c.mv || 0))] += c.qty;
   const max = Math.max(...counts);
   box.hidden = max === 0;
-  box.replaceChildren(...counts.map((n, mv) => {
-    const col = document.createElement("div");
-    col.className = "bar";
+  if (box.children.length !== counts.length) {
+    box.replaceChildren(...counts.map((n, mv) => {
+      const col = document.createElement("div");
+      col.className = "bar";
+      const label = document.createElement("b");
+      label.textContent = mv === 7 ? "7+" : mv;
+      col.append(document.createElement("span"), document.createElement("i"), label);
+      return col;
+    }));
+  }
+  counts.forEach((n, mv) => {
+    const col = box.children[mv];
     col.title = `Mana value ${mv === 7 ? "7+" : mv}: ${plural(n, "card")}`;
-    const count = document.createElement("span");
-    count.textContent = n || "";
-    const fill = document.createElement("i");
-    fill.style.height = n ? `max(3px, ${Math.round(100 * n / max)}%)` : "0";
-    const label = document.createElement("b");
-    label.textContent = mv === 7 ? "7+" : mv;
-    col.append(count, fill, label);
-    return col;
-  }));
+    col.querySelector("span").textContent = n || "";
+    col.querySelector("i").style.height = n ? `max(3px, ${Math.round(100 * n / max)}%)` : "0";
+  });
 }
 
 function exportText() {
