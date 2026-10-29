@@ -376,6 +376,7 @@ html.mobile #listtoggle { display: none; }
 /* wide screens: the card list is always visible in a column on the right; the page makes room for it */
 @media (min-width: 900px) {
   html:not(.mobile) body { padding-right: 340px; }
+  html:not(.mobile) body.home .topbuttons { right: calc(340px + max(16px, 2vw)); }   /* left of the card list, not under it */
   html:not(.mobile) .drawer { width: 340px; transform: none; transition: none; box-shadow: none; z-index: 20; }
   html:not(.mobile) #listtoggle, html:not(.mobile) .closelist, html:not(.mobile) .scrim { display: none !important; }
 }
@@ -2091,7 +2092,14 @@ $("optstoggle").addEventListener("click", () => {
 });
 $("listtoggle").addEventListener("click", () => $("drawer").classList.contains("open") ? closeList() : openList());
 $("scrim").addEventListener("click", closeList);
-$("home").addEventListener("click", () => { setView(true); history.pushState({}, "", location.pathname); window.scrollTo(0, 0); $("zin").focus(); });
+// Back to the start screen. It also becomes what a reload or the next visit shows, instead of the last search.
+function goHome() {
+  setView(true);
+  store.set("last", "");
+  store.set("lastEdhrec", null);
+  window.scrollTo(0, 0);
+}
+$("home").addEventListener("click", () => { goHome(); history.pushState({}, "", location.pathname); $("zin").focus(); });
 
 // ?q=<Scryfall query>&s=<the sentence that was typed>. Opening such a link runs the query without asking Claude again.
 function pushSearchUrl(query, zin) {
@@ -2113,7 +2121,7 @@ function searchFromUrl() {
   return true;
 }
 window.addEventListener("popstate", () => {
-  if (!searchFromUrl()) { setView(true); window.scrollTo(0, 0); }
+  if (!searchFromUrl()) goHome();
 });
 // a click outside a pop-up (on the dimmed backdrop) closes it, like Escape; nothing is saved
 for (const d of document.querySelectorAll("dialog")) {
