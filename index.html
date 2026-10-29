@@ -339,9 +339,6 @@ body.home .topbar .btn { color: var(--fg); border-color: var(--line); }
   background: rgb(11 11 12 / 0.8); color: var(--gold); font-size: 17px; line-height: 1; }
 .flipbtn:hover, .tile.flipped .flipbtn { background: var(--gold); color: #0b0b0c; }
 html.mobile .flipbtn { width: 36px; height: 36px; font-size: 20px; }
-.card img, #cd-img { transition: transform 0.16s ease-in-out; }
-.card img.turning, html.mobile .card img.turning, #cd-img.turning { transform: perspective(900px) rotateY(90deg); }
-@media (prefers-reduced-motion: reduce) { .card img, #cd-img { transition: none; } }
 .cd-imgbox { display: grid; gap: 8px; justify-items: center; }
 .carddialog { width: min(860px, calc(100% - 24px)); max-height: calc(100vh - 32px); overflow: auto; }
 .cardpage { display: grid; grid-template-columns: minmax(0, 300px) 1fr; gap: 20px; align-items: start; }
@@ -1791,19 +1788,22 @@ function setView(home) {
 
 // The card page behind the "i" on a card.
 let shownCard = null;
-// Turns a card image over: it narrows to nothing, shows the other side and widens again.
-// The other side is loaded first, so it doesn't appear half-drawn.
+// Turns a card image over in one movement: the first half of the turn shows the old side until it is edge-on,
+// the second half continues the same way with the other side. The other side is loaded first, so it doesn't
+// appear half-drawn.
 async function turnImage(img, src) {
   const turn = img.turnCount = (img.turnCount || 0) + 1;
   const next = new Image();
   next.src = src;
   const loaded = next.decode().catch(() => {});
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) { await loaded; img.src = src; return; }
-  img.classList.add("turning");
-  await Promise.all([loaded, new Promise(r => setTimeout(r, 160))]);
+  const at = deg => ({ transform: `perspective(900px) rotateY(${deg}deg)` });
+  img.getAnimations().forEach(a => a.cancel());
+  await Promise.all([loaded, img.animate([at(0), at(90)], { duration: 170, easing: "ease-in", fill: "forwards" }).finished.catch(() => {})]);
   if (turn !== img.turnCount) return;   // clicked again meanwhile: the newer turn finishes the job
   img.src = src;
-  img.classList.remove("turning");
+  img.getAnimations().forEach(a => a.cancel());
+  img.animate([at(-90), at(0)], { duration: 170, easing: "ease-out" });
 }
 
 function flipShownCard() {
