@@ -303,6 +303,10 @@ section.home { max-width: 760px; margin: 0 auto; display: grid; gap: 22px; }
 .cmdrpick { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; min-width: 0; }   /* the commander and its remove link stay together */
 .cmdrpick .chip { min-width: 0; max-width: calc(100vw - 110px); overflow: hidden; text-overflow: ellipsis; }   /* very long names are cut off with … (vw: a % would not stop the page from widening) */
 .cmdrpick[hidden] { display: none; }
+.compwrap { display: inline-flex; align-items: center; gap: 8px; }
+.compwrap[hidden] { display: none; }
+.compwrap select { padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
+#compnote:not(:empty) { color: var(--accent); }
 
 /* results view */
 .strip { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
@@ -465,6 +469,9 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
     <p>Type your commander's name under the search bar and pick it from the suggestions.
       From then on every search only shows cards that fit in its colors. Ask for a color outside them and the explanation
       turns red to say it was left out. Click <b>remove</b> to search all colors again.</p>
+    <p>Two commanders? If yours has Partner, Friends forever, Choose a Background or Doctor's companion, click <b>+ add partner</b>
+      (or background, Doctor) and pick the second one; the suggestions only show cards that may join it. Searches then use the colors of both.
+      You can also pick a <b>Companion</b>: its deck rule is added to every search, like Lurrus: permanents of 2 mana or less.</p>
 
     <h3>Follow-up questions <span class="optional">(access code)</span></h3>
     <p>After a search, type a change instead of starting over: <i>only under 1 euro</i>, <i>without creatures</i>, <i>nu alleen instants</i>.</p>
@@ -553,6 +560,9 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
           <button class="btn small" type="submit">Set</button>
         </form>
         <span id="cmdrnote" class="hint"></span>
+        <label id="compwrap" class="compwrap" hidden><span class="cmdrlabel">Companion</span>
+          <select id="compselect" aria-label="Companion"><option value="">none</option></select></label>
+        <span id="compnote" class="hint"></span>
       </div></div>
   </section>
 
@@ -687,6 +697,7 @@ const state = {
   order: store.get("order", "edhrec"),
   size: store.get("size", 50),
   search: null,  // { query, full, order, size, total, cache: Map(apiPage -> cards), page }
+  companion: store.get("companion", ""),        // name of the companion, see COMPANIONS
   commander: validCommander(store.get("commander", null)),        // { name, colors } chosen as the starting point
   deck: new Set(store.get("deck", [])),            // lower-case card names of the imported deck
   hideOwned: store.get("hideowned", false),
@@ -1028,6 +1039,42 @@ async function scryfall(url) {
   return body;
 }
 
+// The ten companions and their deck rule as a Scryfall filter ("" when it can't be one). Each search adds the rule.
+const COMPANIONS = {
+  "Lurrus of the Dream-Den": { colors: "wb", rule: "(-is:permanent OR mv<=2)", text: "permanents of 2 mana or less" },
+  "Gyruda, Doom of Depths": { colors: "ub", rule: "mv:even", text: "even mana values only" },
+  "Obosh, the Preypiercer": { colors: "br", rule: "(t:land OR mv:odd)", text: "odd mana values for nonland cards" },
+  "Keruga, the Macrosage": { colors: "ug", rule: "(t:land OR mv>=3)", text: "nonland cards of 3 mana or more" },
+  "Kaheera, the Orphanguard": { colors: "gw", rule: "(-t:creature OR t:cat OR t:elemental OR t:nightmare OR t:dinosaur OR t:beast)",
+    text: "creatures are Cats, Elementals, Nightmares, Dinosaurs or Beasts" },
+  "Jegantha, the Wellspring": { colors: "rg", rule: "-m:{W}{W} -m:{U}{U} -m:{B}{B} -m:{R}{R} -m:{G}{G} -m:{C}{C}",
+    text: "no mana symbol twice in a cost" },
+  "Zirda, the Dawnwaker": { colors: "rw", rule: "(-is:permanent OR t:land OR otag:activated-ability)", text: "permanents with an activated ability" },
+  "Umori, the Collector": { colors: "bg", rule: "", text: "all nonland cards share a card type: pick it with the filters" },
+  "Lutri, the Spellchaser": { colors: "ur", rule: "", text: "no extra rule in Commander" },
+  "Yorion, Sky Nomad": { colors: "wu", rule: "", text: "no extra rule in Commander" }
+};
+const companionRule = () => (COMPANIONS[state.companion] || {}).rule || "";
+
+function renderCompanion() {
+  const c = state.commander;
+  $("compwrap").hidden = !c;
+  const sel = $("compselect");
+  if (sel.options.length === 1) {
+    for (const name of Object.keys(COMPANIONS)) sel.add(new Option(name.split(",")[0], name));
+  }
+  // a companion must fit in the commander's colors
+  for (const o of sel.options) {
+    if (!o.value) continue;
+    o.disabled = !!c && ![...COMPANIONS[o.value].colors].every(x => c.colors.includes(x));
+  }
+  if (!c || (COMPANIONS[state.companion] && sel.querySelector(`option[value="${CSS.escape(state.companion)}"]`).disabled)) state.companion = "";
+  if (!COMPANIONS[state.companion]) state.companion = "";
+  store.set("companion", state.companion);
+  sel.value = state.companion;
+  $("compnote").textContent = state.companion ? COMPANIONS[state.companion].text : "";
+}
+
 function withFilters(query) {
   let extra = "";
   if (!/(^|[\s(-])(f|format|legal|banned|restricted):/i.test(query)) extra += " f:commander";
@@ -1036,6 +1083,8 @@ function withFilters(query) {
   if (state.commander && !/(^|[\s(-])(id|identity|ci)(:|<|>|=)/i.test(query) && !/is:commander/i.test(query)) {
     extra += " id<=" + (state.commander.colors || "c");
   }
+  // the companion's deck rule, not when looking for commanders
+  if (companionRule() && !/is:commander/i.test(query)) extra += " " + companionRule();
   const f = filterTerms();
   if (f) extra += " " + f;
   return { full: query.trim() + extra, extra: extra.trim() };
@@ -1120,6 +1169,7 @@ function renderCommander() {
   $("cmdrpair").textContent = pairing ? "cancel" : `+ add ${c && c.pair ? c.pair.label : "partner"}`;
   $("cmdrinput").placeholder = pairing ? `Name of the ${c.pair.label}` : "e.g. Atraxa";
   $("cmdrnote").textContent = pairing ? "" : c ? "Searches stay within these colors." : "Limits every search to its colors.";
+  renderCompanion();
   if (c) {
     $("cmdrchip").textContent = `${c.names.join(" + ")} · ${(c.colors || "c").toUpperCase()}`;
     $("cmdrchip").title = c.names.join(" + ");
@@ -2240,6 +2290,12 @@ document.querySelectorAll("[data-openhelp]").forEach(b => b.addEventListener("cl
   $("helpdialog").showModal();
   $("helpdialog").scrollTop = 0;   // the "Got it" button gets focus, which would scroll to the bottom
 }));
+$("compselect").addEventListener("change", () => {
+  state.companion = $("compselect").value;
+  store.set("companion", state.companion);
+  renderCompanion();
+  rerunForCommander();
+});
 $("cmdrpair").addEventListener("click", () => {
   pairing = !pairing;
   $("cmdrinput").value = "";
