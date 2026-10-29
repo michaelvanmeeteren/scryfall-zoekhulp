@@ -295,7 +295,8 @@ html:not(.mobile) .mobilebar, html:not(.mobile) .closelist { display: none !impo
         <span id="cmdrchip" class="chip" hidden></span>
         <button id="cmdrclear" class="linkbtn" type="button" hidden>remove</button>
         <form id="cmdrform" class="cmdrform">
-          <input id="cmdrinput" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. Atraxa" aria-label="Commander name">
+          <input id="cmdrinput" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. Atraxa" aria-label="Commander name" list="cmdrlist">
+          <datalist id="cmdrlist"></datalist>
           <button class="btn small" type="submit">Set</button>
         </form>
         <span id="cmdrnote" class="hint"></span>
@@ -880,6 +881,28 @@ async function setCommander(name) {
   } catch (err) {
     $("cmdrnote").textContent = err.message;
   }
+}
+
+// Suggestions while typing a commander: the most played commanders whose name contains the text.
+let suggestTimer, suggestRun = 0;
+function suggestCommanders() {
+  clearTimeout(suggestTimer);
+  const text = $("cmdrinput").value.trim();
+  // picking a suggestion fills in its exact name: set it right away
+  if ([...$("cmdrlist").options].some(o => o.value === text)) { setCommander(text); return; }
+  if (text.length < 2) { $("cmdrlist").replaceChildren(); return; }
+  suggestTimer = setTimeout(async () => {
+    const run = ++suggestRun;
+    try {
+      const body = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q: `is:commander name:"${text.replace(/"/g, "")}"`, order: "edhrec" }));
+      if (run !== suggestRun) return;   // a newer request has started meanwhile
+      $("cmdrlist").replaceChildren(...(body.data || []).slice(0, 8).map(c => {
+        const o = document.createElement("option");
+        o.value = c.name;
+        return o;
+      }));
+    } catch { /* no suggestions this time */ }
+  }, 300);
 }
 
 // ---------- imported deck: mark cards you already have ----------
@@ -1507,6 +1530,7 @@ $("cmdrform").addEventListener("submit", e => {
   const name = $("cmdrinput").value.trim();
   if (name) setCommander(name);
 });
+$("cmdrinput").addEventListener("input", suggestCommanders);
 $("cmdrclear").addEventListener("click", () => {
   state.commander = null;
   store.set("commander", null);
