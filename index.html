@@ -1046,23 +1046,30 @@ async function scryfall(url) {
   return body;
 }
 
+// A card in the deck has the type of its front face: "Sea Gate Restoration // Sea Gate, Reborn" is a sorcery, not a land.
+// Scryfall's t: looks at both faces, so this matches the type line up to " // " instead.
+const front = type => `t:/^[^\\/]*${type}/`;
+const PERMANENT = "(artifact|creature|enchantment|land|planeswalker|battle)";
+
 // The ten companions and their deck rule as a Scryfall filter ("" when it can't be one). Each search adds the rule.
 const COMPANIONS = {
-  "Lurrus of the Dream-Den": { colors: "wb", rule: "(-is:permanent OR mv<=2)", text: "permanents of 2 mana or less" },
+  "Lurrus of the Dream-Den": { colors: "wb", rule: `(-${front(PERMANENT)} OR mv<=2)`, text: "permanents of 2 mana or less" },
   "Gyruda, Doom of Depths": { colors: "ub", rule: "mv:even", text: "even mana values only" },
-  "Obosh, the Preypiercer": { colors: "br", rule: "(t:land OR mv:odd)", text: "odd mana values for nonland cards" },
-  "Keruga, the Macrosage": { colors: "ug", rule: "(t:land OR mv>=3)", text: "nonland cards of 3 mana or more" },
-  "Kaheera, the Orphanguard": { colors: "gw", rule: "(-t:creature OR t:cat OR t:elemental OR t:nightmare OR t:dinosaur OR t:beast)",
+  "Obosh, the Preypiercer": { colors: "br", rule: `(${front("land")} OR mv:odd)`, text: "odd mana values for nonland cards" },
+  "Keruga, the Macrosage": { colors: "ug", rule: `(${front("land")} OR mv>=3)`, text: "nonland cards of 3 mana or more" },
+  "Kaheera, the Orphanguard": { colors: "gw",
+    rule: `(-${front("creature")} OR ${front("creature[^\\/]*(cat|elemental|nightmare|dinosaur|beast)")})`,
     text: "creatures are Cats, Elementals, Nightmares, Dinosaurs or Beasts" },
   "Jegantha, the Wellspring": { colors: "rg", rule: "-m:{W}{W} -m:{U}{U} -m:{B}{B} -m:{R}{R} -m:{G}{G} -m:{C}{C}",
     text: "no mana symbol twice in a cost" },
-  "Zirda, the Dawnwaker": { colors: "rw", rule: "(-is:permanent OR t:land OR otag:activated-ability)", text: "permanents with an activated ability" },
+  "Zirda, the Dawnwaker": { colors: "rw", rule: `(-${front(PERMANENT)} OR ${front("land")} OR otag:activated-ability)`,
+    text: "permanents with an activated ability" },
   "Umori, the Collector": { colors: "bg", rule: "", text: "all nonland cards share a card type: pick it" },   // rule: see companionRule
   "Lutri, the Spellchaser": { colors: "ur", rule: "", text: "no extra rule in Commander" },
   "Yorion, Sky Nomad": { colors: "wu", rule: "", text: "no extra rule in Commander" }
 };
 const companionRule = () => state.companion === "Umori, the Collector"
-  ? (state.umoriType ? `(t:land OR t:${state.umoriType})` : "")
+  ? (state.umoriType ? `(${front("land")} OR ${front(state.umoriType)})` : "")
   : (COMPANIONS[state.companion] || {}).rule || "";
 
 function renderCompanion() {
