@@ -146,14 +146,6 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 
 /* list */
 .list { padding: 14px; display: grid; gap: 10px; }
-.recent { padding: 14px; display: grid; gap: 8px; }
-.recent h2 { margin: 0; font-size: 16px; }
-.recent ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-.recent li button { width: 100%; text-align: left; background: none; border: 0; padding: 6px; border-radius: 4px; display: grid; gap: 1px; }
-.recent li button:hover { background: var(--accent-soft); }
-.recent .zin { font-size: 13.5px; overflow-wrap: anywhere; }
-.recent .q { font-family: var(--mono); font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.recent .when { font-size: 11.5px; color: var(--muted); }
 .list h2 { margin: 0; font-size: 16px; }
 .list .totals { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
@@ -188,7 +180,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 
 /* first-visit welcome, help and clearer labels */
 h2, .help h3 { font-family: var(--serif); font-weight: 700; letter-spacing: 0.01em; }
-.list h2, .recent h2, .welcome h2, .settings h2 { font-size: 21px; }
+.list h2, .welcome h2, .settings h2 { font-size: 21px; }
 .help h3 { font-size: 18px; }
 .qlabel, .cmdrlabel, .tryhead, .filterbar .group > span { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
 .welcome { padding: 18px; display: grid; gap: 12px; }
@@ -256,7 +248,6 @@ html.mobile .picker .badge { min-width: 42px; height: 44px; padding: 0 12px 0 8p
 html.mobile .picker .check { min-width: 44px; height: 44px; font-size: 22px; }
 html.mobile .pager { gap: 6px; }
 html.mobile .pager button { min-width: 46px; min-height: 46px; font-size: 15px; }
-html.mobile .recent li button { padding: 10px 6px; }
 html.mobile .list h2 { font-size: 19px; }
 html.mobile .list li { padding: 8px 0; }
 html.mobile .list .cardname { font-size: 15px; }
@@ -357,6 +348,12 @@ body.home .topbar { padding-bottom: 18px; }
 /* phone: the bar scrolls away with the page, and the bottom bar already opens the list */
 html.mobile .topbar { position: static; }
 html.mobile #listtoggle { display: none; }
+/* wide screens: the card list is always visible in a column on the right; the page makes room for it */
+@media (min-width: 900px) {
+  html:not(.mobile) body { padding-right: 340px; }
+  html:not(.mobile) .drawer { width: 340px; transform: none; transition: none; box-shadow: none; z-index: 20; }
+  html:not(.mobile) #listtoggle, html:not(.mobile) .closelist, html:not(.mobile) .scrim { display: none !important; }
+}
 </style>
 </head>
 <body>
@@ -427,8 +424,6 @@ html.mobile #listtoggle { display: none; }
     <p>In the card list, <b>Import deck</b> takes your deck list (for example copied from Moxfield).
       Cards you already have get an <b>In deck</b> label, and you can hide them.</p>
 
-    <h3>Recent searches</h3>
-    <p>With the access code you see what others searched for on the right; your own searches are shared there too (without names).</p>
 
     <h3>Access code</h3>
     <p>Without the code a simple built-in translator is used. With it, Claude understands your searches much better.
@@ -460,7 +455,6 @@ html.mobile #listtoggle { display: none; }
     </label>
     <p class="hint">Ask the owner of this page for the code. With it, Claude (<code>claude-haiku-5-5</code>) translates your searches;
       without it the built-in translator is used. The code is stored only in this browser on this device.</p>
-    <p class="hint">With the code, your searches are shared under <b>Recent searches</b> with everyone who has the code (no names).</p>
     <div class="listactions">
       <button id="savesettings" class="btn primary" type="submit" value="save">Save</button>
       <button id="removecode" class="btn" type="button">Remove code</button>
@@ -499,7 +493,6 @@ html.mobile #listtoggle { display: none; }
       <li><span><b>Copy for Moxfield</b> from your list and paste it into your deck.</span></li>
     </ol>
     <p class="homeline">Commander filter, follow-up questions, combos and deck import: <button class="linkbtn" type="button" data-openhelp>Help</button></p>
-    <div id="recenthome"></div>
   </section>
 
   <section id="results" class="results" aria-label="Results" hidden>
@@ -588,17 +581,8 @@ html.mobile #listtoggle { display: none; }
     </div>
     <textarea id="exporttext" readonly hidden aria-label="List to copy"></textarea>
   </div>
-  <div id="recentdrawer"></div>
 </aside>
 
-<section id="recent" class="recent" aria-label="Recent searches by everyone" hidden>
-  <div class="listhead">
-    <h2>Recent searches</h2>
-    <button id="refreshrecent" class="btn small" type="button" aria-label="Refresh recent searches">Refresh</button>
-  </div>
-  <p class="hint">Searches by everyone with the access code. Click one to run it.</p>
-  <ul id="recentlist"></ul>
-</section>
 
 <footer class="foot">Card data and images via Scryfall. Magic: The Gathering is © Wizards of the Coast. · <button id="viewswitch" class="linkbtn" type="button">Switch view</button></footer>
 
@@ -877,77 +861,6 @@ function renderCombos(combos) {
   }
 }
 
-// ---------- shared "Recent searches" (everyone with the access code) ----------
-async function worker(path, data) {
-  const res = await fetch(WORKER_URL + path, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ ...data, code: settings.code })
-  });
-  if (!res.ok) throw new Error(`Worker returned ${res.status}`);
-  return res.json();
-}
-
-async function logShared(zin, query) {
-  if (!settings.code) return;
-  try { await worker("/log", { zin, query }); } catch { /* the search itself still works */ }
-  loadRecent();
-}
-
-async function loadRecent() {
-  if (!settings.code) return;
-  try {
-    const { searches } = await worker("/recent", {});
-    renderRecent(searches || []);
-  } catch { /* keep what is shown */ }
-}
-
-const ago = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
-function timeAgo(iso) {
-  const sec = Math.round((Date.parse(iso) - Date.now()) / 1000);
-  const steps = [[60, "second"], [60, "minute"], [24, "hour"], [7, "day"], [Infinity, "week"]];
-  let n = sec;
-  for (const [size, unit] of steps) {
-    if (Math.abs(n) < size) return ago.format(n, unit);
-    n = Math.round(n / size);
-  }
-}
-
-function renderRecent(searches) {
-  const ul = $("recentlist");
-  ul.replaceChildren();
-  for (const s of searches) {
-    const li = document.createElement("li");
-    const b = document.createElement("button");
-    b.type = "button";
-    const zin = document.createElement("span");
-    zin.className = "zin";
-    zin.textContent = s.zin;
-    const q = document.createElement("span");
-    q.className = "q";
-    q.textContent = s.query;
-    q.title = s.query;
-    const when = document.createElement("span");
-    when.className = "when";
-    when.textContent = timeAgo(s.at);
-    b.append(zin, q, when);
-    b.addEventListener("click", () => {
-      $("zin").value = s.zin;
-      showQuery(s.query, "From Recent searches.");
-      state.previous = { zin: s.zin, query: s.query };
-      runSearch(s.query);
-      if (isMobile) $("count").scrollIntoView({ block: "start" });
-    });
-    li.append(b);
-    ul.append(li);
-  }
-  if (!searches.length) {
-    const li = document.createElement("li");
-    li.className = "hint";
-    li.textContent = "No searches yet.";
-    ul.append(li);
-  }
-}
 
 // ---------- Scryfall ----------
 let lastCall = 0;
@@ -1576,7 +1489,6 @@ function setView(home) {
   $("start").hidden = !home;
   $("results").hidden = home;
   (home ? $("cmdrhome") : $("cmdrresults")).append($("cmdrrow"));
-  (home ? $("recenthome") : $("recentdrawer")).append($("recent"));
 }
 
 // The card page behind the "i" on a card.
@@ -1696,7 +1608,6 @@ $("searchform").addEventListener("submit", async e => {
   state.previous = result.combos && result.combos.length ? null : { zin, query: result.query };
   resetFilters();
   runSearch(result.query);
-  logShared(zin, result.query);
 });
 
 $("opnieuw").addEventListener("click", () => {
@@ -1746,6 +1657,14 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && $("drawer"
 $("listtoggle").addEventListener("click", () => $("drawer").classList.contains("open") ? closeList() : openList());
 $("scrim").addEventListener("click", closeList);
 $("home").addEventListener("click", () => { setView(true); window.scrollTo(0, 0); $("zin").focus(); });
+// a click outside a pop-up (on the dimmed backdrop) closes it, like Escape; nothing is saved
+for (const d of document.querySelectorAll("dialog")) {
+  d.addEventListener("click", e => {
+    const r = d.getBoundingClientRect();
+    const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    if (e.target === d && !inside) d.close();
+  });
+}
 $("cd-add").addEventListener("click", () => { if (shownCard) { addToList(shownCard); renderCardButton(); } });
 $("viewswitch").textContent = isMobile ? "Switch to desktop view" : "Switch to mobile view";
 if (isMobile) $("emptylist").textContent = "Empty. Tap cards in the results to add them.";
@@ -1767,11 +1686,7 @@ applyCardSize();
 // settings: access code for the translator
 function renderCodeState() {
   $("nokey").hidden = !!settings.code;
-  $("recent").hidden = !settings.code;
-  loadRecent();
 }
-$("refreshrecent").addEventListener("click", loadRecent);
-setInterval(() => { if (settings.code && document.visibilityState === "visible") loadRecent(); }, 60000);
 function openSettings() {
   $("accesscode").value = settings.code;
   $("settings").showModal();
