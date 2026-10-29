@@ -1151,6 +1151,12 @@ function canBeCommander(card) {
   return /Legendary/.test(type) && /Creature|Vehicle|Spacecraft|Background/.test(type) || /can be your commander/.test(text);
 }
 
+// A changed commander redoes the search on screen, but not from the start screen: there it only takes effect
+// for the next search.
+function rerunForCommander() {
+  if (state.search && !state.search.static && !document.body.classList.contains("home")) runSearch(state.search.query);
+}
+
 async function setCommander(name) {
   $("cmdrnote").textContent = "Looking it up…";
   try {
@@ -1163,7 +1169,7 @@ async function setCommander(name) {
     $("cmdrlist").replaceChildren();
     clearTimeout(suggestTimer);
     renderCommander();
-    if (state.search && !state.search.static) runSearch(state.search.query);
+    rerunForCommander();
   } catch (err) {
     $("cmdrnote").textContent = err.message;
   }
@@ -2203,7 +2209,7 @@ $("cmdrclear").addEventListener("click", () => {
   store.set("commander", null);
   $("cmdrinput").value = "";
   renderCommander();
-  if (state.search && !state.search.static) runSearch(state.search.query);
+  rerunForCommander();
 });
 $("importdeck").addEventListener("click", () => { $("decktext").value = ""; $("deckdialog").showModal(); $("decktext").focus(); });
 $("deckform").addEventListener("submit", e => {
