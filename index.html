@@ -372,6 +372,15 @@ html.mobile body.home .topbar .searchrow { flex-basis: auto; width: 100%; order:
 html.mobile body.home .topbar { padding-top: 64px; }
 html.mobile body.home .brandbtn { font-size: 40px; text-align: center; }
 html.mobile body.home .topbuttons { right: 12px; top: 10px; }
+/* phones: a bigger, gold-edged search bar, the main thing on the page */
+html.mobile .topbar .searchrow { gap: 0; }
+html.mobile .topbar .searchrow input { font-size: 17px; padding: 15px 14px; border: 2px solid var(--gold); border-right: 0; border-radius: 6px 0 0 6px; min-height: 56px; }
+html.mobile .topbar .searchrow .btn { border-radius: 0 6px 6px 0; min-height: 56px; padding: 0 18px; font-size: 16px; border: 2px solid var(--gold); }
+html.mobile body.home .topbar { padding-top: 56px; gap: 14px; }
+html.mobile body.home .brandbtn { font-size: 34px; }
+html.mobile body.home .tagline { font-size: 14px; margin-top: -6px; }
+html.mobile body.home .topbar .searchrow input { font-size: 18px; min-height: 64px; box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 18%, transparent); }
+html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 18%, transparent); }
 </style>
 </head>
 <body>
@@ -670,6 +679,8 @@ function looksLikePhone() {
 const savedView = store.get("view", null);   // "mobile" or "desktop" when the viewer switched by hand
 const isMobile = savedView ? savedView === "mobile" : looksLikePhone();
 document.documentElement.classList.toggle("mobile", isMobile);
+// a placeholder that fits on a phone
+if (isMobile) document.getElementById("zin").placeholder = "e.g. cheap removal in black";
 
 // ---------- built-in translator (to be replaced by Claude later) ----------
 const COLORS = { white: "w", blue: "u", black: "b", red: "r", green: "g" };
