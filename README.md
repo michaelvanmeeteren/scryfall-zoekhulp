@@ -25,7 +25,8 @@ browser → Worker (API-key, toegangscode, vaste instellingen) → Claude API
 ```
 
 - Wie de **toegangscode** heeft, vult die in bij **⚙ Settings**; dan vertaalt Claude. Zonder code (of als Claude faalt) doet de ingebouwde vertaler het, met de reden onder de zoekopdracht.
-- De Worker gebruikt altijd `claude-haiku-5-5`, altijd dezelfde systeemprompt voor Scryfall, zinnen tot 300 tekens en maximaal 20 vertalingen per minuut per bezoeker. Zo kan de key nergens anders voor gebruikt worden.
+- De Worker gebruikt altijd `claude-haiku-5-5`, altijd dezelfde systeemprompt voor Scryfall en zinnen tot 300 tekens. Zo kan de key nergens anders voor gebruikt worden; vragen die niet over kaarten gaan krijgen geen antwoord.
+- **Limieten** (geteld in de D1-tabel `hits`): maximaal 20 vertalingen per minuut per bezoeker (IP-adres), en na 20 foute codes (toegangs- of beheercode) binnen een uur wordt dat IP-adres de rest van dat uur geweigerd, ook met de goede code. Zo is de code niet te raden. De Cron Trigger ruimt oude tellers op.
 - Hij accepteert alleen verzoeken van deze GitHub-pagina (en `http://localhost:8010` om te testen).
 - **Scryfall Tagger:** Claude krijgt alle 3.662 oracle tags van [Scryfall Tagger](https://scryfall.com/docs/tagger-tags)
   mee (zonder de `cycle-…`-tags) en kiest bij "kaarten die X doen" een passende tag, zoals `otag:anthem`,
@@ -62,9 +63,8 @@ browser → Worker (API-key, toegangscode, vaste instellingen) → Claude API
 | API-key vervangen | `npx wrangler secret put ANTHROPIC_API_KEY` |
 | Worker opnieuw online zetten na een wijziging in `worker/src/index.js` | `npx wrangler deploy` |
 | De taglijst verversen met nieuwe Scryfall-tags (daarna `npx wrangler deploy`) | `node update-tags.mjs` |
-| De vertaler testen met 70 vragen (kost minder dan 5 cent) | `$env:ACCESS_CODE="<code>"; node eval.mjs` |
-| Alle gelogde zoekopdrachten bekijken | `npx wrangler d1 execute zoekhulp-log --remote --command "SELECT * FROM searches ORDER BY id DESC"` |
-| Het logboek leegmaken | `npx wrangler d1 execute zoekhulp-log --remote --command "DELETE FROM searches"` |
+| De vertaler testen met 170 vragen (kost ongeveer 10 cent) | `$env:ACCESS_CODE="<code>"; node eval.mjs` |
+| Jezelf deblokkeren na te veel foute codes | `npx wrangler d1 execute zoekhulp-log --remote --command "DELETE FROM hits"` |
 
 Plak de key nooit in een chat. Zet in de [Anthropic Console](https://console.anthropic.com) een maandlimiet, bijvoorbeeld €5.
 Vermoed je een lek: verwijder de key in de Console, maak een nieuwe en zet die met het commando hierboven in de Worker.

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Scryfall Zoekhulp</title>
 <link rel="icon" href="data:,">
-<script>try { const t = JSON.parse(localStorage.getItem("szh.theme")); if (t) document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
+<script>try { const t = JSON.parse(localStorage.getItem("szh.theme")); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
@@ -645,10 +645,18 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 "use strict";
 
 // ---------- storage ----------
+const validCommander = c => c && typeof c.name === "string" && typeof c.colors === "string" ? c : null;
+
 const store = {
   get(key, fallback) {
-    try { const v = localStorage.getItem("szh." + key); return v == null ? fallback : JSON.parse(v); }
-    catch { return fallback; }
+    try {
+      const v = localStorage.getItem("szh." + key);
+      if (v == null) return fallback;
+      const parsed = JSON.parse(v);
+      // a value of the wrong kind (edited or damaged storage) counts as missing
+      if (fallback !== null && (Array.isArray(fallback) ? !Array.isArray(parsed) : typeof parsed !== typeof fallback)) return fallback;
+      return parsed;
+    } catch { return fallback; }
   },
   set(key, value) {
     try { localStorage.setItem("szh." + key, JSON.stringify(value)); } catch { /* storage unavailable */ }
@@ -661,7 +669,7 @@ const state = {
   order: store.get("order", "edhrec"),
   size: store.get("size", 50),
   search: null,  // { query, full, order, size, total, cache: Map(apiPage -> cards), page }
-  commander: store.get("commander", null),        // { name, colors } chosen as the starting point
+  commander: validCommander(store.get("commander", null)),        // { name, colors } chosen as the starting point
   deck: new Set(store.get("deck", [])),            // lower-case card names of the imported deck
   hideOwned: store.get("hideowned", false),
   filters: { types: new Set(), mv: new Set(), price: "" },   // filter buttons beside the results
@@ -1058,12 +1066,23 @@ function renderCommander() {
 // The commander card for a (partial) name; ambiguous names ("atraxa") give the most played commander containing it.
 async function findCommander(name) {
   let card = await scryfall("https://api.scryfall.com/cards/named?" + new URLSearchParams({ fuzzy: name }));
-  if (!card || card.object !== "card") {
+  const named = card && card.object === "card" ? card : null;
+  if (!named || !canBeCommander(named)) {
     const found = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q: `is:commander name:"${name.replace(/"/g, "")}"`, order: "edhrec" }));
     card = found.data && found.data[0];
   }
-  if (!card || card.object !== "card") throw new Error(`No commander found named "${name}".`);
+  if (!card || card.object !== "card") {
+    throw new Error(named ? `${named.name} can't be your commander.` : `No commander found named "${name}".`);
+  }
   return card;
+}
+
+// Legendary creatures (front face), legendary vehicles and spacecraft, backgrounds, and cards that say they can be.
+function canBeCommander(card) {
+  const front = (card.card_faces && card.card_faces[0]) || card;
+  const type = front.type_line || card.type_line || "";
+  const text = [card.oracle_text, ...(card.card_faces || []).map(f => f.oracle_text)].join(" ");
+  return /Legendary/.test(type) && /Creature|Vehicle|Spacecraft|Background/.test(type) || /can be your commander/.test(text);
 }
 
 async function setCommander(name) {
@@ -1104,6 +1123,18 @@ function suggestCommanders() {
   }, 300);
 }
 
+// The results view without results, e.g. for a request that isn't a card search.
+function showNothing(title, uitleg) {
+  showQuery("", uitleg);
+  state.search = null;
+  setView(false);
+  $("results").classList.add("nosearch");
+  renderFilterbar();
+  for (const id of ["grid", "pagertop", "pagerbottom"]) $(id).replaceChildren();
+  $("count").textContent = title;
+  message("");
+}
+
 // ---------- EDHREC recommendations for a commander ----------
 // EDHREC has no official API; its pages load this JSON and it may be read from other sites (it sends CORS headers).
 // Scryfall takes about 40 card names per search, so the cards are fetched in batches and kept in EDHREC's order.
@@ -1142,6 +1173,8 @@ async function runEdhrec(name, tag, uitleg) {
     cards.sort((a, b) => b.edh - a.edh);
     showEdhrec(commander.name, cleanTag, cards, uitleg);
   } catch (err) {
+    // started from the start screen (a link or a typed request): switch to the results view to show the error
+    if (document.body.classList.contains("home")) showNothing("No EDHREC recommendations", "");
     message(err.message, true);
   } finally {
     setBusy(false);
@@ -1173,7 +1206,8 @@ function showEdhrec(commanderName, tag, cards, uitleg) {
 function parseDeck(text) {
   const names = new Set();
   for (let line of text.split(/\r?\n/)) {
-    line = line.replace(/#.*$/, "").trim();   // Moxfield tags
+    line = line.replace(/\s+\[[^\]]*\]|\s+\^[^^]*\^/g, "")   // Archidekt categories [Ramp] and labels ^Have,#37d67a^
+      .replace(/#.*$/, "").trim();   // Moxfield tags
     // skip empty lines and section headers such as "// Commander", "Sideboard:" or "Deck"
     if (!line || line.startsWith("//") || /^(commander|deck|sideboard|maybeboard|companion|about|name)\b:?\s*$/i.test(line)) continue;
     const m = line.match(/^(?:(\d+)x?\s+)?(.+?)(?:\s+\([A-Za-z0-9]{2,6}\)(?:\s+\S+)?)?(?:\s+\*[A-Z]+\*)*\s*$/);
@@ -1329,6 +1363,11 @@ async function showPage(n) {
     search.page = n;
     render(cards, n, pages);
   } catch (err) {
+    // don't leave the cards and count of the previous search standing under the new query
+    if (search === state.search) {
+      for (const id of ["grid", "pagertop", "pagerbottom"]) $(id).replaceChildren();
+      $("count").textContent = "Search failed";
+    }
     message(err.message, true);
   } finally {
     setBusy(false);
@@ -1562,6 +1601,8 @@ function migrateList(list) {
   const basic = /^(?:Snow-Covered )?(?:Plains|Island|Swamp|Mountain|Forest|Wastes)$/;
   const byName = new Map();
   for (const c of list) {
+    if (!c || typeof c.name !== "string" || typeof c.set !== "string") continue;   // damaged entry
+    if (!(c.qty >= 1)) c.qty = 1;
     const multi = typeof c.multi === "boolean" ? c.multi : basic.test(c.name);
     const prev = byName.get(c.name);
     if (prev) { if (multi) prev.qty += c.qty; continue; }
@@ -1797,7 +1838,7 @@ $("searchform").addEventListener("submit", async e => {
   const zin = $("zin").value.trim();
   if (!zin || $("zoek").disabled) return;
   let result;
-  if (zin.startsWith("/s ")) result = { query: zin.slice(3).trim(), uitleg: "Scryfall syntax, used as typed." };
+  if (/^\/s(\s|$)/.test(zin)) result = { query: zin.slice(2).trim(), uitleg: "Scryfall syntax, used as typed." };
   else if (zin.startsWith("!")) result = { query: zin.slice(1).trim(), uitleg: "Scryfall syntax, used as typed." };
   else if (looksLikeSyntax(zin)) result = { query: zin, uitleg: "This already looks like Scryfall syntax, so it was used as typed." };
   else if (settings.code) {
@@ -1815,14 +1856,7 @@ $("searchform").addEventListener("submit", async e => {
   if (result.edhrec) { runEdhrec(result.edhrec.commander, result.edhrec.tag, result.uitleg); return; }
   if (!result.query) {
     // Nothing to search: show why, without searching, logging or adding it to the history.
-    showQuery("", result.uitleg);
-    state.search = null;
-    setView(false);
-    $("results").classList.add("nosearch");
-    renderFilterbar();
-    for (const id of ["grid", "pagertop", "pagerbottom"]) $(id).replaceChildren();
-    $("count").textContent = "Nothing to search";
-    message("");
+    showNothing("Nothing to search", result.uitleg);
     return;
   }
   showQuery(result.query, result.uitleg, result.combos);
@@ -2029,7 +2063,8 @@ fillListTypes();
 renderHistory();
 const last = store.get("last", "");
 setView(true);
-const lastEdhrec = store.get("lastEdhrec", null);
+const savedEdhrec = store.get("lastEdhrec", null);
+const lastEdhrec = savedEdhrec && typeof savedEdhrec.name === "string" ? savedEdhrec : null;
 if (searchFromUrl()) { /* the link decides */ }
 else if (lastEdhrec) runEdhrec(lastEdhrec.name, lastEdhrec.tag || "", "");
 else if (last) { showQuery(last, "Your last search from the previous session."); runSearch(last); }

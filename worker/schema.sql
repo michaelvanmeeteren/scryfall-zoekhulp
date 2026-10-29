@@ -17,3 +17,14 @@ CREATE TABLE IF NOT EXISTS usage (
   output INTEGER NOT NULL,
   PRIMARY KEY (day, kind)
 );
+
+-- Request counters per visitor (IP address) and time window, for the limits in src/index.js.
+-- kind: translate (per minute) or badcode (wrong access or admin code, per hour). Old rows are removed by the cron trigger.
+CREATE TABLE IF NOT EXISTS hits (
+  kind TEXT NOT NULL,
+  ip TEXT NOT NULL,
+  win INTEGER NOT NULL,       -- number of the time window
+  expires INTEGER NOT NULL,   -- Unix seconds after which the row can go
+  n INTEGER NOT NULL,
+  PRIMARY KEY (kind, ip, win)
+);
