@@ -958,6 +958,14 @@ async function translateWithClaude(zin) {
     throw new Error("Can't reach the translator. Check your internet connection.");
   }
   const body = await res.json().catch(() => ({}));
+  // A wrong code is forgotten right away: the Worker locks out a visitor (and everyone on the same network)
+  // for an hour after 20 wrong codes, so it must not be sent again with every search.
+  if (res.status === 401) {
+    settings.code = "";
+    store.set("code", "");
+    renderCodeState();
+    throw new Error("The access code is wrong, so it was removed. Enter the right one under Settings.");
+  }
   if (!res.ok) throw new Error(body.error || `The translator returned an error (${res.status}).`);
   // An empty query is an answer, not a failure: Claude says this isn't a card search (or no combos match).
   if (body.edhrec) return { query: "", uitleg: body.uitleg || "", edhrec: body.edhrec };
