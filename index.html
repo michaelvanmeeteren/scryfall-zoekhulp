@@ -1973,6 +1973,7 @@ $("searchform").addEventListener("submit", async e => {
   e.preventDefault();
   const zin = $("zin").value.trim();
   if (!zin || $("zoek").disabled) return;
+  if (isMobile) $("zin").blur();   // closes the on-screen keyboard, so the results can be seen
   let result;
   if (/^\/s(\s|$)/i.test(zin)) result = { query: zin.slice(2).trim(), uitleg: "Scryfall syntax, used as typed." };
   else if (zin.startsWith("!")) result = { query: zin.slice(1).trim(), uitleg: "Scryfall syntax, used as typed." };
