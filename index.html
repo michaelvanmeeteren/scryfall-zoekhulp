@@ -545,6 +545,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
           <span id="cmdrchip" class="chip"></span>
           <button id="cmdrclear" class="linkbtn" type="button">remove</button>
         </span>
+        <button id="cmdrpair" class="linkbtn" type="button" hidden></button>
         <button id="cmdredhrec" class="btn small" type="button" hidden>EDHREC top cards</button>
         <form id="cmdrform" class="cmdrform">
           <input id="cmdrinput" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. Atraxa" aria-label="Commander name" list="cmdrlist">
@@ -661,7 +662,8 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 "use strict";
 
 // ---------- storage ----------
-const validCommander = c => c && typeof c.name === "string" && typeof c.colors === "string" ? c : null;
+const validCommander = c => c && typeof c.name === "string" && typeof c.colors === "string"
+  ? { ...c, names: Array.isArray(c.names) && c.names.length ? c.names : [c.name] } : null;
 
 const store = {
   get(key, fallback) {
@@ -1106,13 +1108,22 @@ function renderFilterbar() {
 }
 
 // ---------- commander as the starting point ----------
+let pairing = false;   // the commander field is open for a partner, background or companion
 function renderCommander() {
   const c = state.commander;
+  const canPair = !!(c && c.pair && c.names.length === 1);
+  if (!canPair) pairing = false;
   $("cmdredhrec").hidden = !c;
   $("cmdrpick").hidden = !c;
-  $("cmdrform").hidden = !!c;
-  $("cmdrnote").textContent = c ? "Searches stay within these colors." : "Limits every search to its colors.";
-  if (c) $("cmdrchip").textContent = `${c.name} · ${(c.colors || "c").toUpperCase().split("").join("")}`;
+  $("cmdrform").hidden = !!c && !pairing;
+  $("cmdrpair").hidden = !canPair;
+  $("cmdrpair").textContent = pairing ? "cancel" : `+ add ${c && c.pair ? c.pair.label : "partner"}`;
+  $("cmdrinput").placeholder = pairing ? `Name of the ${c.pair.label}` : "e.g. Atraxa";
+  $("cmdrnote").textContent = pairing ? "" : c ? "Searches stay within these colors." : "Limits every search to its colors.";
+  if (c) {
+    $("cmdrchip").textContent = `${c.names.join(" + ")} · ${(c.colors || "c").toUpperCase()}`;
+    $("cmdrchip").title = c.names.join(" + ");
+  }
 }
 
 // The commander card for a (partial) name; ambiguous names ("atraxa") give the most played commander containing it.
@@ -1127,6 +1138,22 @@ async function findCommander(name) {
     throw new Error(named ? `${named.name} can't be your commander.` : `No commander found named "${name}".`);
   }
   return card;
+}
+
+// A second commander: Partner, "Partner with <name>", "Partner—<group>" (Friends forever and the like), Backgrounds
+// and Doctor's companions. Gives the Scryfall query for the cards that may join it, or null.
+function pairFor(card) {
+  const text = [card.oracle_text, ...(card.card_faces || []).map(f => f.oracle_text)].filter(Boolean).join("\n");
+  const type = card.type_line || "";
+  let m;
+  if ((m = text.match(/Partner with ([^(\n]+?)\s*(?:\(|$)/m))) return { label: "partner", query: `!"${m[1].trim()}"` };
+  if ((m = text.match(/Partner—([^(\n]+?)\s*(?:\(|$)/m))) return { label: "partner", query: `is:commander o:"Partner—${m[1].trim()}"` };
+  if (/^Partner\b(?!—| with)/m.test(text)) return { label: "partner", query: 'is:commander kw:partner -o:"partner with" -o:"partner—"' };
+  if (/Choose a Background/i.test(text)) return { label: "background", query: "t:background" };
+  if (/Background/.test(type)) return { label: "commander", query: 'is:commander o:"choose a background"' };
+  if (/Doctor.s companion/i.test(text)) return { label: "Doctor", query: 't:"time lord" t:doctor' };
+  if (/Time Lord Doctor/.test(type)) return { label: "companion", query: 'is:commander o:"doctor\'s companion"' };
+  return null;
 }
 
 // Legendary creatures (front face), legendary vehicles and spacecraft, backgrounds, and cards that say they can be.
@@ -1148,7 +1175,16 @@ async function setCommander(name) {
   try {
     const card = await findCommander(name);
     const colors = "wubrg".split("").filter(c => (card.color_identity || []).map(x => x.toLowerCase()).includes(c)).join("");
-    state.commander = { name: card.name, colors };
+    const first = state.commander;
+    if (pairing && first) {
+      // two commanders: one name for the translator and EDHREC, the colors of both
+      const both = "wubrg".split("").filter(c => (first.colors + colors).includes(c)).join("");
+      const names = [first.names[0], card.name];
+      state.commander = { name: names.join(" + "), names, colors: both, pair: first.pair };
+      pairing = false;
+    } else {
+      state.commander = { name: card.name, names: [card.name], colors, pair: pairFor(card) };
+    }
     store.set("commander", state.commander);
     // close the suggestion list first: the browser may leave it floating where the (now hidden) field was
     $("cmdrinput").blur();
@@ -1174,7 +1210,8 @@ function suggestCommanders() {
     try {
       // name:/^…/ is a Scryfall regex: only names that begin with what was typed
       const prefix = text.replace(/[\\^$.|?*+()[\]{}\/]/g, "\\$&");
-      const body = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q: `is:commander name:/^${prefix}/`, order: "edhrec" }));
+      const base = pairing && state.commander && state.commander.pair ? `(${state.commander.pair.query})` : "is:commander";
+      const body = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q: `${base} name:/^${prefix}/`, order: "edhrec" }));
       if (run !== suggestRun) return;   // a newer request has started meanwhile
       $("cmdrlist").replaceChildren(...(body.data || []).slice(0, 8).map(c => {
         const o = document.createElement("option");
@@ -1207,10 +1244,16 @@ async function runEdhrec(name, tag, uitleg) {
   setBusy(true, "Asking EDHREC…");
   message("");
   try {
-    const commander = await findCommander(name);
-    const res = await fetch(`https://json.edhrec.com/pages/commanders/${edhrecSlug(commander.name)}.json`);
-    if (!res.ok) throw new Error(`EDHREC has no page for ${commander.name}.`);
-    const page = await res.json();
+    const parts = [];
+    for (const part of name.split(" + ").slice(0, 2)) parts.push(await findCommander(part));
+    const commander = { name: parts.map(c => c.name).join(" + ") };
+    const pageFor = async slug => {
+      const res = await fetch(`https://json.edhrec.com/pages${slug}.json`);
+      if (!res.ok) throw new Error(`EDHREC has no page for ${commander.name}.`);
+      return res.json();
+    };
+    let page = await pageFor("/commanders/" + parts.map(c => edhrecSlug(c.name)).join("-"));
+    if (page.redirect) page = await pageFor(page.redirect);
     const views = ((page.container && page.container.json_dict && page.container.json_dict.cardlists) || []).flatMap(l => l.cardviews || []);
     const stats = new Map();
     for (const v of views) {
@@ -2197,7 +2240,15 @@ document.querySelectorAll("[data-openhelp]").forEach(b => b.addEventListener("cl
   $("helpdialog").showModal();
   $("helpdialog").scrollTop = 0;   // the "Got it" button gets focus, which would scroll to the bottom
 }));
+$("cmdrpair").addEventListener("click", () => {
+  pairing = !pairing;
+  $("cmdrinput").value = "";
+  $("cmdrlist").replaceChildren();
+  renderCommander();
+  if (pairing) $("cmdrinput").focus();
+});
 $("cmdrclear").addEventListener("click", () => {
+  pairing = false;
   state.commander = null;
   store.set("commander", null);
   $("cmdrinput").value = "";
