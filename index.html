@@ -381,7 +381,10 @@ html.mobile #results:not(.opts) #filterbar { display: none !important; }
 html.mobile .infobtn { width: 34px; height: 34px; font-size: 18px; }
 /* nothing to search: keep the explanation, hide the result controls */
 #results.nosearch .controls, #results.nosearch .optstoggle, #results.nosearch #querybar { display: none !important; }
-#results.static #querybar, #results.static #filterbar, #results.static .controls label:first-child { display: none !important; }
+#results.static #querybar, #results.static .controls label:first-child { display: none !important; }
+/* EDHREC lists keep only "Hide cards in my deck" from the filter bar: type, mana value and price don't apply to them */
+#results.static #filterbar > :not(label) { display: none !important; }
+#results.static #filterbar:not(:has(> label)) { display: none !important; }
 /* phones: a closed drawer must not exist in the layout, or Android Chrome widens the page to include it */
 html.mobile .drawer:not(.open) { display: none; }
 @media (max-width: 899px) { .drawer:not(.open) { display: none; } }
@@ -447,17 +450,20 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
     <h3>Searching</h3>
     <p>Describe the cards you want, like <i>cheap removal in black</i> or <i>blue instants that draw a card</i>.
       Colors, card types, mana value, price, keywords and what a card does all work. Dutch works too (with the access code).
+      <i>Cheap</i> means a low mana value (2 or less) and <i>expensive</i> a high one (6 or more); for price use
+      <i>budget</i> (under €2) or an amount, like <i>under 1 euro</i>.
       Only Commander-legal paper cards are shown. Already know Scryfall's syntax? Start with <code>/s</code>, e.g. <code>/s t:elf mv=1</code>.</p>
 
     <h3>Your commander</h3>
     <p>Type your commander's name under the search bar and pick it from the suggestions.
-      From then on every search only shows cards that fit in its colors. Click <b>remove</b> to search all colors again.</p>
+      From then on every search only shows cards that fit in its colors. Ask for a color outside them and the explanation
+      turns red to say it was left out. Click <b>remove</b> to search all colors again.</p>
 
     <h3>Follow-up questions <span class="optional">(access code)</span></h3>
     <p>After a search, type a change instead of starting over: <i>only under 1 euro</i>, <i>without creatures</i>, <i>nu alleen instants</i>.</p>
 
     <h3>Combos <span class="optional">(access code)</span></h3>
-    <p>Ask for combos, like <i>2 card combos in dimir</i>, <i>combos with Sol Ring</i> or <i>cheap combos in boros</i>.
+    <p>Ask for combos, like <i>2 card combos in dimir</i>, <i>combos with Sol Ring</i> or <i>budget combos in boros</i>.
       The combos appear under the search with what they do and their price; click one to see only its cards.</p>
 
     <h3>Filters</h3>
@@ -481,7 +487,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
       Double-faced cards have a <b>⟲</b> button to turn them over.</p>
 
     <h3>Import your deck</h3>
-    <p>In the card list, <b>Import deck</b> takes your deck list (for example copied from Moxfield).
+    <p>In the card list, <b>Import deck</b> takes your deck list (copied from Moxfield, Archidekt, MTG Arena and the like).
       Cards you already have get an <b>In deck</b> label, and you can hide them.</p>
 
 
@@ -1156,7 +1162,7 @@ function showNothing(title, uitleg) {
 // ---------- EDHREC recommendations for a commander ----------
 // EDHREC has no official API; its pages load this JSON and it may be read from other sites (it sends CORS headers).
 // Scryfall takes about 40 card names per search, so the cards are fetched in batches and kept in EDHREC's order.
-const edhrecSlug = name => name.split(" // ")[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+const edhrecSlug = name => name.split(" // ")[0].toLowerCase().replace(/\u00e6/g, "ae").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
   .replace(/[^a-z0-9\s-]/g, "").trim().replace(/[\s-]+/g, "-");
 
 async function runEdhrec(name, tag, uitleg) {
