@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Scryfall Zoekhulp</title>
+<title>SpellSeekr</title>
 <link rel="icon" href="data:,">
 <script>try { const t = JSON.parse(localStorage.getItem("szh.theme")); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -305,7 +305,7 @@ body.home .topbuttons { position: absolute; top: 12px; right: max(16px, 2vw); }
 body.home .topbar .btn { color: var(--fg); border-color: var(--line); }
 
 .layout { max-width: 1500px; margin: 0 auto; padding: 14px max(16px, 2vw) 24px; }
-.home { max-width: 760px; margin: 0 auto; display: grid; gap: 22px; }
+section.home { max-width: 760px; margin: 0 auto; display: grid; gap: 22px; }
 .homeline { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; align-items: center; color: var(--muted); font-size: 13.5px; text-align: center; }
 .home .cmdr { justify-content: center; }
 .cmdrpick { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; min-width: 0; }   /* the commander and its remove link stay together */
@@ -413,7 +413,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 <body>
 
 <header class="topbar">
-  <button id="home" class="brandbtn" type="button" title="Back to the start">Scryfall Zoekhulp</button>
+  <button id="home" class="brandbtn" type="button" title="Back to the start">SpellSeekr</button>
   <p class="tagline">Commander card search in plain words</p>
   <form id="searchform" class="searchrow">
     <input id="zin" type="search" autocomplete="off" placeholder="Describe the cards you want, e.g. cheap removal in black" aria-label="Describe the cards you want">
@@ -450,7 +450,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 
 <dialog id="helpdialog" class="settings help" aria-labelledby="helptitle">
   <form method="dialog">
-    <h2 id="helptitle">How to use Scryfall Zoekhulp</h2>
+    <h2 id="helptitle">How to use SpellSeekr</h2>
 
     <h3>Searching</h3>
     <p>Describe the cards you want, like <i>cheap removal in black</i> or <i>blue instants that draw a card</i>.

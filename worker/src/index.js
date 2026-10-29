@@ -1,4 +1,4 @@
-// Scryfall Zoekhulp translator: turns an English sentence into Scryfall syntax with Claude.
+// SpellSeekr translator: turns an English sentence into Scryfall syntax with Claude.
 // The Anthropic API key lives only here, as a Worker secret (ANTHROPIC_API_KEY).
 // Friends get in with a shared access code (ACCESS_CODE secret); the page sends it with each request.
 // Endpoints (all POST): /translate (needs the access code) and /stats (needs the separate admin code).

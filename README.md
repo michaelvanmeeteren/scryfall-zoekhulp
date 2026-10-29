@@ -1,4 +1,6 @@
-# Scryfall Zoekhulp
+# SpellSeekr
+
+*(Voorheen Scryfall Zoekhulp. De link en de mapnamen houden de oude naam, zodat bestaande bladwijzers blijven werken.)*
 
 Zoek Magic-kaarten met een Engelse zin, verzamel ze in een lijst en kopieer die naar Moxfield.
 Er wordt altijd gezocht in Commander-legale papieren kaarten (`f:commander game:paper`).
