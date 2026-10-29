@@ -2095,6 +2095,7 @@ $("scrim").addEventListener("click", closeList);
 // Back to the start screen. It also becomes what a reload or the next visit shows, instead of the last search.
 function goHome() {
   setView(true);
+  $("zin").value = "";
   store.set("last", "");
   store.set("lastEdhrec", null);
   window.scrollTo(0, 0);
@@ -2242,6 +2243,9 @@ fillListTypes();
 renderHistory();
 const last = store.get("last", "");
 setView(true);
+// Browsers put back the typed text of the previous visit after the page has loaded (also on a reload or Back);
+// on the start screen the search bar should be empty, so it is cleared once that has happened.
+window.addEventListener("pageshow", () => { if (document.body.classList.contains("home")) $("zin").value = ""; });
 const savedEdhrec = store.get("lastEdhrec", null);
 const lastEdhrec = savedEdhrec && typeof savedEdhrec.name === "string" ? savedEdhrec : null;
 if (searchFromUrl()) { /* the link decides */ }
