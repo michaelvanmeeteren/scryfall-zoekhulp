@@ -12,7 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap" rel="stylesheet">
 <style>
 /* Layout: header on top, search + card grid on the left, a sticky list column on the right; stacked on narrow screens. */
-/* Colors: crimson on near-black when dark, on near-white when light; with a commander, the color of its art. The page follows the device,
+/* Colors: crimson on near-black when dark, on near-white when light. The page follows the device,
    unless the theme button in the header picked one (data-theme on <html>, saved in localStorage). */
 :root {
   --qr-dark: #000000;
@@ -636,8 +636,7 @@ html.mobile .qchips button { padding: 2px 6px 2px 9px; }
 html.mobile .cmdrresults .cmdrart img { width: 44px; height: 32px; border-radius: 5px; }
 html.mobile .cmdrresults:not(:empty) { margin-bottom: 10px; }
 
-/* The commander's art as a banner, and the page takes its one color from that art. --h and --s are set by renderHero;
-   without a commander they make crimson. --accent is for text and lines, --fill for what is filled with the color. */
+/* The commander's art as a banner. The accent is always crimson: --accent is for text and lines, --fill for what is filled with it. */
 :root {
   --h: 353; --s: 81%;
   --bg: #f7f6f6; --surface: #ffffff; --fg: #141414; --muted: #5a5a5a;
@@ -659,7 +658,7 @@ html.mobile .cmdrresults:not(:empty) { margin-bottom: 10px; }
     --accent: hsl(var(--h) var(--s) 68%); --accent-fg: hsl(var(--h) 30% 9%); --accent-soft: hsl(var(--h) 40% 16%);
     --note-bg: hsl(var(--h) 25% 13%); --note-fg: hsl(var(--h) 45% 84%); --danger: #f5a524;
   }
-  :root:not([data-theme="light"]):not([data-art]) { --fill: #b11226; --fill-ink: #ffffff; }
+  :root:not([data-theme="light"]) { --fill: #b11226; --fill-ink: #ffffff; }
 }
 :root[data-theme="dark"] {
     --bg: #0a0a0a; --surface: #151515; --fg: #efefef; --muted: #a0a0a0;
@@ -667,7 +666,7 @@ html.mobile .cmdrresults:not(:empty) { margin-bottom: 10px; }
     --accent: hsl(var(--h) var(--s) 68%); --accent-fg: hsl(var(--h) 30% 9%); --accent-soft: hsl(var(--h) 40% 16%);
     --note-bg: hsl(var(--h) 25% 13%); --note-fg: hsl(var(--h) 45% 84%); --danger: #f5a524;
 }
-:root[data-theme="dark"]:not([data-art]) { --fill: #b11226; --fill-ink: #ffffff; }
+:root[data-theme="dark"] { --fill: #b11226; --fill-ink: #ffffff; }
 .btn.primary, .topbar .btn.primary, .pager button[aria-current="page"] { background: var(--fill); color: var(--fill-ink); border-color: var(--fill); }
 .btn.primary:hover { background: color-mix(in srgb, var(--fill) 86%, var(--fg)); }
 body.home .topbar .btn.primary { color: var(--fill-ink); }
@@ -747,7 +746,7 @@ html:not(.mobile) body.home:has(#barcopy:disabled) .mobilebar { display: none !i
 html:not(.mobile) body { padding-bottom: 64px; }
 .mobilebar { --surface: var(--deep-2); --line: var(--on-deep-line); --fg: var(--on-deep); background: var(--deep-2); border-top: 1px solid var(--deep-line); color: var(--on-deep); }
 .mobilebar .btn { color: var(--on-deep); background: transparent; border-color: var(--on-deep-line); }
-.mobilebar .btn.primary { color: var(--on-deep-well); background: var(--on-deep-accent); border-color: var(--on-deep-accent); }
+.mobilebar .btn.primary { color: #ffffff; background: #b11226; border-color: #b11226; }
 .mobilebar .btn.primary:disabled, .mobilebar .btn.primary:disabled:hover { color: var(--on-deep-2); background: transparent; border-color: var(--on-deep-line); }
 
 html.mobile #cmdrresults #cmdrrow.has { min-height: 104px; padding: 16px var(--gutter) 12px; }
@@ -1850,40 +1849,7 @@ function renderIdentity() {
   renderHero();
 }
 
-// The banner shows the commander's art; the page takes its color from the same art, or from its color identity if that can't be read.
-const heroColors = new Map();
-const IDENTITY_HUES = { w: 45, u: 215, b: 280, r: 5, g: 130, c: 40 };
-function artColor(src) {
-  if (heroColors.has(src)) return heroColors.get(src);
-  const found = new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onerror = reject;
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 32; canvas.height = 24;
-      const ctx = canvas.getContext("2d", { willReadFrequently: true });
-      ctx.drawImage(img, 0, 0, 32, 24);
-      const px = ctx.getImageData(0, 0, 32, 24).data;
-      const bins = Array.from({ length: 12 }, () => ({ weight: 0, hue: 0, sat: 0, n: 0 }));
-      for (let i = 0; i < px.length; i += 4) {
-        const r = px[i] / 255, g = px[i + 1] / 255, b = px[i + 2] / 255;
-        const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min, l = (max + min) / 2;
-        if (!d || l < 0.12 || l > 0.88) continue;
-        const sat = d / (1 - Math.abs(2 * l - 1));
-        const hue = (max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60;
-        const bin = bins[Math.floor(hue / 30) % 12];
-        bin.weight += sat * sat; bin.hue += hue; bin.sat += sat; bin.n++;
-      }
-      const best = bins.reduce((a, b) => (b.weight > a.weight ? b : a));
-      if (!best.n) return reject(new Error("no color"));
-      resolve({ h: Math.round(best.hue / best.n), s: Math.round(Math.min(80, Math.max(48, 100 * best.sat / best.n))) });
-    };
-    img.src = src;
-  });
-  heroColors.set(src, found);
-  return found;
-}
+// The banner shows the commander's art.
 function renderHero() {
   const c = state.commander, root = document.documentElement, art = $("heroart");
   const arts = ((c && c.arts) || []).filter(Boolean);
@@ -1892,13 +1858,6 @@ function renderHero() {
   if (arts[0]) art.style.setProperty("--art", `url("${arts[0]}")`); else art.style.removeProperty("--art");
   if (arts[1]) art.style.setProperty("--art2", `url("${arts[1]}")`); else art.style.removeProperty("--art2");
   sizeHero();
-  if (pairing) return;
-  const paint = (h, sat) => { root.style.setProperty("--h", h); root.style.setProperty("--s", sat + "%"); root.dataset.art = "1"; };
-  if (!c) { root.style.removeProperty("--h"); root.style.removeProperty("--s"); delete root.dataset.art; return; }
-  const key = c.name;
-  const fallback = () => paint(IDENTITY_HUES[(c.colors || "c")[0]] ?? 40, 45);
-  if (!arts[0]) return fallback();
-  artColor(arts[0]).then(({ h, s }) => { if (state.commander && state.commander.name === key) paint(h, s); }, fallback);
 }
 // The art runs from the top of the page to the end of the title, or of the banner on the start screen.
 function sizeHero() {
