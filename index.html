@@ -9,7 +9,7 @@
 <script>try { const t = JSON.parse(localStorage.getItem("szh.theme")); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap" rel="stylesheet">
 <style>
 /* Layout: header on top, search + card grid on the left, a sticky list column on the right; stacked on narrow screens. */
 /* Colors: crimson on near-black when dark, on near-white when light; with a commander, the color of its art. The page follows the device,
@@ -766,12 +766,13 @@ html.mobile .heroart::before { background: color-mix(in srgb, var(--on-deep-well
 #cmdrrow.has #cmdrchip, #cmdrrow.has .linkbtn, #cmdrrow.has .cmdrlabel, #results:has(#cmdrrow.has) #toolbar .rtitle, #results:has(#cmdrrow.has) #toolbar .count { text-shadow: 0 1px 12px var(--on-deep-well); }
 #results:has(#cmdrrow.has) #toolbar .count { color: var(--on-deep); }
 body:not(.home):has(#cmdrrow.has) .topbar .btn:not(.primary), #results:has(#cmdrrow.has) #toolbar .btn { background: color-mix(in srgb, var(--on-deep-well) 60%, transparent); }
-/* One family throughout: Noto Sans JP, with its own bold for names and titles. */
+/* One family throughout: Noto Sans JP, kept light: 350 for text, 500 for names, titles and what needs a little weight. */
 :root { --font: "Noto Sans JP", system-ui, -apple-system, "Segoe UI", sans-serif; --serif: var(--font); }
-body { line-height: 1.5; }
-.brandbtn, .rtitle, .rtitle.syntax .for, .cmdrask, .list h2, .settings h2, .listsub, .deckrow.has #deckinfo { font-weight: 700; letter-spacing: -0.02em; }
-#cmdrrow.has #cmdrchip { font-weight: 700; letter-spacing: -0.025em; line-height: 1.15; }
-.rtitle .for { font-weight: 400; letter-spacing: -0.01em; }
+body { line-height: 1.5; font-weight: 350; }
+.btn.primary, .topbar .btn.primary, .pager button[aria-current="page"], .cmdrlabel, .card .name, #cmdrchip, #listcount, .optstoggle .optcount, .list li.grouphead, .settings label, h3, .help h3, .modeswitch button { font-weight: 500; }
+.brandbtn, .rtitle, .rtitle.syntax .for, .cmdrask, .list h2, .settings h2, .listsub, .deckrow.has #deckinfo { font-weight: 500; letter-spacing: -0.02em; }
+#cmdrrow.has #cmdrchip { font-weight: 500; letter-spacing: -0.025em; line-height: 1.15; }
+.rtitle .for { font-weight: 300; letter-spacing: -0.01em; }
 </style>
 </head>
 <body>
