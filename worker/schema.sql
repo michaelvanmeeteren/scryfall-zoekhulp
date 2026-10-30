@@ -28,3 +28,11 @@ CREATE TABLE IF NOT EXISTS hits (
   n INTEGER NOT NULL,
   PRIMARY KEY (kind, ip, win)
 );
+
+-- Synced data per sync code (see handleSync in src/index.js). id is the SHA-256 of the code, so the code itself is never stored.
+CREATE TABLE IF NOT EXISTS sync (
+  id TEXT PRIMARY KEY,
+  rev INTEGER NOT NULL,       -- goes up with every write, so two devices can't overwrite each other unseen
+  data TEXT NOT NULL,         -- JSON: card list, commander, deck, recent searches, result settings
+  updated INTEGER NOT NULL    -- Unix seconds; the cron trigger removes rows unused for a year
+);

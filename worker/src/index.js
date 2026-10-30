@@ -1,7 +1,7 @@
 // SpellSeekr translator: turns an English sentence into Scryfall syntax with Claude.
 // The Anthropic API key lives only here, as a Worker secret (ANTHROPIC_API_KEY).
 // Friends get in with a shared access code (ACCESS_CODE secret); the page sends it with each request.
-// Endpoints (all POST): /translate (needs the access code) and /stats (needs the separate admin code).
+// Endpoints (all POST): /translate (needs the access code), /stats (needs the separate admin code) and /sync (needs a sync code).
 // Model, system prompt and output size are fixed here, so the key can't be used for anything else.
 import Anthropic from "@anthropic-ai/sdk";
 import { ORACLE_TAGS } from "./tags.js";   // refresh with: node update-tags.mjs
@@ -10,6 +10,9 @@ const MODEL = "claude-haiku-5-5";   // fixed on purpose: never any other model
 const MAX_SENTENCE = 300;            // characters
 const MAX_PER_MINUTE = 20;           // translations per visitor
 const MAX_BAD_CODES = 20;            // wrong codes per visitor per hour
+const MAX_SYNC_BYTES = 200000;       // size of one visitor's synced data
+const MAX_NEW_SYNCS = 5;             // new sync codes per visitor per day
+const SYNC_KEEP_DAYS = 365;          // synced data unused this long is removed
 const ALLOWED_ORIGINS = ["https://michaelvanmeeteren.github.io", "http://localhost:8010"];
 
 const SYSTEM_PROMPT = `You translate a search request for Magic: The Gathering cards into Scryfall search syntax.
@@ -408,6 +411,8 @@ export default {
     } catch (error) {
       console.log("warm-up failed: " + (error instanceof Anthropic.APIError ? `${error.status} ${error.type}` : String(error)));
     }
+    // synced data nobody has used for a long time
+    try { await env.DB.prepare("DELETE FROM sync WHERE updated < ?").bind(Math.floor(Date.now() / 1000) - SYNC_KEEP_DAYS * 86400).run(); } catch { /* next time */ }
     // old request counters
     try { await env.DB.prepare("DELETE FROM hits WHERE expires < ?").bind(Math.floor(Date.now() / 1000)).run(); } catch { /* next time */ }
   },
@@ -427,18 +432,19 @@ export default {
 
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
     const path = new URL(request.url).pathname;
-    if (request.method !== "POST" || !["/translate", "/stats"].includes(path)) {
+    if (request.method !== "POST" || !["/translate", "/stats", "/sync"].includes(path)) {
       return reply(404, { error: "Not found." });
     }
 
     const ip = request.headers.get("cf-connecting-ip") || "unknown";
-    const limiter = path === "/translate" ? env.LIMITER : env.LOG_LIMITER;
+    const limiter = path === "/translate" ? env.LIMITER : path === "/sync" ? env.SYNC_LIMITER : env.LOG_LIMITER;
     const { success } = await limiter.limit({ key: ip });
     if (!success) return reply(429, { error: "Too many requests, try again in a minute." });
 
     let input;
     try { input = await request.json(); } catch { return reply(400, { error: "Bad request." }); }
     if (!input || typeof input !== "object") return reply(400, { error: "Bad request." });   // e.g. a body of just null
+    if (path === "/sync") return handleSync(env, input, ip, reply);
     const code = typeof input.code === "string" ? input.code : "";
     const zin = typeof input.zin === "string" ? input.zin.trim() : "";
 
@@ -553,4 +559,44 @@ async function sameText(a, b) {
   const enc = new TextEncoder();
   const [ha, hb] = await Promise.all([crypto.subtle.digest("SHA-256", enc.encode(a)), crypto.subtle.digest("SHA-256", enc.encode(b))]);
   return crypto.subtle.timingSafeEqual(ha, hb);
+}
+
+// Syncing between devices. Without "data" this reads what is stored; with "data" and the "rev" it was based on, it writes.
+// A write based on an older rev is refused (409) with the current data, so the page can merge and try again.
+// The code is 120 random bits made by the page, so it can't be guessed; only its hash is stored.
+async function handleSync(env, input, ip, reply) {
+  const code = typeof input.sync === "string" ? input.sync : "";
+  if (!/^[a-z2-9]{4}(-[a-z2-9]{4}){5}$/.test(code)) return reply(400, { error: "That is not a valid sync code." });
+  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(code));
+  const id = [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, "0")).join("");
+  const now = Math.floor(Date.now() / 1000);
+  const read = () => env.DB.prepare("SELECT rev, data, updated FROM sync WHERE id = ?").bind(id).first();
+  const current = row => ({ rev: row ? row.rev : 0, data: row ? JSON.parse(row.data) : null });
+  try {
+    if (input.delete === true) {
+      await env.DB.prepare("DELETE FROM sync WHERE id = ?").bind(id).run();
+      return reply(200, { rev: 0, data: null });
+    }
+    if (input.data === undefined) {
+      const row = await read();
+      // a device that only reads still counts as use
+      if (row && now - row.updated > 30 * 86400) await env.DB.prepare("UPDATE sync SET updated = ? WHERE id = ?").bind(now, id).run();
+      return reply(200, current(row));
+    }
+    if (!input.data || typeof input.data !== "object" || !Number.isInteger(input.rev) || input.rev < 0) return reply(400, { error: "Bad request." });
+    const data = JSON.stringify(input.data);
+    if (new TextEncoder().encode(data).length > MAX_SYNC_BYTES) return reply(413, { error: "Your data is too large to sync." });
+    let written;
+    if (input.rev === 0) {
+      if (await countHits(env, "syncnew", ip, 86400) > MAX_NEW_SYNCS) return reply(429, { error: "Too many new sync codes today. Try again tomorrow." });
+      written = await env.DB.prepare("INSERT OR IGNORE INTO sync (id, rev, data, updated) VALUES (?, 1, ?, ?)").bind(id, data, now).run();
+    } else {
+      written = await env.DB.prepare("UPDATE sync SET rev = rev + 1, data = ?, updated = ? WHERE id = ? AND rev = ?").bind(data, now, id, input.rev).run();
+    }
+    if (!written.meta.changes) return reply(409, current(await read()));
+    return reply(200, { rev: input.rev + 1 });
+  } catch (error) {
+    console.log("sync failed: " + String(error));
+    return reply(503, { error: "Sync is unavailable right now." });
+  }
 }

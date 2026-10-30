@@ -15,6 +15,12 @@ name = "LOG_LIMITER"
 namespace_id = "1002"
 simple = { limit = 120, period = 60 }
 
+# Syncing between devices (/sync).
+[[ratelimits]]
+name = "SYNC_LIMITER"
+namespace_id = "1003"
+simple = { limit = 60, period = 60 }
+
 # Keeps the prompt cache warm (see scheduled() in src/index.js): every 30 minutes from 09:00 to 22:59 UTC,
 # which is 10:00–00:00 Dutch winter time (11:00–01:00 in summer). Costs roughly $0.01 a day.
 [triggers]

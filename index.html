@@ -15,6 +15,8 @@
 /* Colors: black & gold when dark, ivory & bronze-gold when light. The page follows the device,
    unless the theme button in the header picked one (data-theme on <html>, saved in localStorage). */
 :root {
+  --qr-dark: #000000;
+  --qr-light: #ffffff;
   --bg: #f6f3ea;
   --surface: #fffdf7;
   --fg: #1a1712;
@@ -479,6 +481,13 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 .cmdrform input::placeholder, .queryrow input::placeholder, .settings input::placeholder { color: var(--muted); opacity: 1; }
 /* settings: how results are shown */
 .settings .settingshead { margin: 8px 0 0; font-size: 16px; }
+.syncpart { display: grid; gap: 10px; }
+.syncpart[hidden] { display: none; }
+.syncrow { display: flex; gap: 8px; }
+.syncrow input { flex: 1; min-width: 0; }
+.syncqrbox svg { display: block; width: min(220px, 100%); height: auto; }
+.syncqrbox .qrlight { fill: var(--qr-light); }
+.syncqrbox .qrdark { fill: var(--qr-dark); }
 .settingsrow { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; }
 .settings label.inline { display: inline-flex; align-items: center; gap: 8px; font-weight: 400; color: var(--muted); }
 .settings select { min-height: 32px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
@@ -711,6 +720,9 @@ html.mobile .cmdrresults:not(:empty) { margin-bottom: 10px; }
     <h3>Access code</h3>
     <p>Without it a simple built-in translator is used; with it, Claude understands you much better. Enter it under <b>Settings</b>.</p>
 
+    <h3>Your other devices</h3>
+    <p>Turn on <b>Sync</b> under <b>Settings</b> and enter the sync code on your other device. No account needed.</p>
+
     <div class="listactions"><button class="btn primary" type="submit">Got it</button></div>
   </form>
 </dialog>
@@ -752,6 +764,41 @@ html.mobile .cmdrresults:not(:empty) { margin-bottom: 10px; }
       </label>
     </div>
     <p class="hint">These apply straight away.</p>
+    <h3 class="settingshead">Sync between devices</h3>
+    <div id="syncoff" class="syncpart">
+      <p class="hint">Keep your list, commander, deck, recent searches and result settings the same on your devices. No account needed.</p>
+      <div class="listactions"><button id="syncstart" class="btn" type="button">Turn on sync</button></div>
+      <label for="synccode">Already have a sync code?</label>
+      <div class="syncrow">
+        <input id="synccode" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="abcd-efgh-…">
+        <button id="syncjoin" class="btn" type="button">Connect</button>
+      </div>
+      <p id="syncerror" class="hint" role="alert" hidden></p>
+    </div>
+    <div id="syncon" class="syncpart" hidden>
+      <p id="syncstatus" class="hint" role="status"></p>
+      <label>Your sync code
+        <input id="syncshown" readonly>
+      </label>
+      <p class="hint">Enter this code on your other device, or open the link there. Anyone with it can see and change your synced data, so keep it to yourself.</p>
+      <div class="listactions">
+        <button id="synccopy" class="btn" type="button">Copy link</button>
+        <button id="syncqr" class="btn" type="button">Show QR code</button>
+        <button id="syncnow" class="btn" type="button">Sync now</button>
+      </div>
+      <div id="syncqrbox" class="syncqrbox" hidden></div>
+      <div class="listactions">
+        <button id="syncstop" class="btn" type="button">Turn off on this device</button>
+        <button id="syncdelete" class="btn" type="button">Delete synced data</button>
+      </div>
+      <div id="syncconfirm" class="syncpart" hidden>
+        <p class="hint">Remove the synced data and turn sync off on all devices? Each device keeps what it has now.</p>
+        <div class="listactions">
+          <button id="syncdeleteyes" class="btn" type="button">Yes, delete</button>
+          <button id="syncdeleteno" class="btn" type="button">Keep it</button>
+        </div>
+      </div>
+    </div>
     <div class="listactions">
       <button id="savesettings" class="btn primary" type="submit" value="save">Save</button>
       <button id="removecode" class="btn" type="button">Remove code</button>
@@ -902,10 +949,189 @@ const store = {
       return parsed;
     } catch { return fallback; }
   },
-  set(key, value) {
-    try { localStorage.setItem("szh." + key, JSON.stringify(value)); } catch { /* storage unavailable */ }
+  // quiet: not a choice of the user (filled-in card art, data from another device), so sync doesn't count it as a change
+  set(key, value, quiet) {
+    try {
+      const before = localStorage.getItem("szh." + key);
+      const text = JSON.stringify(value);
+      localStorage.setItem("szh." + key, text);
+      if (!quiet && before !== text) syncChanged(key, before, value);
+    } catch { /* storage unavailable */ }
   }
 };
+
+// ---------- sync between devices ----------
+// A device with a sync code keeps when each setting and each list card last changed, and removed cards as well.
+// The Worker stores one document per code. Devices merge it with their own data: the list card by card, everything
+// else newest first. A write based on an old revision is refused, so a device can't overwrite what it hasn't seen.
+const SYNC_KEYS = ["commander", "companion", "umoritype", "deck", "hideowned", "history", "order", "size"];
+const SYNC_KEEP_REMOVED = 180 * 86400000;   // how long a removed card is remembered, in ms
+const SYNC_CODE = /^[a-z2-9]{4}(-[a-z2-9]{4}){5}$/;
+let sync = store.get("sync", null);         // { code, rev, dirty, at: {key: ms}, listAt: {name: ms}, gone: {name: ms}, last: ms }
+let syncTimer, syncBusy = false, syncAgain = false, syncError = "";
+
+function syncChanged(key, before, value) {
+  if (!sync || (key !== "list" && !SYNC_KEYS.includes(key))) return;
+  const now = Date.now();
+  if (key === "list") {
+    const old = new Map((JSON.parse(before || "[]")).map(c => [c.name, JSON.stringify(c)]));
+    for (const c of value) {
+      if (old.get(c.name) !== JSON.stringify(c)) sync.listAt[c.name] = now;
+      delete sync.gone[c.name];
+      old.delete(c.name);
+    }
+    for (const name of old.keys()) { sync.gone[name] = now; delete sync.listAt[name]; }
+  } else {
+    sync.at[key] = now;
+  }
+  sync.dirty = true;
+  store.set("sync", sync);
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(runSync, 2000);
+}
+
+function syncDocument() {
+  const vals = {}, at = {};
+  for (const key of SYNC_KEYS) {
+    const v = store.get(key, null);
+    if (v !== null) vals[key] = v;
+    // 1 instead of 0: a setting from before sync was on loses from any real change, but still reaches other devices
+    if (v !== null || sync.at[key]) at[key] = sync.at[key] || 1;
+  }
+  const oldest = Date.now() - SYNC_KEEP_REMOVED;
+  const gone = Object.fromEntries(Object.entries(sync.gone).filter(([, t]) => t > oldest));
+  return { vals, at, list: state.list, listAt: sync.listAt, gone };
+}
+
+// JSON with sorted keys, to see whether two documents hold the same
+function syncCompare(doc) {
+  return JSON.stringify(doc, (_, v) => v && typeof v === "object" && !Array.isArray(v)
+    ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a < b ? -1 : 1)) : v);
+}
+
+function syncMerge(remote) {
+  if (!remote || typeof remote !== "object") return;
+  const changed = new Set();
+  for (const key of SYNC_KEYS) {
+    const theirs = (remote.at && remote.at[key]) || 0;
+    if (theirs <= (sync.at[key] || 0)) continue;
+    sync.at[key] = theirs;
+    const v = remote.vals && remote.vals[key] !== undefined ? remote.vals[key] : null;
+    if (JSON.stringify(v) !== JSON.stringify(store.get(key, null))) { store.set(key, v, true); changed.add(key); }
+  }
+  const mine = new Map(state.list.map(c => [c.name, c]));
+  const theirs = new Map(migrateList(Array.isArray(remote.list) ? remote.list : []).map(c => [c.name, c]));
+  const remoteAt = remote.listAt || {};
+  const gone = { ...sync.gone };
+  for (const [name, t] of Object.entries(remote.gone || {})) gone[name] = Math.max(gone[name] || 0, t);
+  const list = [], listAt = {};
+  for (const name of new Set([...mine.keys(), ...theirs.keys()])) {
+    const a = sync.listAt[name] || 0, b = remoteAt[name] || 0, newest = Math.max(a, b);
+    if (gone[name] >= newest) continue;   // removed after its last change
+    delete gone[name];
+    list.push(!mine.has(name) || (theirs.has(name) && b > a) ? theirs.get(name) : mine.get(name));
+    if (newest) listAt[name] = newest;
+  }
+  sync.listAt = listAt;
+  sync.gone = gone;
+  const listChanged = JSON.stringify(list) !== JSON.stringify(state.list);
+  if (listChanged) { state.list = list; store.set("list", list, true); }
+  applySynced(changed, listChanged);
+  if (syncCompare(syncDocument()) !== syncCompare(remote)) sync.dirty = true;   // this device has something the other doesn't
+}
+
+// Shows what came from another device. Searches on screen stay as they are until the next one.
+function applySynced(keys, listChanged) {
+  if (keys.has("commander")) { state.commander = validCommander(store.get("commander", null)); pairing = false; }
+  if (keys.has("companion")) state.companion = store.get("companion", "");
+  if (keys.has("umoritype")) state.umoriType = store.get("umoritype", "");
+  if (keys.has("commander") || keys.has("companion") || keys.has("umoritype")) { renderCommander(); fillCommanderArt(); }
+  if (keys.has("deck")) { state.deck = new Set(store.get("deck", [])); renderDeck(); }
+  if (keys.has("hideowned")) { state.hideOwned = store.get("hideowned", false); applyHideOwned(); }
+  if (keys.has("history")) { state.history = store.get("history", []); renderHistory(); }
+  if (keys.has("order")) { state.order = store.get("order", "edhrec"); $("order").value = state.order; }
+  if (keys.has("size")) { state.size = store.get("size", 50); $("size").value = String(state.size); }
+  if (listChanged) { renderList(); refreshBadges(); renderDeckProgress(); }
+}
+
+async function syncCall(body, code = sync.code) {
+  const text = JSON.stringify({ sync: code, ...body });
+  // keepalive lets a write finish when the page is being closed; browsers allow it for small requests only
+  const res = await fetch(WORKER_URL + "/sync", { method: "POST", headers: { "content-type": "application/json" }, body: text, keepalive: text.length < 60000 });
+  const answer = await res.json().catch(() => ({}));
+  if (!res.ok && res.status !== 409) throw new Error(answer.error || "Sync is unavailable right now.");
+  return { ...answer, conflict: res.status === 409 };
+}
+
+async function runSync() {
+  if (!sync) return;
+  if (syncBusy) { syncAgain = true; return; }
+  syncBusy = true;
+  clearTimeout(syncTimer);
+  const code = sync.code;
+  let writing = false;
+  try {
+    let r = await syncCall({});
+    for (let tries = 0; tries < 4 && sync && sync.code === code; tries++) {
+      if (r.rev === 0 && sync.rev > 0) {
+        stopSync();
+        toast("Sync is off: this sync code no longer exists. Your data stays on this device.");
+        return;
+      }
+      if (r.rev !== sync.rev) { syncMerge(r.data); sync.rev = r.rev; }
+      if (!sync.dirty) break;
+      sync.dirty = false;
+      writing = true;
+      r = await syncCall({ rev: sync.rev, data: syncDocument() });
+      writing = false;
+      if (!r.conflict) { sync.rev = r.rev; break; }
+      sync.dirty = true;
+    }
+    if (sync && sync.code === code) { sync.last = Date.now(); syncError = ""; }
+  } catch (error) {
+    if (sync && writing) sync.dirty = true;   // tried again on the next change or visit
+    syncError = error instanceof TypeError ? "Can't reach the sync service. It tries again later." : error.message;
+  } finally {
+    syncBusy = false;
+    if (sync) store.set("sync", sync);
+    renderSync();
+    if (syncAgain) { syncAgain = false; runSync(); }
+  }
+}
+
+function stopSync() {
+  clearTimeout(syncTimer);
+  sync = null;
+  syncError = "";
+  try { localStorage.removeItem("szh.sync"); } catch { /* storage unavailable */ }
+  renderSync();
+}
+
+function newSyncCode() {
+  const letters = "abcdefghijkmnpqrstuvwxyz23456789";   // 32, without the look-alikes l, o, 0 and 1
+  const chars = [...crypto.getRandomValues(new Uint8Array(24))].map(b => letters[b % 32]).join("");
+  return chars.match(/.{4}/g).join("-");
+}
+
+// Accepts the code as typed or the whole link, in any capitals
+function readSyncCode(text) {
+  const m = text.trim().toLowerCase().match(/(?:#sync=)?([a-z2-9-]+)$/);
+  const chars = m ? m[1].replace(/-/g, "") : "";
+  const code = (chars.match(/.{1,4}/g) || []).join("-");
+  return SYNC_CODE.test(code) ? code : "";
+}
+
+function syncLink() { return location.origin + location.pathname + "#sync=" + sync.code; }
+
+function renderSync() {
+  $("syncoff").hidden = !!sync;
+  $("syncon").hidden = !sync;
+  $("syncerror").hidden = true;
+  if (!sync) { $("syncqrbox").hidden = true; $("syncqrbox").replaceChildren(); $("syncqr").textContent = "Show QR code"; return; }
+  $("syncshown").value = sync.code;
+  const when = sync.last ? new Date(sync.last).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) : "";
+  $("syncstatus").textContent = syncError || (syncBusy ? "Syncing…" : when ? `Last synced: ${when}` : "Not synced yet.");
+}
 
 const state = {
   list: migrateList(store.get("list", [])),
@@ -1561,7 +1787,7 @@ async function fillCommanderArt() {
     c.arts = arts;
     c.text = texts.join("\n");
     c.cards = cards;
-    store.set("commander", c);
+    store.set("commander", c, true);
     renderCommander();
   } catch { /* no art this time */ }
 }
@@ -3072,6 +3298,107 @@ $("settingsform").addEventListener("submit", e => {
 $("removecode").addEventListener("click", () => { $("accesscode").value = ""; $("accesscode").focus(); });
 renderCodeState();
 
+// settings: sync between devices (these apply straight away, also on Cancel)
+$("syncstart").addEventListener("click", () => {
+  sync = { code: newSyncCode(), rev: 0, dirty: true, at: {}, listAt: {}, gone: {}, last: 0 };
+  const now = Date.now();
+  for (const key of SYNC_KEYS) if (store.get(key, null) !== null) sync.at[key] = now;
+  for (const c of state.list) sync.listAt[c.name] = now;
+  store.set("sync", sync);
+  renderSync();
+  runSync();
+});
+async function joinSync() {
+  const code = readSyncCode($("synccode").value);
+  const fail = text => { $("syncerror").textContent = text; $("syncerror").hidden = false; };
+  $("syncerror").hidden = true;
+  if (!code) return fail("That is not a valid sync code. It looks like abcd-efgh-jkmn-pqrs-tuvw-xyz2.");
+  $("syncjoin").disabled = true;
+  try {
+    const r = await syncCall({}, code);
+    if (!r.rev) return fail("No synced data found for this code. Check it on your other device.");
+    sync = { code, rev: 0, dirty: false, at: {}, listAt: {}, gone: {}, last: 0 };
+    store.set("sync", sync);
+    $("synccode").value = "";
+    await runSync();
+    if (!syncError) toast("Sync is on. This device now matches your other devices.");
+  } catch (error) {
+    fail(error instanceof TypeError ? "Can't reach the sync service. Try again later." : error.message);
+  } finally {
+    $("syncjoin").disabled = false;
+  }
+}
+$("syncjoin").addEventListener("click", joinSync);
+$("synccode").addEventListener("keydown", e => {   // Enter here connects instead of saving and closing Settings
+  if (e.key === "Enter") { e.preventDefault(); joinSync(); }
+});
+$("syncshown").addEventListener("focus", () => $("syncshown").select());
+$("synccopy").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(syncLink());
+    toast("Link copied. Open it on your other device.");
+  } catch {
+    $("syncshown").focus();
+    toast("Couldn't copy the link. Copy the code from the field instead.");
+  }
+});
+// The QR code library is only loaded when someone asks for a QR code.
+function loadQrLibrary() {
+  return new Promise((resolve, reject) => {
+    if (window.qrcode) return resolve();
+    const s = document.createElement("script");
+    s.src = "qrcode.js";
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.append(s);
+  });
+}
+$("syncqr").addEventListener("click", async () => {
+  const box = $("syncqrbox");
+  if (!box.hidden) { box.hidden = true; $("syncqr").textContent = "Show QR code"; return; }
+  try {
+    await loadQrLibrary();
+    const qr = qrcode(0, "M");
+    qr.addData(syncLink());
+    qr.make();
+    const n = qr.getModuleCount(), margin = 4, size = n + margin * 2;
+    let path = "";
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (qr.isDark(y, x)) path += `M${x + margin} ${y + margin}h1v1h-1z`;
+    box.innerHTML = `<svg viewBox="0 0 ${size} ${size}" role="img" aria-label="QR code with your sync link"><rect class="qrlight" width="${size}" height="${size}"/><path class="qrdark" d="${path}"/></svg>`;
+    box.hidden = false;
+    $("syncqr").textContent = "Hide QR code";
+  } catch {
+    toast("Couldn't make the QR code. Use the link or the code instead.");
+  }
+});
+$("syncnow").addEventListener("click", runSync);
+$("syncstop").addEventListener("click", () => {
+  stopSync();
+  $("syncconfirm").hidden = true;
+  toast("Sync is off on this device. Your data stays here.");
+});
+$("syncdelete").addEventListener("click", () => { $("syncconfirm").hidden = false; });
+$("syncdeleteno").addEventListener("click", () => { $("syncconfirm").hidden = true; });
+$("syncdeleteyes").addEventListener("click", async () => {
+  try {
+    await syncCall({ delete: true });
+    stopSync();
+    toast("Synced data deleted. Your data stays on this device.");
+  } catch (error) {
+    syncError = error instanceof TypeError ? "Can't reach the sync service. Try again later." : error.message;
+    renderSync();
+  }
+  $("syncconfirm").hidden = true;
+});
+renderSync();
+// Other devices' changes come in when the page is opened or looked at again; unsent changes go out when it is left.
+let syncChecked = 0;
+document.addEventListener("visibilitychange", () => {
+  if (!sync) return;
+  if (document.visibilityState === "hidden") { if (sync.dirty) runSync(); return; }
+  if (Date.now() - syncChecked > 30000) { syncChecked = Date.now(); runSync(); }
+});
+
 $("viewswitch").addEventListener("click", () => {
   store.set("view", isMobile ? "desktop" : "mobile");
   location.reload();
@@ -3190,6 +3517,23 @@ const lastEdhrec = savedEdhrec && typeof savedEdhrec.name === "string" ? savedEd
 if (searchFromUrl()) { /* the link decides */ }
 else if (lastEdhrec) runEdhrec(lastEdhrec.name, lastEdhrec.tag || "", "");
 else if (last) { showQuery(last.query, ""); setTitle(last.zin); setPrevious({ zin: last.zin, query: last.query }); runSearch(last.query); }
+runSync();
+// A sync link from another device: the code is in the # part, which never reaches a server. Connecting stays a click.
+function openSyncLink() {
+  if (!location.hash.startsWith("#sync=")) return;
+  const code = readSyncCode(location.hash);
+  history.replaceState(null, "", location.pathname + location.search);
+  if (!code) toast("That sync link isn't complete. Enter the code under Settings instead.");
+  else if (sync && sync.code === code) toast("This device is already syncing with that code.");
+  else if (sync) toast("This device already syncs with another code. Turn that off under Settings first.");
+  else {
+    if (!$("settings").open) openSettings();
+    $("synccode").value = code;
+    $("syncjoin").focus();
+  }
+}
+window.addEventListener("hashchange", openSyncLink);   // the page was already open: following the link doesn't reload it
+openSyncLink();
 // U1: on a computer the search field is ready for typing straight away
 if (!isMobile && document.body.classList.contains("home")) $("zin").focus();
 </script>
