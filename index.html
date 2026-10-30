@@ -1087,7 +1087,7 @@ const store = {
 // A device with a sync code keeps when each setting and each list card last changed, and removed cards as well.
 // The Worker stores one document per code. Devices merge it with their own data: the list card by card, everything
 // else newest first. A write based on an old revision is refused, so a device can't overwrite what it hasn't seen.
-const SYNC_KEYS = ["commander", "companion", "umoritype", "deck", "hideowned", "history", "order", "size"];
+const SYNC_KEYS = ["commander", "companion", "umoritype", "deck", "deckcounts", "hideowned", "history", "order", "size"];
 const SYNC_KEEP_REMOVED = 180 * 86400000;   // how long a removed card is remembered, in ms
 const SYNC_CODE = /^[a-z2-9]{4}(-[a-z2-9]{4}){5}$/;
 let sync = store.get("sync", null);         // { code, rev, dirty, at: {key: ms}, listAt: {name: ms}, gone: {name: ms}, last: ms }
@@ -1169,7 +1169,11 @@ function applySynced(keys, listChanged) {
   if (keys.has("companion")) state.companion = store.get("companion", "");
   if (keys.has("umoritype")) state.umoriType = store.get("umoritype", "");
   if (keys.has("commander") || keys.has("companion") || keys.has("umoritype")) { renderCommander(); fillCommanderArt(); }
-  if (keys.has("deck")) { state.deck = new Set(store.get("deck", [])); renderDeck(); }
+  if (keys.has("deck") || keys.has("deckcounts")) {
+    state.deck = new Set(store.get("deck", []));
+    state.deckCounts = store.get("deckcounts", null);
+    renderDeck();
+  }
   if (keys.has("hideowned")) { state.hideOwned = store.get("hideowned", false); applyHideOwned(); }
   if (keys.has("history")) { state.history = store.get("history", []); renderHistory(); }
   if (keys.has("order")) { state.order = store.get("order", "edhrec"); $("order").value = state.order; }
@@ -1266,6 +1270,7 @@ const state = {
   umoriType: store.get("umoritype", ""),        // the card type Umori's deck shares
   commander: validCommander(store.get("commander", null)),        // { name, colors } chosen as the starting point
   deck: new Set(store.get("deck", [])),            // lower-case card names of the imported deck
+  deckCounts: store.get("deckcounts", null),       // how many of each, without the sideboard: { name: qty }
   hideOwned: store.get("hideowned", false),
   filters: { types: new Set(), mv: new Set(), price: "" },   // filter buttons beside the results
   previous: null   // { zin, query } of the last search, so Claude can handle follow-up questions
@@ -1961,9 +1966,13 @@ async function fillCommanderArt() {
 // How full the deck is: the list against the 99 (or 98 with two commanders).
 function renderDeckProgress() {
   const c = state.commander;
-  const total = state.list.reduce((n, x) => n + x.qty, 0);
   $("deckprogress").hidden = !c;
-  if (c) $("deckprogress").textContent = `${total} / ${100 - c.names.length} in your list`;
+  if (!c) return;
+  // the imported deck plus the list: a card in both counts once, but extra basic lands add up
+  const commanders = c.names.map(n => n.toLowerCase());
+  const imported = deckEntries().filter(([name]) => !commanders.includes(name)).reduce((n, [, qty]) => n + qty, 0);
+  const added = state.list.filter(x => x.multi || !ownsCard(x.name)).reduce((n, x) => n + x.qty, 0);
+  $("deckprogress").textContent = `${imported + added} / ${100 - c.names.length} in your deck`;
 }
 
 // The commander card for a (partial) name; ambiguous names ("atraxa") give the most played commander containing it.
@@ -2165,33 +2174,45 @@ function loadCommanderEdh() {
 
 // ---------- imported deck: mark cards you already have ----------
 function parseDeck(text) {
-  const names = new Set();
+  const names = new Set(), counts = {};
+  let spare = false;   // below a "Sideboard" or "Maybeboard" header: known cards, but not part of the 100
   for (let line of text.split(/\r?\n/)) {
     line = line.replace(/\s+\[[^\]]*\]|\s+\^[^^]*\^/g, "")   // Archidekt categories [Ramp] and labels ^Have,#37d67a^
       .replace(/#.*$/, "").trim();   // Moxfield tags
     // skip empty lines and section headers such as "// Commander", "Sideboard:" or "Deck"
-    if (!line || line.startsWith("//") || /^(commander|deck|sideboard|maybeboard|companion|about|name)\b:?\s*$/i.test(line)) continue;
+    if (/^(?:\/\/\s*)?(sideboard|maybeboard)\b:?\s*$/i.test(line)) { spare = true; continue; }
+    if (/^(?:\/\/\s*)?(commander|deck|mainboard)\b:?\s*$/i.test(line)) { spare = false; continue; }
+    if (!line || line.startsWith("//") || /^(companion|about|name)\b:?\s*$/i.test(line)) continue;
     const m = line.match(/^(?:(\d+)x?\s+)?(.+?)(?:\s+\([A-Za-z0-9]{2,6}\)(?:\s+\S+)?)?(?:\s+\*[A-Z]+\*)*\s*$/);
     if (!m) continue;
     const name = m[2].trim().toLowerCase();
     names.add(name);
     if (name.includes(" // ")) names.add(name.split(" // ")[0]);
+    if (!spare) counts[name] = (counts[name] || 0) + (Number(m[1]) || 1);
   }
-  return names;
+  return { names, counts };
 }
 
+// [name, qty] of the imported deck. Decks imported before quantities were kept count each card once.
+function deckEntries() {
+  if (state.deckCounts) return Object.entries(state.deckCounts);
+  const names = [...state.deck];
+  return names.filter(n => !names.some(other => other.startsWith(n + " // "))).map(n => [n, 1]);
+}
 function ownsCard(name) {
   const n = name.toLowerCase();
   return state.deck.has(n) || state.deck.has(n.split(" // ")[0]);
 }
 
 function renderDeck() {
-  $("deckinfo").textContent = state.deck.size ? `My deck: ${plural(state.deck.size, "card")} imported` : "Import your own deck to see which cards you already have.";
+  const total = deckEntries().reduce((n, [, qty]) => n + qty, 0);
+  $("deckinfo").textContent = total ? `My deck: ${plural(total, "card")} imported` : "Import your own deck to see which cards you already have.";
   $("importdeck").textContent = state.deck.size ? "Replace deck" : "Import deck";
-  $("deckbutton").textContent = $("deckmenu").textContent = state.deck.size ? `Your deck · ${state.deck.size}` : "Import deck";
+  $("deckbutton").textContent = $("deckmenu").textContent = state.deck.size ? `Your deck · ${total}` : "Import deck";
   $("deckbutton").title = state.deck.size ? "Replace or remove your imported deck" : "Import your own deck to see which cards you already have";
   renderFilterbar();
   refreshOwned();
+  renderDeckProgress();
 }
 
 function refreshOwned() {
@@ -3626,14 +3647,20 @@ $("deckbutton").addEventListener("click", openDeckImport);
 $("deckmenu").addEventListener("click", () => { closeMore(); openDeckImport(); });
 $("deckform").addEventListener("submit", e => {
   if (!e.submitter || e.submitter.value !== "save") return;
-  state.deck = parseDeck($("decktext").value);
+  const parsed = parseDeck($("decktext").value);
+  state.deck = parsed.names;
+  state.deckCounts = parsed.counts;
   store.set("deck", [...state.deck]);
+  store.set("deckcounts", state.deckCounts);
   renderDeck();
-  toast(state.deck.size ? `Deck saved: ${plural(state.deck.size, "card")}` : "No cards found in that text.");
+  const total = deckEntries().reduce((n, [, qty]) => n + qty, 0);
+  toast(total ? `Deck saved: ${plural(total, "card")}` : "No cards found in that text.");
 });
 $("removedeck").addEventListener("click", () => {
   state.deck = new Set();
+  state.deckCounts = {};
   store.set("deck", []);
+  store.set("deckcounts", {});
   renderDeck();
   $("deckdialog").close();
   toast("Deck removed");
