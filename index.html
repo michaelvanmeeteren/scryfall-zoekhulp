@@ -521,6 +521,37 @@ html.mobile .toast button { min-height: 44px; padding: 0 6px; }
 }
 @media (min-width: 1900px) { html:not(.mobile) body.listopen:not(.home) .layout { padding-right: calc(460px + 2vw); } }
 
+/* a narrow window on a computer, say half a screen beside Moxfield: the rarer buttons move into the ••• menu */
+.menuonly { display: none; }
+.topbar .searchrow { min-width: 0; }
+.topbar .searchrow input { width: 0; }
+@media (max-width: 1023px) {
+  html:not(.mobile) .topbuttons > #deckbutton, html:not(.mobile) .topbuttons > [data-openhelp] { display: none; }
+  html:not(.mobile) .menuonly { display: block; }
+  .refinechain { max-width: 30%; }
+}
+@media (max-width: 639px) {
+  html:not(.mobile) body:not(.home) .topbar { flex-wrap: wrap; }
+  html:not(.mobile) body:not(.home) .topbar .searchrow { order: 3; flex-basis: 100%; max-width: none; }
+}
+
+/* what the search was translated into: read it, or take a term out */
+.qchips:empty { display: none; }
+.qchips > * { max-width: 26ch; }
+.qchips button, .qchips span { display: inline-flex; align-items: center; gap: 4px; min-width: 0; white-space: nowrap; }
+.qchips span { padding: 2px 9px; border: 1px solid var(--line); border-radius: 999px; font-size: 12.5px; }
+.qchips .term { overflow: hidden; text-overflow: ellipsis; padding: 0; border: 0; font-size: inherit; display: block; }
+.qchips svg { flex: none; }
+#results.static .qchips, #results.nosearch .qchips { display: none; }
+/* phone: the heading beside Filters & sort and the count, all terms on the full width below */
+html.mobile .stripinfo, html.mobile .countline { display: contents; }
+html.mobile .strip .rtitle { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
+html.mobile .strip .optstoggle { grid-column: 2; grid-row: 1; }
+html.mobile .stripinfo .countline .count { grid-column: 2; grid-row: 2; justify-self: end; align-self: start; }
+html.mobile .fchips, html.mobile .stripinfo .explain { grid-column: 1 / -1; }
+html.mobile .fchips:empty, html.mobile .stripinfo .explain:empty { display: none; }
+html.mobile .qchips button { min-height: 34px; padding: 2px 8px 2px 11px; }
+
 /* phone: thumb-sized controls */
 html.mobile .cmdr .linkbtn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 8px; }
 html.mobile .compwrap select, html.mobile .fsel select { min-height: 44px; font-size: 16px; }
@@ -564,6 +595,8 @@ html.mobile .cmdrresults:not(:empty) { margin-bottom: 10px; }
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
       </button>
       <div id="moremenu" class="moremenu" role="menu" hidden>
+        <button id="deckmenu" class="btn small menuonly" type="button" role="menuitem">Import deck</button>
+        <button class="btn small menuonly" type="button" role="menuitem" data-openhelp>Help</button>
         <button id="themetoggle" class="btn small" type="button" role="menuitem"></button>
         <button id="opensettings" class="btn small" type="button" role="menuitem">Settings</button>
       </div>
@@ -603,6 +636,7 @@ html.mobile .cmdrresults:not(:empty) { margin-bottom: 10px; }
       <li><b>Cheap</b> = mana value 2 or less, <b>expensive</b> = 6 or more. For price: <i>budget</i> (under €2) or <i>under 1 euro</i>.</li>
       <li>Know Scryfall's syntax? Start with <code>/s</code>: <code>/s t:elf mv=1</code>. Only Commander-legal paper cards are shown.</li>
       <li>To change the results instead of searching again, switch the search bar from <b>New</b> to <b>Refine</b> (or start with <b>+</b>): <i>only instants</i>, <i>under 1 euro</i>.</li>
+      <li>The chips under the heading show what your words were translated into. Take one out with its <b>×</b> to widen the search.</li>
       <li><b>Filters &amp; sort</b> narrows the results by type, mana value and price. Card size and cards per page are under <b>Settings</b>.</li>
       <li>With the access code you can ask for combos: <i>2 card combos in dimir</i>.</li>
     </ul>
@@ -711,7 +745,7 @@ html.mobile .cmdrresults:not(:empty) { margin-bottom: 10px; }
     <div id="toolbar" class="toolbar strip">
       <div class="stripinfo">
         <h1 id="rtitle" class="rtitle"></h1>
-        <span class="countline"><span id="count" class="count"></span><span id="fchips" class="fchips"></span></span>
+        <span class="countline"><span id="count" class="count"></span><span id="qchips" class="fchips qchips" role="group" aria-label="What was searched for"></span><span id="fchips" class="fchips"></span></span>
         <span id="uitleg" class="explain"></span>
       </div>
       <button id="optstoggle" class="btn small optstoggle" type="button" aria-expanded="false" aria-controls="optspanel">Filters &amp; sort</button>
@@ -1178,19 +1212,37 @@ async function scryfall(url) {
 const front = type => `t:/^[^\\/]*${type}/`;
 const PERMANENT = "(artifact|creature|enchantment|land|planeswalker|battle)";
 
+// What the companion rules look at on a commander: its front face's mana value, type, cost and rules text.
+function cardFacts(card) {
+  const face = (!card.mana_cost && card.card_faces && card.card_faces[0]) || card;
+  return { mv: card.cmc || 0, type: (card.type_line || "").split(" // ")[0].toLowerCase(), cost: face.mana_cost || "",
+    text: (face.oracle_text || card.oracle_text || "").replace(/\([^)]*\)/g, "") };
+}
+const isPermanent = f => new RegExp(PERMANENT).test(f.type);
+const UMORI_TYPES = ["artifact", "creature", "enchantment", "instant", "sorcery", "planeswalker", "battle"];
+
 // The ten companions and their deck rule as a Scryfall filter ("" when it can't be one). Each search adds the rule.
+// fits: whether a commander meets the rule too, since the commanders are part of the starting deck.
 const COMPANIONS = {
-  "Lurrus of the Dream-Den": { colors: "wb", rule: `(-${front(PERMANENT)} OR mv<=2)`, text: "permanents of 2 mana or less" },
-  "Gyruda, Doom of Depths": { colors: "ub", rule: "mv:even", text: "even mana values only" },
-  "Obosh, the Preypiercer": { colors: "br", rule: `(${front("land")} OR mv:odd)`, text: "odd mana values for nonland cards" },
-  "Keruga, the Macrosage": { colors: "ug", rule: `(${front("land")} OR mv>=3)`, text: "nonland cards of 3 mana or more" },
+  "Lurrus of the Dream-Den": { colors: "wb", rule: `(-${front(PERMANENT)} OR mv<=2)`, text: "permanents of 2 mana or less",
+    fits: f => !isPermanent(f) || f.mv <= 2 },
+  "Gyruda, Doom of Depths": { colors: "ub", rule: "mv:even", text: "even mana values only", fits: f => f.mv % 2 === 0 },
+  "Obosh, the Preypiercer": { colors: "br", rule: `(${front("land")} OR mv:odd)`, text: "odd mana values for nonland cards",
+    fits: f => f.type.includes("land") || f.mv % 2 === 1 },
+  "Keruga, the Macrosage": { colors: "ug", rule: `(${front("land")} OR mv>=3)`, text: "nonland cards of 3 mana or more",
+    fits: f => f.type.includes("land") || f.mv >= 3 },
   "Kaheera, the Orphanguard": { colors: "gw",
     rule: `(-${front("creature")} OR ${front("creature[^\\/]*(cat|elemental|nightmare|dinosaur|beast)")})`,
-    text: "creatures are Cats, Elementals, Nightmares, Dinosaurs or Beasts" },
+    text: "creatures are Cats, Elementals, Nightmares, Dinosaurs or Beasts",
+    fits: f => !f.type.includes("creature") || /\b(cat|elemental|nightmare|dinosaur|beast)\b/.test(f.type) },
   "Jegantha, the Wellspring": { colors: "rg", rule: "-m:{W}{W} -m:{U}{U} -m:{B}{B} -m:{R}{R} -m:{G}{G} -m:{C}{C}",
-    text: "no mana symbol twice in a cost" },
+    text: "no mana symbol twice in a cost",
+    fits: f => { const s = f.cost.match(/\{[^}]+\}/g) || []; return new Set(s).size === s.length; } },
   "Zirda, the Dawnwaker": { colors: "rw", rule: `(-${front(PERMANENT)} OR ${front("land")} OR otag:activated-ability)`,
-    text: "permanents with an activated ability" },
+    text: "permanents with an activated ability",
+    // an activated ability has a cost before a colon, or is a keyword like equip or crew
+    fits: f => !isPermanent(f) || f.type.includes("land") || f.text.split("\n").some(l => /^[^"]*:/.test(l))
+      || /\b(equip|crew|cycling|ninjutsu|outlast|reconfigure|unearth|level up|scavenge|embalm|eternalize)\b/i.test(f.text) },
   "Umori, the Collector": { colors: "bg", rule: "", text: "all nonland cards share a card type: pick it" },   // rule: see companionRule
   "Lutri, the Spellchaser": { colors: "ur", rule: "", text: "no extra rule in Commander" },
   "Yorion, Sky Nomad": { colors: "wu", rule: "", text: "no extra rule in Commander" }
@@ -1202,14 +1254,35 @@ const companionRule = () => state.companion === "Umori, the Collector"
 function renderCompanion() {
   const c = state.commander;
   // only the companions that fit in the commander's colors are offered; with none, there is no choice to show
-  const legal = c ? Object.keys(COMPANIONS).filter(n => [...COMPANIONS[n].colors].every(x => c.colors.includes(x))) : [];
-  $("compwrap").hidden = !legal.length;
+  const inColors = c ? Object.keys(COMPANIONS).filter(n => [...COMPANIONS[n].colors].every(x => c.colors.includes(x))) : [];
+  $("compwrap").hidden = !inColors.length;
+  // the commanders count for the rule too: a companion one of them breaks stays in the list, but can't be picked
+  const cards = (c && c.cards) || [];
+  const shared = UMORI_TYPES.filter(t => cards.every(f => f.type.includes(t)));
+  const misfit = n => n === "Umori, the Collector"
+    ? (shared.length ? -1 : 0)
+    : cards.findIndex(f => COMPANIONS[n].fits && !COMPANIONS[n].fits(f));
+  const legal = inColors.filter(n => misfit(n) < 0);
   const sel = $("compselect");
-  sel.replaceChildren(new Option("none", ""), ...legal.map(n => new Option(n.split(",")[0], n)));
+  sel.replaceChildren(new Option("none", ""), ...inColors.map(n => {
+    const i = misfit(n), short = n.split(",")[0];
+    const o = new Option(i < 0 ? short : `${short} (not with ${c.names[i].split(",")[0]})`, n);
+    o.disabled = i >= 0;
+    return o;
+  }));
+  if (state.companion && inColors.includes(state.companion) && !legal.includes(state.companion)) {
+    toast(`${state.companion.split(",")[0]} doesn't fit your commander, so it was removed`);
+  }
   if (!legal.includes(state.companion)) state.companion = "";
   store.set("companion", state.companion);
   sel.value = state.companion;
   const umori = state.companion === "Umori, the Collector";
+  // Umori's card type has to be one the commanders have as well
+  for (const o of $("umoritype").options) o.disabled = !!o.value && cards.length > 0 && !shared.includes(o.value);
+  if (umori && state.umoriType && cards.length && !shared.includes(state.umoriType)) {
+    state.umoriType = "";
+    store.set("umoritype", "");
+  }
   $("umoritype").hidden = !umori;
   $("umoritype").value = state.umoriType;
   $("compnote").textContent = umori && state.umoriType ? `all nonland cards are ${state.umoriType === "sorcery" ? "sorceries" : state.umoriType + "s"}`
@@ -1413,17 +1486,19 @@ function renderStarters() {
 // Commanders saved before the art and rules text were kept get them looked up once.
 async function fillCommanderArt() {
   const c = state.commander;
-  if (!c || (c.arts && c.arts.every(Boolean) && typeof c.text === "string")) return;
+  if (!c || (c.arts && c.arts.every(Boolean) && typeof c.text === "string" && Array.isArray(c.cards))) return;
   try {
-    const arts = [], texts = [];
+    const arts = [], texts = [], cards = [];
     for (const n of c.names) {
       const card = await scryfall("https://api.scryfall.com/cards/named?" + new URLSearchParams({ exact: n }));
       arts.push(((card && (card.image_uris || (card.card_faces && card.card_faces[0].image_uris))) || {}).art_crop || "");
       texts.push(card ? cardText(card) : "");
+      if (card) cards.push(cardFacts(card));
     }
     if (state.commander !== c) return;
     c.arts = arts;
     c.text = texts.join("\n");
+    c.cards = cards;
     store.set("commander", c);
     renderCommander();
   } catch { /* no art this time */ }
@@ -1494,10 +1569,10 @@ async function setCommander(name) {
       const both = "wubrg".split("").filter(c => (first.colors + colors).includes(c)).join("");
       const names = [first.names[0], card.name];
       state.commander = { name: names.join(" + "), names, colors: both, pair: first.pair, arts: [(first.arts || [])[0] || "", art],
-        text: `${first.text || ""}\n${text}` };
+        text: `${first.text || ""}\n${text}`, cards: [...(first.cards || []), cardFacts(card)] };
       pairing = false;
     } else {
-      state.commander = { name: card.name, names: [card.name], colors, pair: pairFor(card), arts: [art], text };
+      state.commander = { name: card.name, names: [card.name], colors, pair: pairFor(card), arts: [art], text, cards: [cardFacts(card)] };
     }
     store.set("commander", state.commander);
     // close the suggestion list first: the browser may leave it floating where the (now hidden) field was
@@ -1688,7 +1763,7 @@ function ownsCard(name) {
 function renderDeck() {
   $("deckinfo").textContent = state.deck.size ? `My deck: ${plural(state.deck.size, "card")} imported` : "Import your own deck to see which cards you already have.";
   $("importdeck").textContent = state.deck.size ? "Replace deck" : "Import deck";
-  $("deckbutton").textContent = state.deck.size ? `Your deck · ${state.deck.size}` : "Import deck";
+  $("deckbutton").textContent = $("deckmenu").textContent = state.deck.size ? `Your deck · ${state.deck.size}` : "Import deck";
   $("deckbutton").title = state.deck.size ? "Replace or remove your imported deck" : "Import your own deck to see which cards you already have";
   renderFilterbar();
   refreshOwned();
@@ -1779,6 +1854,115 @@ function showQuery(query, uitleg, combos, warn) {
   renderCombos(combos);
 }
 
+// A Scryfall query in its separate terms: parentheses, quotes and /regexes/ stay whole, "a OR b" is one term.
+function splitQuery(query) {
+  const terms = [];
+  let term = "", depth = 0, quote = false, regex = false;
+  for (let i = 0; i < query.length; i++) {
+    const ch = query[i];
+    if (regex) { if (ch === "/" && query[i - 1] !== "\\") regex = false; }
+    else if (quote) { if (ch === '"') quote = false; }
+    else if (ch === '"') quote = true;
+    else if (ch === "/" && /(^|[:=<>])$/.test(term)) regex = true;
+    else if (ch === "(") depth++;
+    else if (ch === ")") depth--;
+    else if (/\s/.test(ch) && depth <= 0) { if (term) terms.push(term); term = ""; continue; }
+    term += ch;
+  }
+  if (term) terms.push(term);
+  const merged = [];
+  for (let i = 0; i < terms.length; i++) {
+    if (/^or$/i.test(terms[i]) && merged.length && terms[i + 1]) merged[merged.length - 1] += ` OR ${terms[++i]}`;
+    else merged.push(terms[i]);
+  }
+  return merged;
+}
+
+// One term in Commander words; a term it doesn't know is shown as typed.
+function termLabel(term) {
+  const parts = splitQuery(term.replace(/^\((.*)\)$/, "$1"));
+  if (/^\(.*\)$/.test(term) || parts.length > 1) {
+    const or = parts.some(p => / OR /.test(p));
+    const words = parts.flatMap(p => p.split(/ OR /)).map(termLabel);
+    return words.length > 1 ? words.join(or ? " or " : " + ") : words[0] || term;
+  }
+  const m = term.match(/^(-?)([a-z]+)(:|<=|>=|!=|=|<|>)(.+)$/i);
+  if (!m) return term.replace(/^-/, "not ").replace(/"/g, "");
+  const [, not, field, op, raw] = m;
+  if (raw.startsWith("/")) return term;
+  const value = raw.replace(/"/g, "").toLowerCase();
+  const sym = { "<=": "≤ ", ">=": "≥ ", "<": "< ", ">": "> ", "!=": "not " }[op] || "";
+  const COLORS = { w: "white", u: "blue", b: "black", r: "red", g: "green", c: "colorless" };
+  const colors = /^[wubrgc]+$/.test(value) ? [...value].map(x => COLORS[x]).join(" + ") : value;
+  const money = { eur: "€", usd: "$" }[field.toLowerCase()];
+  const say = {
+    otag: () => value.replace(/-/g, " "), oracletag: () => value.replace(/-/g, " "), function: () => value.replace(/-/g, " "),
+    t: () => value, type: () => value, kw: () => value, keyword: () => value, r: () => value, rarity: () => value, is: () => value, has: () => value,
+    mv: () => /even|odd/.test(value) ? `${value} mana value` : `mana value ${sym}${value}`,
+    cmc: () => `mana value ${sym}${value}`, manavalue: () => `mana value ${sym}${value}`,
+    id: () => identityLabel(op, value, colors), identity: () => identityLabel(op, value, colors), ci: () => identityLabel(op, value, colors),
+    c: () => op === "<=" ? `within ${colors}` : colors, color: () => op === "<=" ? `within ${colors}` : colors,
+    o: () => `text “${raw.replace(/"/g, "")}”`, oracle: () => `text “${raw.replace(/"/g, "")}”`, fo: () => `text “${raw.replace(/"/g, "")}”`,
+    pow: () => `power ${sym}${value}`, power: () => `power ${sym}${value}`, tou: () => `toughness ${sym}${value}`, toughness: () => `toughness ${sym}${value}`,
+    eur: () => priceLabel(op, value, money), usd: () => priceLabel(op, value, money),
+    order: () => `sorted by ${value}`, set: () => `set ${value}`, s: () => `set ${value}`, name: () => `name “${raw.replace(/"/g, "")}”`
+  }[field.toLowerCase()];
+  if (!say) return term;
+  return (not ? "not " : "") + say();
+}
+function identityLabel(op, value, colors) {
+  if (op === "=") return `exactly ${colors}`;
+  if (op === ">=" || op === ">") return `at least ${colors}`;
+  // a card "in black" may also be colorless: that is why artifacts and lands show up
+  return value.length === 1 && value !== "c" ? `${colors} or colorless` : `within ${colors}`;
+}
+function priceLabel(op, value, money) {
+  if (op === "<") return `under ${money}${value}`;
+  if (op === "<=") return `${money}${value} or less`;
+  if (op === ">" || op === ">=") return `over ${money}${value}`;
+  return `${money}${value}`;
+}
+
+// The search on screen as chips: what it was translated into, each term removable.
+function renderQueryChips(query) {
+  const box = $("qchips");
+  box.replaceChildren();
+  const prev = state.previous;
+  if (!prev || prev.query.trim() !== query) return;
+  const terms = splitQuery(query);
+  terms.forEach((term, i) => {
+    const label = termLabel(term);
+    const text = document.createElement("span");
+    text.className = "term";
+    text.textContent = label;
+    // the last term can't go: nothing would be left to search
+    if (terms.length < 2) { const s = document.createElement("span"); s.title = term; s.append(text); box.append(s); return; }
+    const b = document.createElement("button");
+    b.type = "button";
+    b.title = term;
+    b.setAttribute("aria-label", `Take ${label} out of the search`);
+    b.innerHTML = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6"/></svg>';
+    b.prepend(text);
+    b.addEventListener("click", () => {
+      const before = { query: prev.query, zin: prev.zin };
+      stepSearch(terms.filter((_, j) => j !== i).join(" "), `${prev.zin} → without ${label}`);
+      toast(`Took out ${label}`, { label: "Undo", run: () => stepSearch(before.query, before.zin) });
+      const next = box.querySelector("button");
+      if (next) next.focus();
+    });
+    box.append(b);
+  });
+}
+// A changed search that needs no translating, like taking a term out or undoing that.
+function stepSearch(query, zin) {
+  showQuery(query, "");
+  setTitle(zin);
+  pushSearchUrl(query, zin);
+  addHistory({ zin, query, uitleg: "" });
+  setPrevious({ zin, query });
+  runSearch(query);
+}
+
 // The sort menu's value as Scryfall parameters; prices go cheapest first unless "high to low" is picked.
 function sortParams(order) {
   if (order === "eur") return { order: "eur", dir: "asc" };
@@ -1795,6 +1979,7 @@ async function runSearch(query, page = 1) {
   $("scryfalllink").href = "https://scryfall.com/search?" + new URLSearchParams({ q: full, ...sortParams(state.order) });
   state.search = { query, full, order: state.order, size: state.size, total: null, cache: new Map(), page: 1 };
   $("toolbar").hidden = false;
+  renderQueryChips(query);
   renderFilterbar();
   applyHideOwned();
   store.set("lastsearch", { query, zin: $("rtitle").dataset.text || query });
@@ -2306,12 +2491,25 @@ async function copyList() {
   toast(isMobile ? "Couldn't copy automatically. Select the text below and copy it." : "Couldn't copy automatically. Select the text and press Ctrl+C.");
 }
 
-// On a computer the list stays open beside the results, so cards can be added while it shows; on a phone it covers them.
+// On a computer the list stays open beside the results, so cards can be added while it shows; on a phone or in a
+// narrow window it covers them, and then it is a dialog: the page behind it can't be reached until it closes.
+const narrowWindow = matchMedia("(max-width: 899px)");
+let listOpener = null;
+function syncListMode() {
+  const modal = $("drawer").classList.contains("open") && (isMobile || narrowWindow.matches);
+  if (modal) { $("drawer").setAttribute("role", "dialog"); $("drawer").setAttribute("aria-modal", "true"); }
+  else { $("drawer").removeAttribute("role"); $("drawer").removeAttribute("aria-modal"); }
+  for (const el of document.querySelectorAll("body > header, body > main, body > footer, #mobilebar")) el.inert = modal;
+  if (modal && !$("drawer").contains(document.activeElement)) $("closelist").focus();
+}
+narrowWindow.addEventListener("change", syncListMode);
 function openList() {
+  listOpener = document.activeElement;
   $("drawer").classList.add("open");
   document.body.classList.add("listopen");
   $("listtoggle").setAttribute("aria-expanded", "true");
   $("scrim").hidden = false;
+  syncListMode();
   $("closelist").focus();
 }
 function closeList() {
@@ -2319,7 +2517,8 @@ function closeList() {
   document.body.classList.remove("listopen");
   $("listtoggle").setAttribute("aria-expanded", "false");
   $("scrim").hidden = true;
-  $("listtoggle").focus();
+  syncListMode();
+  (listOpener && listOpener.isConnected && listOpener.offsetParent ? listOpener : $(isMobile ? "openlist" : "listtoggle")).focus();
 }
 
 // Home: big centered search. Results: top bar, info strip and grid. Shared parts move with the view.
@@ -2703,7 +2902,11 @@ $("confirmyes").addEventListener("click", () => {
 $("openlist").addEventListener("click", openList);
 $("closelist").addEventListener("click", closeList);
 $("barcopy").addEventListener("click", copyList);
-document.addEventListener("keydown", e => { if (e.key === "Escape" && $("drawer").classList.contains("open")) closeList(); });
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape" || !$("drawer").classList.contains("open") || document.querySelector("dialog[open]")) return;
+  e.preventDefault();   // in the search field Escape would also wipe what was typed
+  closeList();
+});
 function renderOptsToggle() {
   const open = $("results").classList.contains("opts");
   const f = state.filters;
@@ -2856,6 +3059,7 @@ $("deckprogress").addEventListener("click", () => openList());
 
 // help window
 document.querySelectorAll("[data-openhelp]").forEach(b => b.addEventListener("click", () => {
+  closeMore();
   $("helpdialog").showModal();
   $("helpdialog").scrollTop = 0;   // the "Got it" button gets focus, which would scroll to the bottom
 }));
@@ -2889,6 +3093,7 @@ $("cmdrclear").addEventListener("click", () => {
 function openDeckImport() { $("decktext").value = ""; $("deckdialog").showModal(); $("decktext").focus(); }
 $("importdeck").addEventListener("click", openDeckImport);
 $("deckbutton").addEventListener("click", openDeckImport);
+$("deckmenu").addEventListener("click", () => { closeMore(); openDeckImport(); });
 $("deckform").addEventListener("submit", e => {
   if (!e.submitter || e.submitter.value !== "save") return;
   state.deck = parseDeck($("decktext").value);
