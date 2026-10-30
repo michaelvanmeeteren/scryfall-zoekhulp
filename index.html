@@ -1366,6 +1366,7 @@ const EARLY_FUNCTIONS = [
   [/\b(?:creature lands?|man ?lands?)\b/, "otag:manland", "creature land"]
 ];
 const FUNCTIONS = [
+  [/\brepeatable (?:card )?draw(?:ing)?\b/, "otag:repeatable-draw", "repeatable draw"],
   [/\b(?:card draw|card advantage|draw engines?|draw cards|card drawers?)\b/, "otag:draw", "card draw"],
   [/\b(?:board ?wipes?|wipes?|wraths?|sweepers?|mass removal)\b/, "otag:board-wipe", "board wipe"],
   [/\bremoval\b/, "otag:removal", "removal"],

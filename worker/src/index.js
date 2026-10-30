@@ -5,6 +5,7 @@
 // Model, system prompt and output size are fixed here, so the key can't be used for anything else.
 import Anthropic from "@anthropic-ai/sdk";
 import { ORACLE_TAGS } from "./tags.js";   // refresh with: node update-tags.mjs
+import { closeTags } from "./closetags.js";
 
 const MODEL = "claude-haiku-5-5";   // fixed on purpose: never any other model
 const MAX_SENTENCE = 300;            // characters
@@ -106,6 +107,10 @@ Rules:
   function even when their rules text is worded differently. Pick the tag from the list at the end whose name fits
   best; when several fit, combine them with OR in parentheses, e.g. (otag:anthem OR otag:power-boost-to-all).
   Prefer the most specific tag that matches (otag:copy-spell for copying spells, not otag:copy).
+  Every descriptive word in the request counts: never drop one by using a broader tag. "repeatable card draw" =
+  otag:repeatable-draw, not otag:draw; "repeatable removal" = otag:repeatable-removal.
+  A request may come with a line "Tags close to this request". Look at those first and use the closest one, or several
+  with OR, when it keeps the meaning. They only share words with the request, so skip any that mean something else.
   Use only tags from that list, never invent one. Fall back to o:"..." only when no tag fits,
   e.g. creatures that make Treasure = t:creature o:"create a treasure" (there is no treasure-maker tag).
 - "most played" / "popular" / "by edhrec" = order:edhrec.
@@ -216,6 +221,8 @@ function requestText(zin, commander, previous, companion) {
   const prevZin = clean(previous && previous.zin, MAX_SENTENCE);
   const prevQuery = clean(previous && previous.query, 500);
   if (prevZin && prevQuery) lines.push(`Refine my search: "${prevZin}" => ${prevQuery}`);
+  const close = closeTags(zin);
+  if (close.length) lines.push(`Tags close to this request: ${close.join(", ")}`);
   if (!lines.length) return zin;   // same message as always, so nothing changes for plain searches
   return lines.join("\n") + `\nRequest: ${zin}`;
 }

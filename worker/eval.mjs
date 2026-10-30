@@ -22,6 +22,8 @@ const CASES = [
   { zin: "goblin commanders", any: [["is:commander"], ["t:goblin"]] },
   { zin: "planeswalkers that can be my commander", any: [["t:planeswalker"], ["is:commander"]] },
   { zin: "commanders that care about +1/+1 counters in simic", any: [["is:commander"], ["counters"]], id: "=ug" },
+  { zin: "repeatable card draw", any: [["otag:repeatable-draw", "otag:repeatable-pure-draw", "otag:draw-engine"]] },
+  { zin: "repeatable removal", any: [["otag:repeatable-removal"]] },
   { zin: "esper card draw", any: [["otag:draw", "otag:card-advantage", "otag:draw-engine"]], id: "<=wub" },
   { zin: "colorless artifacts under 2 mana", any: [["t:artifact"], ["mv<2", "mv<=1"], ["id:c", "id=c", "c:c", "id<=c", "c=c"]] },
   { zin: "nonbasic lands for mono red", any: [["t:land"], ["-t:basic"]], id: "<=r" },
