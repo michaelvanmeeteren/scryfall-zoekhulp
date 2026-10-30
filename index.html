@@ -12,7 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Young+Serif&display=swap" rel="stylesheet">
 <style>
 /* Layout: header on top, search + card grid on the left, a sticky list column on the right; stacked on narrow screens. */
-/* Colors: black & gold when dark, ivory & bronze-gold when light. The page follows the device,
+/* Colors: crimson on near-black when dark, on near-white when light; with a commander, the color of its art. The page follows the device,
    unless the theme button in the header picked one (data-theme on <html>, saved in localStorage). */
 :root {
   --qr-dark: #000000;
@@ -388,11 +388,11 @@ section.home { max-width: 760px; margin: 0 auto; display: grid; gap: 22px; }
 
 /* "i" button on a card, and the card page */
 .infobtn { position: absolute; left: 6px; bottom: 30%; width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 1px solid var(--gold);
-  background: var(--badge-bg); color: var(--gold); font-family: var(--serif); font-weight: 700; font-style: italic; font-size: 15px; line-height: 1;
+  background: var(--badge-bg); color: var(--accent); font-family: var(--serif); font-weight: 700; font-style: italic; font-size: 15px; line-height: 1;
   opacity: 0; transition: opacity 0.12s; }
 .tile:hover .infobtn, .infobtn:focus-visible, html.mobile .infobtn { opacity: 1; }
 .flipbtn { position: absolute; right: 6px; bottom: 30%; width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 1px solid var(--gold);
-  background: var(--badge-bg); color: var(--gold); font-size: 17px; line-height: 1; }
+  background: var(--badge-bg); color: var(--accent); font-size: 17px; line-height: 1; }
 .flipbtn:hover, .tile.flipped .flipbtn { background: var(--gold); color: var(--ink-on-gold); }
 html.mobile .flipbtn { width: 36px; height: 36px; font-size: 20px; }
 .cd-imgbox { display: grid; gap: 8px; justify-items: center; }
@@ -632,14 +632,16 @@ html.mobile .qchips button { padding: 2px 6px 2px 9px; }
 html.mobile .cmdrresults .cmdrart img { width: 44px; height: 32px; border-radius: 5px; }
 html.mobile .cmdrresults:not(:empty) { margin-bottom: 10px; }
 
-/* The commander's art as a banner, and the page takes its one color from that art. --h and --s are set by renderHero. */
+/* The commander's art as a banner, and the page takes its one color from that art. --h and --s are set by renderHero;
+   without a commander they make crimson. --accent is for text and lines, --fill for what is filled with the color. */
 :root {
-  --h: 42; --s: 65%;
-  --bg: hsl(var(--h) 18% 96%); --surface: hsl(var(--h) 20% 99%); --fg: hsl(var(--h) 12% 12%); --muted: hsl(var(--h) 8% 38%);
-  --line: hsl(var(--h) 12% 86%); --field-line: hsl(var(--h) 8% 58%);
-  --accent: hsl(var(--h) var(--s) 30%); --accent-fg: hsl(var(--h) 20% 98%); --accent-soft: hsl(var(--h) var(--s) 90%);
-  --note-bg: hsl(var(--h) 25% 92%); --note-fg: hsl(var(--h) 25% 22%);
-  --gold: var(--accent); --ink-on-gold: var(--accent-fg);
+  --h: 353; --s: 81%;
+  --bg: #f7f6f6; --surface: #ffffff; --fg: #141414; --muted: #5a5a5a;
+  --line: #e2e0e0; --field-line: #8a8888;
+  --accent: hsl(var(--h) var(--s) 32%); --accent-fg: hsl(var(--h) 20% 98%); --accent-soft: hsl(var(--h) var(--s) 92%);
+  --note-bg: hsl(var(--h) 30% 94%); --note-fg: hsl(var(--h) 30% 22%); --danger: #b45309;
+  --fill: var(--accent); --fill-ink: var(--accent-fg);
+  --gold: var(--fill); --ink-on-gold: var(--fill-ink);
   --bar: var(--surface); --bar-fg: var(--fg); --bar-line: var(--line); --bar-field: var(--bg); --bar-placeholder: var(--muted);
   --deep: hsl(var(--h) var(--s) 19%); --deep-2: hsl(var(--h) var(--s) 26%);
   --on-deep: hsl(var(--h) 20% 97%); --on-deep-2: hsl(var(--h) 18% 80%); --on-deep-accent: hsl(var(--h) var(--s) 76%);
@@ -648,18 +650,29 @@ html.mobile .cmdrresults:not(:empty) { margin-bottom: 10px; }
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: hsl(var(--h) 6% 11%); --surface: hsl(var(--h) 6% 15%); --fg: hsl(var(--h) 10% 95%); --muted: hsl(var(--h) 6% 70%);
-    --line: hsl(var(--h) 6% 23%); --field-line: hsl(var(--h) 6% 42%);
-    --accent: hsl(var(--h) var(--s) 68%); --accent-fg: hsl(var(--h) 30% 9%); --accent-soft: hsl(var(--h) 25% 20%);
-    --note-bg: hsl(var(--h) 20% 17%); --note-fg: hsl(var(--h) 40% 80%);
+    --bg: #0a0a0a; --surface: #151515; --fg: #efefef; --muted: #a0a0a0;
+    --line: #262626; --field-line: #454545;
+    --accent: hsl(var(--h) var(--s) 68%); --accent-fg: hsl(var(--h) 30% 9%); --accent-soft: hsl(var(--h) 40% 16%);
+    --note-bg: hsl(var(--h) 25% 13%); --note-fg: hsl(var(--h) 45% 84%); --danger: #f5a524;
   }
+  :root:not([data-theme="light"]):not([data-art]) { --fill: #b11226; --fill-ink: #ffffff; }
 }
 :root[data-theme="dark"] {
-  --bg: hsl(var(--h) 6% 11%); --surface: hsl(var(--h) 6% 15%); --fg: hsl(var(--h) 10% 95%); --muted: hsl(var(--h) 6% 70%);
-  --line: hsl(var(--h) 6% 23%); --field-line: hsl(var(--h) 6% 42%);
-  --accent: hsl(var(--h) var(--s) 68%); --accent-fg: hsl(var(--h) 30% 9%); --accent-soft: hsl(var(--h) 25% 20%);
-  --note-bg: hsl(var(--h) 20% 17%); --note-fg: hsl(var(--h) 40% 80%);
+    --bg: #0a0a0a; --surface: #151515; --fg: #efefef; --muted: #a0a0a0;
+    --line: #262626; --field-line: #454545;
+    --accent: hsl(var(--h) var(--s) 68%); --accent-fg: hsl(var(--h) 30% 9%); --accent-soft: hsl(var(--h) 40% 16%);
+    --note-bg: hsl(var(--h) 25% 13%); --note-fg: hsl(var(--h) 45% 84%); --danger: #f5a524;
 }
+:root[data-theme="dark"]:not([data-art]) { --fill: #b11226; --fill-ink: #ffffff; }
+.btn.primary, .topbar .btn.primary, .pager button[aria-current="page"] { background: var(--fill); color: var(--fill-ink); border-color: var(--fill); }
+.btn.primary:hover { background: color-mix(in srgb, var(--fill) 86%, var(--fg)); }
+body.home .topbar .btn.primary { color: var(--fill-ink); }
+.picker { background: var(--fill); color: var(--fill-ink); }
+.optstoggle .optcount { background: var(--fill); color: var(--fill-ink); }
+.curve .bar i { background: var(--accent); }
+.topbar .btn:hover { border-color: var(--accent); }
+.topbar .searchrow input:focus { border-color: var(--accent); }
+.topbar .searchrow input:focus-visible { outline-color: var(--accent); }
 html, body { overflow-x: clip; }
 body { background: var(--bg); }
 .topbar { background: var(--bar); }
@@ -1859,8 +1872,8 @@ function renderHero() {
   if (arts[1]) art.style.setProperty("--art2", `url("${arts[1]}")`); else art.style.removeProperty("--art2");
   sizeHero();
   if (pairing) return;
-  const paint = (h, sat) => { root.style.setProperty("--h", h); root.style.setProperty("--s", sat + "%"); };
-  if (!c) { root.style.removeProperty("--h"); root.style.removeProperty("--s"); return; }
+  const paint = (h, sat) => { root.style.setProperty("--h", h); root.style.setProperty("--s", sat + "%"); root.dataset.art = "1"; };
+  if (!c) { root.style.removeProperty("--h"); root.style.removeProperty("--s"); delete root.dataset.art; return; }
   const key = c.name;
   const fallback = () => paint(IDENTITY_HUES[(c.colors || "c")[0]] ?? 40, 45);
   if (!arts[0]) return fallback();
