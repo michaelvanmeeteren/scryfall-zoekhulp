@@ -773,6 +773,8 @@ body { line-height: 1.5; font-weight: 300; }
 .brandbtn, .rtitle, .rtitle.syntax .for, .cmdrask, .list h2, .settings h2, .listsub, .deckrow.has #deckinfo { font-weight: 200; letter-spacing: -0.01em; }
 #cmdrrow.has #cmdrchip { font-weight: 200; letter-spacing: -0.015em; line-height: 1.15; }
 .rtitle .for { font-weight: 200; letter-spacing: -0.01em; }
+/* The logo takes the color of the text around it, so it works on the banner and in both themes. */
+.brandlogo { display: inline-block; flex: none; width: 1.5em; height: 1.5em; background: currentColor; -webkit-mask: url(logo.svg) center / contain no-repeat; mask: url(logo.svg) center / contain no-repeat; }
 </style>
 </head>
 <body>
@@ -781,7 +783,7 @@ body { line-height: 1.5; font-weight: 300; }
 <div id="identity" class="identity" aria-hidden="true"></div>
 
 <header class="topbar">
-  <button id="home" class="brandbtn" type="button" title="Back to the start"><img class="brandlogo" src="logo.svg" alt="">SpellSeekr</button>
+  <button id="home" class="brandbtn" type="button" title="Back to the start"><span class="brandlogo" aria-hidden="true"></span>SpellSeekr</button>
   <div id="cmdrtop" class="cmdrtop"></div>
   <form id="searchform" class="searchrow">
     <div id="modeswitch" class="modeswitch" role="group" aria-label="What the search bar does" hidden
