@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SpellSeekr</title>
+<meta name="description" content="Describe the Magic: The Gathering cards you want in plain words and find Commander-legal cards for your deck.">
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <script>try { const t = JSON.parse(localStorage.getItem("szh.theme")); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -85,12 +86,12 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .btn:hover { border-color: var(--accent); }
 .btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
 .btn.small { padding: 5px 10px; font-size: 13px; }
-.btn:disabled { opacity: 0.55; cursor: default; }
+.btn:disabled, .btn:disabled:hover { background: var(--surface); color: var(--muted); border-color: var(--line); cursor: default; }
 .hint { margin: 0; color: var(--muted); font-size: 13px; }
 
 .queryrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .queryrow input { flex: 1 1 260px; min-width: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); font-family: var(--mono); font-size: 14px; }
-.chip { font-family: var(--mono); font-size: 12.5px; padding: 3px 8px; border-radius: 3px; background: var(--accent-soft); color: var(--fg); white-space: nowrap; }
+.chip { font-size: 12.5px; padding: 3px 8px; border-radius: 3px; background: var(--accent-soft); color: var(--fg); white-space: nowrap; }
 .queryrow a { font-size: 13px; color: var(--accent); white-space: nowrap; }
 .explain { margin: 0; font-size: 13px; color: var(--muted); }
 .explain a { color: var(--accent); }
@@ -119,7 +120,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min, 150px), 100%), 1fr)); gap: 14px; }
 .sizer { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
 .sizer button { width: 30px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); font-size: 16px; font-weight: 700; line-height: 1; }
-.sizer button:disabled { opacity: 0.4; cursor: default; }
+.sizer button:disabled { color: var(--muted); background: transparent; cursor: default; }
 .card { position: relative; display: grid; width: 100%; gap: 4px; padding: 0; border: 0; background: none; text-align: left; }
 .card img { width: 100%; aspect-ratio: 488 / 680; border-radius: 4.75% / 3.5%; display: block; background: var(--line); box-shadow: var(--shadow); transition: transform 0.12s; }
 .card:hover img { transform: translateY(-2px); }
@@ -127,7 +128,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .tile.picked .card img { outline: 3px solid var(--accent); outline-offset: 1px; }
 .picker { position: absolute; top: 6px; right: 6px; display: flex; align-items: center; border-radius: 3px; background: var(--accent); color: var(--accent-fg); box-shadow: var(--shadow); overflow: hidden; }
 .picker .minus { width: 30px; height: 28px; padding: 0; border: 0; border-right: 1px solid color-mix(in srgb, var(--accent-fg) 30%, transparent); background: transparent; color: inherit; font-size: 17px; font-weight: 700; line-height: 1; }
-.picker .minus:hover { background: rgb(0 0 0 / 0.18); }
+.picker .minus:hover { background: var(--overlay-soft); }
 .picker .badge { min-width: 28px; height: 28px; padding: 0 9px 0 7px; font-weight: 700; display: grid; place-items: center; font-variant-numeric: tabular-nums; }
 .picker .check { min-width: 30px; height: 28px; padding: 0 8px; font-weight: 700; display: grid; place-items: center; }
 .list li.single { grid-template-columns: minmax(0, 1fr) auto; }
@@ -150,7 +151,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .qty button, .remove { width: 24px; height: 24px; border-radius: 4px; border: 1px solid var(--line); background: var(--surface); padding: 0; line-height: 1; }
 .qty span { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
 .list .cardname { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.list .cardname small { color: var(--muted); font-family: var(--mono); font-size: 11.5px; margin-left: 4px; }
+.list .cardname small { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; margin-left: 4px; }
 .remove { color: var(--muted); }
 .list li.grouphead { display: block; padding: 10px 0 3px; border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
 .list li.grouphead:first-child { padding-top: 2px; }
@@ -158,10 +159,10 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 @keyframes pop { 0% { transform: scale(0.4); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
 .list li.flash { animation: flash 1.2s ease-out; }
 @keyframes flash { from { background: color-mix(in srgb, var(--accent) 30%, transparent); } to { background: transparent; } }
-@media (prefers-reduced-motion: reduce) { .curve .bar i { transition: none; } .picker.pop, .list li.flash, .copybtn.copied { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .picker.pop, .list li.flash, .copybtn.copied { animation: none; } }
 .curve { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; height: 74px; align-items: end; }
 .curve .bar { display: grid; grid-template-rows: auto 1fr auto; height: 100%; text-align: center; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.curve .bar i { align-self: end; display: block; height: 0; border-radius: 2px 2px 0 0; background: var(--accent); transition: height 0.3s ease-out; }
+.curve .bar i { align-self: end; display: block; height: 0; border-radius: 2px 2px 0 0; background: var(--accent); }
 .curve .bar b { font-weight: 600; padding-top: 2px; border-top: 1px solid var(--line); }
 .list .emptylist { color: var(--muted); font-size: 13.5px; margin: 0; }
 .exportopts { display: flex; gap: 12px; font-size: 13px; flex-wrap: wrap; }
@@ -177,11 +178,11 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 
 .foot { padding: 0 max(16px, 3vw) 20px; color: var(--muted); font-size: 12px; }
 
-#preview { position: fixed; z-index: 20; width: 300px; pointer-events: none; border-radius: 14px; box-shadow: 0 8px 30px rgb(0 0 0 / 0.35); }
+#preview { position: fixed; z-index: 20; width: 300px; pointer-events: none; border-radius: 14px; box-shadow: 0 8px 30px var(--float-shadow); }
 .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 4px; font-size: 14px; z-index: 30; }
 
 .settings { width: min(460px, calc(100% - 32px)); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--fg); padding: 18px; box-shadow: var(--shadow); }
-.settings::backdrop { background: rgb(0 0 0 / 0.4); }
+.settings::backdrop { background: var(--overlay); }
 .settings form { display: grid; gap: 10px; }
 .settings h2 { margin: 0; font-size: 17px; }
 .settings label { display: grid; gap: 4px; font-size: 13.5px; font-weight: 600; }
@@ -201,13 +202,13 @@ h2, .help h3 { font-family: var(--serif); font-weight: 700; letter-spacing: 0.01
 .help h3 { margin: 6px 0 2px; font-size: 15px; }
 .help p { margin: 0; font-size: 14px; }
 /* Search | Refine slider: a gold block slides under the chosen side */
-.modeswitch { position: relative; flex: none; display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border: 1px solid #3a3220; border-radius: 6px; }
+.modeswitch { position: relative; flex: none; display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border: 1px solid var(--bar-line); border-radius: 6px; }
 .modeswitch[hidden], body.home .modeswitch { display: none; }
 .modeswitch::before { content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); border-radius: 4px;
   background: var(--gold); transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .modeswitch.refining::before { transform: translateX(100%); }
 .modeswitch button { position: relative; padding: 0 12px; border: 0; background: none; color: var(--bar-fg); font-weight: 600; font-size: 13px; transition: color 0.22s; }
-.modeswitch button[aria-pressed="true"] { color: #0b0b0c; }
+.modeswitch button[aria-pressed="true"] { color: var(--ink-on-gold); }
 @media (prefers-reduced-motion: reduce) { .modeswitch::before { transition: none; } }
 .refinechain { align-self: center; flex: 0 1 auto; max-width: 45%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
   color: var(--gold); font-size: 14px; font-weight: 600; }
@@ -254,11 +255,11 @@ body.home #cmdrchip { font-size: 18px; }
 .iconbtn { display: inline-flex; align-items: center; justify-content: center; }
 .iconbtn svg { fill: currentColor; }
 .moremenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 50; display: grid; gap: 2px; min-width: 150px; padding: 6px;
-  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 8px 24px rgb(0 0 0 / 0.35); }
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 8px 24px var(--float-shadow); }
 .moremenu .btn, .topbar .moremenu .btn { justify-content: flex-start; text-align: left; border-color: transparent; background: none; color: var(--fg); }
 .moremenu .btn:hover { background: var(--accent-soft); }
 /* the gold search button keeps dark text on the start screen too */
-body.home .topbar .btn.primary { color: #0b0b0c; }
+body.home .topbar .btn.primary { color: var(--ink-on-gold); }
 html.mobile .cmdrask { font-size: 22px; }
 html.mobile .rtitle { font-size: 22px; }
 html.mobile .cmdrpick .chip, html.mobile #cmdrchip { max-width: none; white-space: normal; overflow: visible; }
@@ -274,13 +275,13 @@ html.mobile body.home .topbar .cmdrtop { order: 0; flex-basis: 100%; }
 .settings textarea { width: 100%; font-family: var(--mono); font-size: 12.5px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); padding: 8px; }
 .deckrow { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; }
 .tile.owned .card img { opacity: 0.5; }
-.ownedbadge { position: absolute; top: 6px; left: 6px; padding: 2px 7px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.06em; background: var(--fg); color: var(--bg); font-size: 11.5px; font-weight: 700; pointer-events: none; }
+.ownedbadge { position: absolute; top: 6px; left: 6px; padding: 2px 7px; border-radius: 3px; background: var(--fg); color: var(--bg); font-size: 11.5px; font-weight: 700; pointer-events: none; }
 .grid.hideowned .tile.owned { display: none; }
 html.mobile .cmdrform input { width: 100%; font-size: 16px; }
 html.mobile .cmdrform { flex: 1 1 100%; }
 .listhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .linkbtn { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; font-size: inherit; }
-.mobilebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 22; display: flex; gap: 10px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -4px 14px rgb(0 0 0 / 0.1); }
+.mobilebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 22; display: flex; gap: 10px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); }
 .mobilebar .btn { flex: 1; min-height: 48px; font-size: 15px; }
 .mobilebar .btn:first-child { text-align: left; overflow: hidden; text-overflow: ellipsis; }
 
@@ -321,20 +322,20 @@ html:not(.mobile) .mobilebar { display: none !important; }
 /* ---------- Scryfall-like layout ----------
    Home: a big centered search. Results: a sticky top bar with the search, an info strip and a full-width grid.
    The card list slides in from the right. */
-:root { --bar: #100e0b; --bar-fg: #f4efe4; --bar-line: #332d24; --gold: #dcb152; }
+:root { --bar: #100e0b; --bar-fg: #f4efe4; --bar-line: #332d24; --bar-field: #1b1a1d; --bar-placeholder: #8c8677; --gold: #dcb152; --ink-on-gold: #0b0b0c; --overlay: rgb(0 0 0 / 0.45); --overlay-soft: rgb(0 0 0 / 0.18); --float-shadow: rgb(0 0 0 / 0.35); --badge-bg: rgb(11 11 12 / 0.8); }
 .topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 14px; padding: 10px max(16px, 2vw);
   background: var(--bar); color: var(--bar-fg); border-bottom: 1px solid var(--bar-line); }
 .brandbtn { background: none; border: 0; padding: 0; color: var(--gold); font-family: var(--serif); font-weight: 700; font-size: 22px; letter-spacing: 0.01em; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.3em; }
 .brandlogo { width: 1.25em; height: 1.25em; }
-.tagline { display: none; margin: 0; color: #a39d8c; font-size: 14px; }
+.tagline { display: none; margin: 0; color: var(--muted); font-size: 14px; }
 .topbar .searchrow { flex: 1; max-width: 760px; }
-.topbar .searchrow input { background: #1b1a1d; border-color: #3a3220; color: var(--bar-fg); }
-.topbar .searchrow input::placeholder { color: #8c8677; }
+.topbar .searchrow input { background: var(--bar-field); border-color: var(--bar-line); color: var(--bar-fg); }
+.topbar .searchrow input::placeholder { color: var(--bar-placeholder); }
 .topbuttons { margin-left: auto; display: flex; gap: 6px; }
-.topbar .btn { background: transparent; color: var(--bar-fg); border-color: #3a3220; }
+.topbar .btn { background: transparent; color: var(--bar-fg); border-color: var(--bar-line); }
 .topbar .btn:hover { border-color: var(--gold); }
-.topbar .btn.primary { background: var(--gold); color: #0b0b0c; border-color: var(--gold); }
-#listcount { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 3px; background: var(--gold); color: #0b0b0c; font-weight: 700; text-align: center; }
+.topbar .btn.primary { background: var(--gold); color: var(--ink-on-gold); border-color: var(--gold); }
+#listcount { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 3px; background: var(--gold); color: var(--ink-on-gold); font-weight: 700; text-align: center; }
 
 /* home view: the bar becomes a large centered search, like Scryfall's front page */
 body.home .topbar { position: static; flex-direction: column; justify-content: center; padding: 11vh 16px 34px; gap: 12px; border-bottom: 0; background: transparent; color: var(--fg); }
@@ -370,26 +371,26 @@ section.home { max-width: 760px; margin: 0 auto; display: grid; gap: 22px; }
 
 /* the card list drawer */
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 40; width: min(400px, 100%); overflow: auto; display: grid; gap: 14px; align-content: start;
-  padding: 14px; background: var(--bg); border-left: 1px solid var(--line); box-shadow: -10px 0 30px rgb(0 0 0 / 0.35);
+  padding: 14px; background: var(--bg); border-left: 1px solid var(--line); box-shadow: -10px 0 30px var(--float-shadow);
   transform: translateX(105%); transition: transform 0.18s ease-out; }
 .drawer.open { transform: none; }
-.scrim { position: fixed; inset: 0; z-index: 35; background: rgb(0 0 0 / 0.45); }
+.scrim { position: fixed; inset: 0; z-index: 35; background: var(--overlay); }
 .drawer .list { position: static; max-height: none; }
 @media (prefers-reduced-motion: reduce) { .drawer { transition: none; } }
 
 /* "i" button on a card, and the card page */
 .infobtn { position: absolute; left: 6px; bottom: 30%; width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 1px solid var(--gold);
-  background: rgb(11 11 12 / 0.8); color: var(--gold); font-family: var(--serif); font-weight: 700; font-style: italic; font-size: 15px; line-height: 1;
+  background: var(--badge-bg); color: var(--gold); font-family: var(--serif); font-weight: 700; font-style: italic; font-size: 15px; line-height: 1;
   opacity: 0; transition: opacity 0.12s; }
 .tile:hover .infobtn, .infobtn:focus-visible, html.mobile .infobtn { opacity: 1; }
 .flipbtn { position: absolute; right: 6px; bottom: 30%; width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 1px solid var(--gold);
-  background: rgb(11 11 12 / 0.8); color: var(--gold); font-size: 17px; line-height: 1; }
-.flipbtn:hover, .tile.flipped .flipbtn { background: var(--gold); color: #0b0b0c; }
+  background: var(--badge-bg); color: var(--gold); font-size: 17px; line-height: 1; }
+.flipbtn:hover, .tile.flipped .flipbtn { background: var(--gold); color: var(--ink-on-gold); }
 html.mobile .flipbtn { width: 36px; height: 36px; font-size: 20px; }
 .cd-imgbox { display: grid; gap: 8px; justify-items: center; }
 .carddialog { width: min(860px, calc(100% - 24px)); max-height: calc(100vh - 32px); overflow: auto; }
-.cardpage { display: grid; grid-template-columns: minmax(0, 300px) 1fr; gap: 20px; align-items: start; }
-@media (max-width: 640px) { .cardpage { grid-template-columns: 1fr; } }
+.cardpage { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 640px) { .cardpage { grid-template-columns: minmax(0, 1fr); } }
 .cardpage img { width: 100%; border-radius: 4.75% / 3.5%; display: block; }
 .cardpage h2 { font-size: 26px; margin: 0; }
 .cardpage .cost { font-family: var(--mono); color: var(--muted); font-size: 14px; }
@@ -503,7 +504,7 @@ html.mobile body.home .cmdrart img { width: 92px; height: 68px; }
 .cardpage mark { background: color-mix(in srgb, var(--gold) 34%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
 
 /* added or removed: the message offers Undo */
-.toast { display: flex; align-items: center; gap: 14px; box-shadow: 0 6px 20px rgb(0 0 0 / 0.3); }
+.toast { display: flex; align-items: center; gap: 14px; box-shadow: 0 6px 20px var(--float-shadow); }
 .toast[hidden] { display: none; }
 .toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .toast button { flex: none; padding: 4px 2px; border: 0; background: none; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
@@ -579,7 +580,7 @@ body.home .topbar { background: transparent; }
 .identity:empty { display: none; }
 .identity i { flex: 1; }
 ::selection { background: var(--accent); color: var(--accent-fg); }
-html { scrollbar-color: var(--line) transparent; }
+html { scrollbar-color: var(--line) transparent; caret-color: var(--accent); }
 .brandbtn, .rtitle, .cmdrask, .rtitle.syntax .for { font-weight: 400; }
 .brandbtn { letter-spacing: -0.01em; }
 body.home .brandbtn { font-size: clamp(40px, 6vw, 64px); letter-spacing: -0.02em; }
@@ -600,7 +601,19 @@ html.mobile .rtitle { font-size: 25px; }
 .card .name { font-weight: 500; }
 .optspanel { border-color: transparent; }
 .list li.grouphead { letter-spacing: 0; text-transform: none; font-size: 13px; }
-@media (prefers-reduced-motion: reduce) { .card img { transition: none; } .card:hover img { transform: none; } }
+/* a press shows on every control; the filters' Scryfall terms stay code */
+.btn:not(:disabled):active, .pager button:active, .fchips button:active, .qty button:active, .remove:active, .sizer button:not(:disabled):active, .modeswitch button:active { transform: translateY(1px); }
+.card:active img { transform: scale(0.985); }
+#filters { font-family: var(--mono); }
+.btn.primary:disabled, .btn.primary:disabled:hover, .topbar .btn.primary:disabled { background: var(--accent-soft); color: var(--muted); border-color: var(--line); }
+/* phone: the logo and ••• share one line, Import deck and Help are in the menu */
+html.mobile .topbuttons > #deckbutton, html.mobile .topbuttons > [data-openhelp] { display: none; }
+html.mobile .menuonly { display: block; }
+html.mobile .moremenu .btn { min-height: 44px; font-size: 15px; }
+html.mobile body:not(.home) .topbar { padding-top: 8px; padding-bottom: 8px; row-gap: 8px; }
+html.mobile .qchips { gap: 4px; }
+html.mobile .qchips button { padding: 2px 6px 2px 9px; }
+@media (prefers-reduced-motion: reduce) { .card img { transition: none; } .card:hover img, .card:active img { transform: none; } .btn:active, .pager button:active, .fchips button:active, .qty button:active, .remove:active, .sizer button:active, .modeswitch button:active { transform: none; } }
 html.mobile .cmdrresults .cmdrart img { width: 44px; height: 32px; border-radius: 5px; }
 html.mobile .cmdrresults:not(:empty) { margin-bottom: 10px; }
 </style>
