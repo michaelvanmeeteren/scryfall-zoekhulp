@@ -647,24 +647,24 @@ html.mobile .cmdrresults:not(:empty) { margin-bottom: 10px; }
   --gold: var(--fill); --ink-on-gold: var(--fill-ink);
   --bar: var(--surface); --bar-fg: var(--fg); --bar-line: var(--line); --bar-field: var(--bg); --bar-placeholder: var(--muted);
   --deep: #0a0a0a; --deep-2: #0a0a0a; --deep-line: #262626;
-  --on-deep: hsl(var(--h) 20% 97%); --on-deep-2: hsl(var(--h) 18% 80%); --on-deep-accent: hsl(var(--h) var(--s) 76%);
-  --on-deep-well: hsl(var(--h) 25% 9%); --on-deep-line: hsl(var(--h) 18% 44%);
+  --on-deep: #efefef; --on-deep-2: #c8c8c8; --on-deep-accent: #efefef;
+  --on-deep-well: #0a0a0a; --on-deep-line: #454545;
   --gutter: max(16px, 2vw);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0a0a0a; --surface: #151515; --fg: #efefef; --muted: #a0a0a0;
     --line: #262626; --field-line: #454545;
-    --accent: hsl(var(--h) var(--s) 68%); --accent-fg: hsl(var(--h) 30% 9%); --accent-soft: hsl(var(--h) 40% 16%);
-    --note-bg: hsl(var(--h) 25% 13%); --note-fg: hsl(var(--h) 45% 84%); --danger: #f5a524;
+    --accent: #efefef; --accent-fg: #0a0a0a; --accent-soft: #1c1c1c;
+    --note-bg: #151515; --note-fg: #efefef; --danger: #f5a524;
   }
   :root:not([data-theme="light"]) { --fill: #b11226; --fill-ink: #ffffff; }
 }
 :root[data-theme="dark"] {
     --bg: #0a0a0a; --surface: #151515; --fg: #efefef; --muted: #a0a0a0;
     --line: #262626; --field-line: #454545;
-    --accent: hsl(var(--h) var(--s) 68%); --accent-fg: hsl(var(--h) 30% 9%); --accent-soft: hsl(var(--h) 40% 16%);
-    --note-bg: hsl(var(--h) 25% 13%); --note-fg: hsl(var(--h) 45% 84%); --danger: #f5a524;
+    --accent: #efefef; --accent-fg: #0a0a0a; --accent-soft: #1c1c1c;
+    --note-bg: #151515; --note-fg: #efefef; --danger: #f5a524;
 }
 :root[data-theme="dark"] { --fill: #b11226; --fill-ink: #ffffff; }
 .btn.primary, .topbar .btn.primary, .pager button[aria-current="page"] { background: var(--fill); color: var(--fill-ink); border-color: var(--fill); }
@@ -672,7 +672,7 @@ html.mobile .cmdrresults:not(:empty) { margin-bottom: 10px; }
 body.home .topbar .btn.primary { color: var(--fill-ink); }
 .picker { background: var(--fill); color: var(--fill-ink); }
 .optstoggle .optcount { background: var(--fill); color: var(--fill-ink); }
-.curve .bar i { background: var(--accent); }
+.curve .bar i { background: var(--fill); }
 .topbar .btn:hover { border-color: var(--accent); }
 .topbar .searchrow input:focus { border-color: var(--accent); }
 .topbar .searchrow input:focus-visible { outline-color: var(--accent); }
@@ -786,6 +786,10 @@ body:not(.home) .topbar .startchip { white-space: nowrap; }
 @media (max-width: 1399px) { body:not(.home) .starters { order: 5; flex-basis: 100%; } }
 html.mobile body:not(.home) .starters { order: 5; flex-basis: 100%; overflow-x: auto; scrollbar-width: none; }
 html.mobile body:not(.home) .starters .startor { display: none; }
+/* The accent marks what is chosen or filled; it stays crimson even though --accent itself is neutral in the dark theme. */
+.tile.picked .card img { outline-color: var(--fill); }
+.list.withdeck li.addedcard, .keyadded { box-shadow: inset 2px 0 0 var(--fill); }
+.keynote { border-left-color: var(--fill); }
 </style>
 </head>
 <body>
