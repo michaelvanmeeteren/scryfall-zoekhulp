@@ -784,12 +784,20 @@ body { line-height: 1.5; font-weight: 300; }
 .rtitle .for { font-weight: 200; letter-spacing: -0.01em; }
 /* The logo takes the color of the text around it, so it works on the banner and in both themes. */
 .brandlogo { display: inline-block; flex: none; width: 2.3em; height: 2.3em; margin-block: -0.4em; background: currentColor; -webkit-mask: url(logo.svg) center / contain no-repeat; mask: url(logo.svg) center / contain no-repeat; }
-/* Quick search stays in reach: beside the search bar in the results, on a line of its own where that doesn't fit. */
+/* Quick search stays in reach: directly under the search bar in the results. */
 body:not(.home) .topbar { flex-wrap: wrap; }
 body:not(.home) .starters { flex: none; flex-wrap: nowrap; justify-content: flex-start; gap: 6px; width: auto; }
 body:not(.home) .starters .startor { white-space: nowrap; font-size: 13px; }
 body:not(.home) .topbar .startchip { white-space: nowrap; }
-@media (max-width: 1399px) { body:not(.home) .starters { order: 5; flex-basis: 100%; } }
+@media (min-width: 1024px) {
+  html:not(.mobile) body:not(.home) .topbar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 14px; row-gap: 6px; }
+  html:not(.mobile) body:not(.home) .brandbtn { grid-area: 1 / 1; }
+  html:not(.mobile) body:not(.home) .topbar .searchrow { grid-area: 1 / 2; }
+  html:not(.mobile) body:not(.home) .starters { grid-area: 2 / 2; }
+  html:not(.mobile) body:not(.home) .topbuttons { grid-area: 1 / 3; }
+}
+@media (max-width: 1023px) { body:not(.home) .starters { order: 5; flex-basis: 100%; } }
+body:not(.home):has(#cmdrrow.has) .starters .startor { color: var(--on-deep); text-shadow: 0 1px 8px var(--on-deep-well); }
 html.mobile body:not(.home) .starters { order: 5; flex-basis: 100%; overflow-x: auto; scrollbar-width: none; }
 html.mobile body:not(.home) .starters .startor { display: none; }
 /* The accent marks what is chosen or filled; it stays crimson even though --accent itself is neutral in the dark theme. */
