@@ -2370,7 +2370,8 @@ function renderQueryChips(query) {
     b.prepend(text);
     b.addEventListener("click", () => {
       const before = { query: prev.query, zin: prev.zin };
-      stepSearch(terms.filter((_, j) => j !== i).join(" "), `${prev.zin} → without ${label}`);
+      const rest = terms.filter((_, j) => j !== i);
+      stepSearch(rest.join(" "), remainingTitle(rest));
       toast(`Took out ${label}`, { label: "Undo", run: () => stepSearch(before.query, before.zin) });
       const next = box.querySelector("button");
       if (next) next.focus();
@@ -2378,8 +2379,14 @@ function renderQueryChips(query) {
     box.append(b);
   });
 }
+// The title after taking a term out says what is still searched for; colors and sorting are no subject of their own.
+function remainingTitle(terms) {
+  const labels = terms.filter(t => !/^(?:id|identity|ci|commander|order|dir|direction)[:<>=]/i.test(t)).map(termLabel);
+  return labels.join(", ") || "All cards";
+}
 // A changed search that needs no translating, like taking a term out or undoing that.
 function stepSearch(query, zin) {
+  $("zin").value = "";   // the words typed earlier no longer describe this search
   showQuery(query, "");
   setTitle(zin);
   pushSearchUrl(query, zin);
