@@ -226,6 +226,51 @@ html.mobile .modeswitch button { padding: 7px 0; font-size: 14px; }
 .filterbar .fsel select { padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
 .chip .mana { width: 1.05em; height: 1.05em; vertical-align: -0.2em; margin-left: 3px; }
 .chip .mana:first-of-type { margin-left: 8px; }
+.pips { white-space: nowrap; }
+/* commander first: on the start screen it sits between the logo and the search bar */
+.cmdrtop { width: min(760px, 100%); }
+body:not(.home) .cmdrtop { display: none; }
+.cmdrask { flex-basis: 100%; margin: 0 0 4px; text-align: center; font-family: var(--serif); font-size: 26px; font-weight: 700; color: var(--fg); }
+body:not(.home) .cmdrask, body:not(.home) #cmdrskip, .cmdr.has .cmdrask, .cmdr.has #cmdrskip, .cmdr.has > .cmdrlabel { display: none; }
+body.home .cmdr:not(.has) > .cmdrlabel { display: none; }
+body.home #cmdrinput { width: min(340px, 70vw); font-size: 16px; padding: 9px 12px; }
+body.home .cmdr { margin-bottom: 14px; }
+/* the commander as a deck card: art, name, colors */
+.cmdrart { display: inline-flex; flex: none; }
+.cmdrart img { display: block; width: 58px; height: 42px; object-fit: cover; border-radius: 6px; }
+.cmdrart img + img { margin-left: -16px; outline: 2px solid var(--bg); }
+body.home .cmdrart img { width: 76px; height: 56px; border-radius: 8px; }
+#cmdrchip { padding: 0; background: none; font-family: var(--font); font-size: 15px; font-weight: 700; }
+body.home #cmdrchip { font-size: 18px; }
+.cmdrpick { gap: 10px; }
+.deckprogress { font-variant-numeric: tabular-nums; color: var(--muted); text-decoration: none; }
+.deckprogress:hover { color: var(--accent); }
+/* results: the question leads, the count follows */
+.rtitle { margin: 0; font-family: var(--serif); font-size: 28px; font-weight: 700; line-height: 1.15; overflow-wrap: anywhere; text-wrap: balance; }
+.rtitle .for { color: var(--muted); }
+.rtitle.syntax { font-family: var(--mono); font-size: 22px; font-weight: 600; }
+.rtitle.syntax .for { font-family: var(--serif); font-size: 26px; }
+.countline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.stripinfo .countline .count { font-family: var(--font); font-size: 13.5px; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+.fchips { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.fchips button { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px 2px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--fg); font-size: 12.5px; }
+.fchips button:hover { border-color: var(--accent); }
+.fchips svg { width: 12px; height: 12px; stroke: currentColor; stroke-width: 2.2; fill: none; }
+#pagertop { display: none !important; }
+/* header: a menu for the rarely used */
+.more { position: relative; }
+.iconbtn { display: inline-flex; align-items: center; justify-content: center; }
+.iconbtn svg { fill: currentColor; }
+.moremenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 50; display: grid; gap: 2px; min-width: 150px; padding: 6px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 8px 24px rgb(0 0 0 / 0.35); }
+.moremenu .btn, .topbar .moremenu .btn { justify-content: flex-start; text-align: left; border-color: transparent; background: none; color: var(--fg); }
+.moremenu .btn:hover { background: var(--accent-soft); }
+/* the gold search button keeps dark text on the start screen too */
+body.home .topbar .btn.primary { color: #0b0b0c; }
+html.mobile .cmdrask { font-size: 22px; }
+html.mobile .rtitle { font-size: 22px; }
+html.mobile .cmdrpick .chip, html.mobile #cmdrchip { max-width: none; white-space: normal; overflow: visible; }
+html.mobile body.home .topbar .cmdrtop { order: 0; flex-basis: 100%; }
 .help ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 14px; }
 .help code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
 
@@ -443,10 +488,11 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 
 <header class="topbar">
   <button id="home" class="brandbtn" type="button" title="Back to the start"><img class="brandlogo" src="logo.svg" alt="">SpellSeekr</button>
+  <div id="cmdrtop" class="cmdrtop"></div>
   <form id="searchform" class="searchrow">
     <div id="modeswitch" class="modeswitch" role="group" aria-label="What the search bar does" hidden
       title="Refine changes the results on screen. Tip: start with + to refine once.">
-      <button type="button" data-mode="search" aria-pressed="true">Search</button>
+      <button type="button" data-mode="search" aria-pressed="true">New</button>
       <button type="button" data-mode="refine" aria-pressed="false">Refine</button>
     </div>
     <span id="refinechain" class="refinechain" hidden></span>
@@ -456,9 +502,16 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
   <nav class="topbuttons" aria-label="Page">
     <button id="deckbutton" class="btn small" type="button" title="Import your own deck to see which cards you already have">Import deck</button>
     <button id="listtoggle" class="btn small" type="button" aria-controls="drawer">List<span id="listcount">0</span></button>
-    <button id="themetoggle" class="btn small" type="button"></button>
     <button class="btn small" type="button" data-openhelp>Help</button>
-    <button id="opensettings" class="btn small" type="button" aria-label="Settings">Settings</button>
+    <div class="more">
+      <button id="morebtn" class="btn small iconbtn" type="button" aria-label="More" aria-haspopup="menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+      </button>
+      <div id="moremenu" class="moremenu" role="menu" hidden>
+        <button id="themetoggle" class="btn small" type="button" role="menuitem"></button>
+        <button id="opensettings" class="btn small" type="button" role="menuitem">Settings</button>
+      </div>
+    </div>
   </nav>
 </header>
 
@@ -498,7 +551,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 
     <h3>Commander</h3>
     <ul>
-      <li>Set it under the search bar: every search stays in its colors. A color outside them is left out (in red).</li>
+      <li>Set it on the start screen: every search stays in its colors. A color outside them is left out (in red).</li>
       <li>Partner, Background or Doctor? <b>+ add partner</b> adds the second one.</li>
       <li>A <b>Companion</b> adds its deck rule to every search, e.g. Lurrus: permanents of 2 mana or less.</li>
       <li><b>EDHREC top cards</b> shows the cards most played with it, or type <i>recommended ramp for my commander</i>.</li>
@@ -553,8 +606,10 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
   <section id="start" class="home" aria-label="Start">
     <p id="nokey" class="keynote" hidden>Have the access code? <button class="linkbtn" type="button" data-opensettings>Enter it</button> for smarter translation by Claude.</p>
     <div id="cmdrhome"><div id="cmdrrow" class="cmdr">
+        <p id="cmdrask" class="cmdrask">Who's your commander?</p>
         <span class="cmdrlabel">Commander</span>
         <span id="cmdrpick" class="cmdrpick" hidden>
+          <span id="cmdrart" class="cmdrart"></span>
           <span id="cmdrchip" class="chip"></span>
           <button id="cmdrclear" class="linkbtn" type="button">remove</button>
         </span>
@@ -565,6 +620,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
           <datalist id="cmdrlist"></datalist>
           <button class="btn small" type="submit">Set</button>
         </form>
+        <button id="cmdrskip" class="linkbtn" type="button">or just search</button>
         <span id="cmdrnote" class="hint"></span>
         <label id="compwrap" class="compwrap" hidden><span class="cmdrlabel">Companion</span>
           <select id="compselect" aria-label="Companion"><option value="">none</option></select>
@@ -573,13 +629,15 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
             <option>instant</option><option>sorcery</option><option>planeswalker</option><option>battle</option>
           </select></label>
         <span id="compnote" class="hint"></span>
+        <button id="deckprogress" class="linkbtn deckprogress" type="button" hidden></button>
       </div></div>
   </section>
 
   <section id="results" class="results" aria-label="Results" hidden>
     <div id="toolbar" class="toolbar strip">
       <div class="stripinfo">
-        <span id="count" class="count"></span>
+        <h1 id="rtitle" class="rtitle"></h1>
+        <span class="countline"><span id="count" class="count"></span><span id="fchips" class="fchips"></span></span>
         <span id="uitleg" class="explain"></span>
       </div>
       <button id="optstoggle" class="btn small optstoggle" type="button" aria-expanded="false">Filters &amp; sort</button>
@@ -1136,8 +1194,28 @@ function resetFilters() {
   renderFilterbar();
 }
 
+// Active filters shown next to the count, each removable with one click.
+function renderFilterChips() {
+  const f = state.filters;
+  const chips = [];
+  const chip = (label, clear) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("aria-label", `Remove filter ${label}`);
+    b.innerHTML = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6"/></svg>';
+    b.prepend(label);
+    b.addEventListener("click", () => { clear(); renderFilterbar(); if (state.search) runSearch(state.search.query); });
+    chips.push(b);
+  };
+  for (const t of f.types) chip(t, () => f.types.delete(t));
+  for (const k of f.mv) chip(`mana value ${k}`, () => f.mv.delete(k));
+  if (f.price) chip(f.price, () => { f.price = ""; });
+  $("fchips").replaceChildren(...chips);
+}
+
 function renderFilterbar() {
   renderOptsToggle();
+  renderFilterChips();
   const bar = $("filterbar");
   bar.replaceChildren();
   bar.hidden = !state.search;
@@ -1191,18 +1269,54 @@ function renderCommander() {
   $("cmdrpair").textContent = pairing ? "cancel" : `+ add ${c && c.pair ? c.pair.label : "partner"}`;
   $("cmdrinput").placeholder = pairing ? `Name of the ${c.pair.label}` : "e.g. Atraxa";
   $("cmdrnote").textContent = "";
+  $("cmdrrow").classList.toggle("has", !!c && !pairing);
+  $("cmdrart").replaceChildren(...((c && c.arts) || []).filter(Boolean).map(src => {
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = "";
+    return img;
+  }));
   renderCompanion();
+  renderDeckProgress();
   if (c) {
     // the colors as Scryfall's own mana symbols
-    $("cmdrchip").replaceChildren(c.names.join(" + "), ...(c.colors || "c").toUpperCase().split("").map(x => {
+    const pips = document.createElement("span");
+    pips.className = "pips";   // the color symbols stay together on one line
+    pips.append(...(c.colors || "c").toUpperCase().split("").map(x => {
       const img = document.createElement("img");
       img.className = "mana";
       img.src = `https://svgs.scryfall.io/card-symbols/${x}.svg`;
       img.alt = x;
       return img;
     }));
+    $("cmdrchip").replaceChildren(c.names.map(n => n.split(",")[0]).join(" + "), pips);
     $("cmdrchip").title = c.names.join(" + ");
   }
+}
+
+// Commanders saved before the art was kept get it looked up once.
+async function fillCommanderArt() {
+  const c = state.commander;
+  if (!c || (c.arts && c.arts.every(Boolean))) return;
+  try {
+    const arts = [];
+    for (const n of c.names) {
+      const card = await scryfall("https://api.scryfall.com/cards/named?" + new URLSearchParams({ exact: n }));
+      arts.push(((card && (card.image_uris || (card.card_faces && card.card_faces[0].image_uris))) || {}).art_crop || "");
+    }
+    if (state.commander !== c) return;
+    c.arts = arts;
+    store.set("commander", c);
+    renderCommander();
+  } catch { /* no art this time */ }
+}
+
+// How full the deck is: the list against the 99 (or 98 with two commanders).
+function renderDeckProgress() {
+  const c = state.commander;
+  const total = state.list.reduce((n, x) => n + x.qty, 0);
+  $("deckprogress").hidden = !c;
+  if (c) $("deckprogress").textContent = `${total} / ${100 - c.names.length} in your list`;
 }
 
 // The commander card for a (partial) name; ambiguous names ("atraxa") give the most played commander containing it.
@@ -1254,15 +1368,16 @@ async function setCommander(name) {
   try {
     const card = await findCommander(name);
     const colors = "wubrg".split("").filter(c => (card.color_identity || []).map(x => x.toLowerCase()).includes(c)).join("");
+    const art = (card.image_uris || (card.card_faces && card.card_faces[0].image_uris) || {}).art_crop || "";
     const first = state.commander;
     if (pairing && first) {
       // two commanders: one name for the translator and EDHREC, the colors of both
       const both = "wubrg".split("").filter(c => (first.colors + colors).includes(c)).join("");
       const names = [first.names[0], card.name];
-      state.commander = { name: names.join(" + "), names, colors: both, pair: first.pair };
+      state.commander = { name: names.join(" + "), names, colors: both, pair: first.pair, arts: [(first.arts || [])[0] || "", art] };
       pairing = false;
     } else {
-      state.commander = { name: card.name, names: [card.name], colors, pair: pairFor(card) };
+      state.commander = { name: card.name, names: [card.name], colors, pair: pairFor(card), arts: [art] };
     }
     store.set("commander", state.commander);
     // close the suggestion list first: the browser may leave it floating where the (now hidden) field was
@@ -1310,7 +1425,8 @@ function showNothing(title, uitleg) {
   $("results").classList.add("nosearch");
   renderFilterbar();
   for (const id of ["grid", "pagertop", "pagerbottom"]) $(id).replaceChildren();
-  $("count").textContent = title;
+  $("count").textContent = "";
+  setTitle(title);
   message("");
 }
 
@@ -1383,7 +1499,8 @@ function showEdhrec(commanderName, tag, cards, uitleg) {
   for (let i = 0; i < cards.length; i += API_PAGE) cache.set(i / API_PAGE + 1, cards.slice(i, i + API_PAGE));
   state.search = { query: label, full: label, order: state.order, size: state.size, total: cards.length, cache, page: 1, static: true, warnings: [], details: null };
   setPrevious(null);
-  showQuery("", uitleg || `Most played cards in ${commanderName} decks on EDHREC${tag ? ` (${tag})` : ""}.`);
+  showQuery("", uitleg || "");
+  setTitle(`EDHREC top cards${tag ? ` · ${tag}` : ""}`);
   $("uitleg").textContent = companionRule() ? `Only cards that fit your companion: ${$("compnote").textContent}.` : "";
   setView(false);
   $("results").classList.add("static");
@@ -1566,7 +1683,8 @@ async function showPage(n) {
     // don't leave the cards and count of the previous search standing under the new query
     if (search === state.search) {
       for (const id of ["grid", "pagertop", "pagerbottom"]) $(id).replaceChildren();
-      $("count").textContent = "Search failed";
+      $("count").textContent = "";
+      setTitle("Search failed");
     }
     message(err.message, true);
   } finally {
@@ -1588,7 +1706,7 @@ function render(cards, page, pages) {
   const search = state.search;
   const grid = $("grid");
   grid.replaceChildren();
-  $("count").textContent = search.static ? `${plural(search.total, "card")} on EDHREC for ${state.edhrecFor}` : `${plural(search.total, "card")} found`;
+  $("count").textContent = search.static ? `${plural(search.total, "card")} · most played first` : plural(search.total, "card");
 
   const notes = [];
   if (search.total === 0) {
@@ -1745,7 +1863,7 @@ function renderPager(nav, page, pages) {
   label.className = "label";
   const first = (page - 1) * search.size + 1;
   const last = Math.min(page * search.size, search.total);
-  label.textContent = `Page ${page} of ${pages} · cards ${fmtNum(first)}–${fmtNum(last)} of ${fmtNum(search.total)}`;
+  label.textContent = `Page ${page} of ${pages}`;
   nav.append(label);
 }
 
@@ -1772,7 +1890,7 @@ function movePreview(e) {
 function hidePreview() { $("preview").hidden = true; }
 
 // ---------- card list ----------
-function saveList() { store.set("list", state.list); renderList(); refreshBadges(); }
+function saveList() { store.set("list", state.list); renderList(); refreshBadges(); renderDeckProgress(); }
 
 // The list is keyed by card name, so another printing of a card already in the list counts as the same card.
 let justAdded = "";   // name of the card added by the last click, animated once
@@ -2006,7 +2124,7 @@ function setView(home) {
   if (home && refining) setRefining(false);
   $("start").hidden = !home;
   $("results").hidden = home;
-  (home ? $("cmdrhome") : $("cmdrresults")).append($("cmdrrow"));
+  (home ? $("cmdrtop") : $("cmdrresults")).append($("cmdrrow"));
 }
 
 // The card page behind the "i" on a card.
@@ -2111,7 +2229,8 @@ function renderHistory() {
     b.append(zin, q);
     b.addEventListener("click", () => {
       $("zin").value = refining ? "" : h.zin;   // when refining, the steps are already shown before the field
-      showQuery(h.query, h.uitleg, h.combos);
+      showQuery(h.query, "", h.combos);
+      setTitle(h.zin);
       setPrevious(h.combos && h.combos.length ? null : { zin: h.zin, query: h.query });
       pushSearchUrl(h.query, h.zin);
       runSearch(h.query);
@@ -2163,6 +2282,23 @@ function refineExamples(query) {
   return options.filter(([fits]) => fits).map(([, text]) => text).slice(0, 2).join(", ");
 }
 
+// The heading of the results: what was asked, and for which commander.
+function setTitle(text) {
+  const t = String(text || "").trim();
+  const h = $("rtitle");
+  // Scryfall syntax is shown as typed; plain words start with a capital
+  const syntax = /\w:\S|[<>=]/.test(t);
+  h.classList.toggle("syntax", syntax);
+  h.replaceChildren(t && !syntax ? t[0].toUpperCase() + t.slice(1) : t);
+  const c = state.commander;
+  if (c && t && !/is:commander|commanders?\b/i.test(t)) {
+    const span = document.createElement("span");
+    span.className = "for";
+    span.textContent = ` for ${c.names.map(n => n.split(",")[0]).join(" + ")}`;
+    h.append(span);
+  }
+}
+
 // What to say under the count: a warning, an error or fallback, combos, or words the built-in translator skipped.
 // A normal search needs no running commentary: the cards are the answer.
 function shownUitleg(r) {
@@ -2205,6 +2341,7 @@ $("searchform").addEventListener("submit", async e => {
     return;
   }
   showQuery(result.query, shownUitleg(result), result.combos, result.warn);
+  setTitle(zin.replace(/^(\/s|!)\s*/i, ""));
   pushSearchUrl(result.query, zin);
   addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
   // a combo result is a list of card names, which makes no sense to refine; anything else can be
@@ -2240,6 +2377,7 @@ async function refineSearch(text) {
   const zin = `${prev.zin} → ${text}`;
   $("zin").value = "";
   showQuery(result.query, shownUitleg(result), result.combos, result.warn);
+  setTitle(zin);
   pushSearchUrl(result.query, zin);
   addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
   setPrevious(result.combos && result.combos.length ? null : { zin, query: result.query });
@@ -2342,7 +2480,8 @@ function searchFromUrl() {
   const query = params.get("q");
   if (!query) return false;
   $("zin").value = params.get("s") || query;
-  showQuery(query, params.get("s") ? "" : "Search from a link.");
+  showQuery(query, "");
+  setTitle((params.get("s") || query).replace(/^(\/s|!)\s*/i, ""));
   setPrevious({ zin: params.get("s") || query, query });
   resetFilters();
   runSearch(query);
@@ -2431,6 +2570,22 @@ $("themetoggle").addEventListener("click", () => {
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderThemeButton);
 renderThemeButton();
 
+// the More menu (theme and settings)
+function closeMore() { $("moremenu").hidden = true; $("morebtn").setAttribute("aria-expanded", "false"); }
+$("morebtn").addEventListener("click", e => {
+  e.stopPropagation();
+  const open = $("moremenu").hidden;
+  $("moremenu").hidden = !open;
+  $("morebtn").setAttribute("aria-expanded", String(open));
+});
+document.addEventListener("click", e => { if (!e.target.closest(".more")) closeMore(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeMore(); });
+$("opensettings").addEventListener("click", closeMore);
+
+// commander first: skipping it just goes to the search bar; the progress opens the list
+$("cmdrskip").addEventListener("click", () => $("zin").focus());
+$("deckprogress").addEventListener("click", () => openList());
+
 // help window
 document.querySelectorAll("[data-openhelp]").forEach(b => b.addEventListener("click", () => {
   $("helpdialog").showModal();
@@ -2484,6 +2639,7 @@ renderCommander();
 renderDeck();
 
 renderList();
+fillCommanderArt();
 fillListTypes();
 renderHistory();
 const last = store.get("last", "");
@@ -2495,7 +2651,7 @@ const savedEdhrec = store.get("lastEdhrec", null);
 const lastEdhrec = savedEdhrec && typeof savedEdhrec.name === "string" ? savedEdhrec : null;
 if (searchFromUrl()) { /* the link decides */ }
 else if (lastEdhrec) runEdhrec(lastEdhrec.name, lastEdhrec.tag || "", "");
-else if (last) { showQuery(last, ""); runSearch(last); }
+else if (last) { showQuery(last, ""); setTitle(last); runSearch(last); }
 // U1: on a computer the search field is ready for typing straight away
 if (!isMobile && document.body.classList.contains("home")) $("zin").focus();
 </script>
