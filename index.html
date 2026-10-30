@@ -1098,7 +1098,7 @@ const store = {
 // A device with a sync code keeps when each setting and each list card last changed, and removed cards as well.
 // The Worker stores one document per code. Devices merge it with their own data: the list card by card, everything
 // else newest first. A write based on an old revision is refused, so a device can't overwrite what it hasn't seen.
-const SYNC_KEYS = ["commander", "companion", "umoritype", "deck", "deckcounts", "hideowned", "history", "order", "size"];
+const SYNC_KEYS = ["commander", "companion", "umoritype", "deck", "deckcounts", "decktext", "hideowned", "history", "order", "size"];
 const SYNC_KEEP_REMOVED = 180 * 86400000;   // how long a removed card is remembered, in ms
 const SYNC_CODE = /^[a-z2-9]{4}(-[a-z2-9]{4}){5}$/;
 let sync = store.get("sync", null);         // { code, rev, dirty, at: {key: ms}, listAt: {name: ms}, gone: {name: ms}, last: ms }
@@ -3726,7 +3726,11 @@ $("cmdrclear").addEventListener("click", () => {
   renderCommander();
   rerunForCommander();
 });
-function openDeckImport() { $("decktext").value = ""; $("deckdialog").showModal(); $("decktext").focus(); }
+// The deck as it was pasted, so it can be changed; decks imported before this was kept are written out from their names.
+function currentDeckText() {
+  return store.get("decktext", "") || deckEntries().map(([name, qty]) => `${qty} ${name}`).join("\n");
+}
+function openDeckImport() { $("decktext").value = currentDeckText(); $("deckdialog").showModal(); $("decktext").focus(); }
 $("importdeck").addEventListener("click", openDeckImport);
 $("deckbutton").addEventListener("click", openDeckImport);
 $("deckmenu").addEventListener("click", () => { closeMore(); openDeckImport(); });
@@ -3737,6 +3741,7 @@ $("deckform").addEventListener("submit", e => {
   state.deckCounts = parsed.counts;
   store.set("deck", [...state.deck]);
   store.set("deckcounts", state.deckCounts);
+  store.set("decktext", $("decktext").value);
   renderDeck();
   const total = deckEntries().reduce((n, [, qty]) => n + qty, 0);
   toast(total ? `Deck saved: ${plural(total, "card")}` : "No cards found in that text.");
@@ -3746,6 +3751,7 @@ $("removedeck").addEventListener("click", () => {
   state.deckCounts = {};
   store.set("deck", []);
   store.set("deckcounts", {});
+  store.set("decktext", "");
   renderDeck();
   $("deckdialog").close();
   toast("Deck removed");
