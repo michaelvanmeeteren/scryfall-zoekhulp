@@ -136,7 +136,7 @@ Commander knowledge (all syntax and tags below are checked against Scryfall):
 - Player slang: dork = otag:mana-dork, rock = otag:mana-rock, cantrip = otag:cantrip, tutor = otag:tutor,
   fixing / land ramp = otag:land-ramp, wheel = otag:wheel, draw engine = otag:draw-engine, wincon / alt win =
   otag:win-condition, extra turns = otag:extra-turn, extra combat = otag:extra-combat, recursion = otag:regrowth,
-  graveyard hate = otag:hate-graveyard, protection = otag:protects-creature, evasion = otag:gives-evasion,
+  graveyard hate = otag:hate-graveyard, protection = otag:protection, evasion = otag:gives-evasion,
   ETB = "enters" effects (is:etb), lord = otag:lord, anthem = otag:anthem, game changers (Commander brackets) = is:gamechanger,
   punishing opponents for drawing = otag:draw-hate.
   "staples" / "best" / "must-haves" = add order:edhrec (most played first).
