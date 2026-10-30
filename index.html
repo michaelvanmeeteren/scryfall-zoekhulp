@@ -453,7 +453,10 @@ html.mobile .infobtn { width: 34px; height: 34px; font-size: 18px; }
 /* the commander in the results: a compact line; on a phone just the card, the rest comes with Filters & sort */
 .cmdrresults:not(:empty) { margin-bottom: 12px; }
 html.mobile #results:not(.opts) .cmdrresults :is(#compwrap, #compnote, #cmdrpair, #cmdrclear, #cmdrnote) { display: none; }
-html.mobile #results:not(.opts) .cmdrresults .cmdr:not(.has) { display: none; }
+html.mobile #results:not(.opts) .cmdrresults .cmdr:not(.has):not(.pairing) { display: none; }
+html.mobile #results:not(.opts) .cmdrresults .pairing #cmdrpair { display: inline-flex; }
+body:not(.home) #cmdrrow.pairing .cmdrask { display: block; }
+body:not(.home) #cmdrrow.pairing #cmdrskip { display: inline; }
 /* phones: a closed drawer must not exist in the layout, or Android Chrome widens the page to include it */
 html.mobile .drawer:not(.open) { display: none; }
 @media (max-width: 899px) { .drawer:not(.open) { display: none; } }
@@ -1834,6 +1837,7 @@ function renderHero() {
   if (arts[0]) art.style.setProperty("--art", `url("${arts[0]}")`); else art.style.removeProperty("--art");
   if (arts[1]) art.style.setProperty("--art2", `url("${arts[1]}")`); else art.style.removeProperty("--art2");
   sizeHero();
+  if (pairing) return;
   const paint = (h, sat) => { root.style.setProperty("--h", h); root.style.setProperty("--s", sat + "%"); };
   if (!c) { root.style.removeProperty("--h"); root.style.removeProperty("--s"); return; }
   const key = c.name;
@@ -1861,23 +1865,32 @@ function renderCommander() {
   const c = state.commander;
   const canPair = !!(c && c.pair && c.names.length === 1);
   if (!canPair) pairing = false;
-  $("cmdrpick").hidden = !c;
+  $("cmdrpick").hidden = !c || pairing;
   $("cmdrform").hidden = !!c && !pairing;
   $("cmdrpair").hidden = !canPair;
   $("cmdrpair").textContent = pairing ? "cancel" : `+ add ${c && c.pair ? c.pair.label : "partner"}`;
   $("cmdrinput").placeholder = pairing ? `Name of the ${c.pair.label}` : "e.g. Atraxa";
   $("cmdrnote").textContent = "";
   $("cmdrrow").classList.toggle("has", !!c && !pairing);
+  $("cmdrrow").classList.toggle("pairing", pairing);
+  $("cmdrask").textContent = pairing ? `Add a ${c.pair.label} for ${commanderShort()}` : "Who's your commander?";
+  $("cmdrskip").textContent = pairing ? `or continue with just ${commanderShort()}` : "or just search";
   $("cmdrart").replaceChildren(...((c && c.arts) || []).filter(Boolean).map(src => {
     const img = document.createElement("img");
     img.src = src;
     img.alt = "";
     return img;
   }));
-  renderCompanion();
-  renderDeckProgress();
+  if (pairing) {
+    $("compwrap").hidden = true;
+    $("compnote").textContent = "";
+    $("deckprogress").hidden = true;
+  } else {
+    renderCompanion();
+    renderDeckProgress();
+    loadCommanderEdh();
+  }
   renderStarters();
-  loadCommanderEdh();
   if (c) {
     // the colors as Scryfall's own mana symbols
     const pips = document.createElement("span");
@@ -1987,6 +2000,14 @@ function canBeCommander(card) {
 
 // A changed commander redoes the search on screen, but not from the start screen: there it only takes effect
 // for the next search.
+// Going on without a second commander.
+function finishPairing() {
+  pairing = false;
+  store.set("commander", state.commander);
+  $("cmdrinput").value = "";
+  $("cmdrlist").replaceChildren();
+  renderCommander();
+}
 function rerunForCommander() {
   if (state.search && !document.body.classList.contains("home")) runSearch(state.search.query);
 }
@@ -2008,14 +2029,17 @@ async function setCommander(name) {
       pairing = false;
     } else {
       state.commander = { name: card.name, names: [card.name], colors, pair: pairFor(card), arts: [art], text, cards: [cardFacts(card)] };
+      pairing = !!state.commander.pair;   // wait for the second commander; it is saved once that is settled
     }
-    store.set("commander", state.commander);
+    if (!pairing) store.set("commander", state.commander);
     // close the suggestion list first: the browser may leave it floating where the (now hidden) field was
     $("cmdrinput").blur();
+    $("cmdrinput").value = "";
     $("cmdrlist").replaceChildren();
     clearTimeout(suggestTimer);
     renderCommander();
-    rerunForCommander();
+    if (pairing) $("cmdrinput").focus();
+    else rerunForCommander();
   } catch (err) {
     $("cmdrnote").textContent = err.message;
   }
@@ -2342,6 +2366,7 @@ function sortParams(order) {
 }
 
 async function runSearch(query, page = 1) {
+  if (pairing) finishPairing();   // searching without a second commander: go on with the first
   $("results").classList.remove("nosearch");
   query = query.trim();
   if (!query) return;
@@ -3520,7 +3545,10 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeMore();
 $("opensettings").addEventListener("click", closeMore);
 
 // commander first: skipping it just goes to the search bar; the progress opens the list
-$("cmdrskip").addEventListener("click", () => $("zin").focus());
+$("cmdrskip").addEventListener("click", () => {
+  if (pairing) { finishPairing(); rerunForCommander(); }
+  $("zin").focus();
+});
 $("deckprogress").addEventListener("click", () => openList());
 
 // help window
@@ -3543,6 +3571,7 @@ $("compselect").addEventListener("change", () => {
 });
 $("cmdrpair").addEventListener("click", () => {
   pairing = !pairing;
+  if (!pairing) state.commander = validCommander(store.get("commander", null));   // cancel: back to what was saved
   $("cmdrinput").value = "";
   $("cmdrlist").replaceChildren();
   renderCommander();
