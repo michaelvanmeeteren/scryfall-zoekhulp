@@ -454,9 +454,12 @@ html.mobile .infobtn { width: 34px; height: 34px; font-size: 18px; }
 .cmdrresults:not(:empty) { margin-bottom: 12px; }
 html.mobile #results:not(.opts) .cmdrresults :is(#compwrap, #compnote, #cmdrpair, #cmdrclear, #cmdrnote) { display: none; }
 html.mobile #results:not(.opts) .cmdrresults .cmdr:not(.has):not(.pairing) { display: none; }
-html.mobile #results:not(.opts) .cmdrresults .pairing #cmdrpair { display: inline-flex; }
 body:not(.home) #cmdrrow.pairing .cmdrask { display: block; }
-body:not(.home) #cmdrrow.pairing #cmdrskip { display: inline; }
+#cmdrrow.pairing { justify-content: center; }
+#cmdrrow.pairing #cmdrskip { display: none; }
+#cmdrrow.pairing .cmdrform { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; width: min(440px, 100%); flex: none; }
+#cmdrrow.pairing .cmdrform input { width: 100%; font-size: 16px; padding: 9px 12px; }
+#cmdrfirst { grid-column: 1 / -1; }
 /* phones: a closed drawer must not exist in the layout, or Android Chrome widens the page to include it */
 html.mobile .drawer:not(.open) { display: none; }
 @media (max-width: 899px) { .drawer:not(.open) { display: none; } }
@@ -939,6 +942,8 @@ body:not(.home):has(#cmdrrow.has) .topbar .btn:not(.primary), #results:has(#cmdr
         </span>
         <button id="cmdrpair" class="linkbtn" type="button" hidden></button>
         <form id="cmdrform" class="cmdrform">
+          <input id="cmdrfirst" type="text" autocomplete="off" spellcheck="false" aria-label="Commander name" list="cmdrfirstlist" hidden>
+          <datalist id="cmdrfirstlist"></datalist>
           <input id="cmdrinput" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. Atraxa" aria-label="Commander name" list="cmdrlist">
           <datalist id="cmdrlist"></datalist>
           <button class="btn small" type="submit">Set</button>
@@ -1867,14 +1872,15 @@ function renderCommander() {
   if (!canPair) pairing = false;
   $("cmdrpick").hidden = !c || pairing;
   $("cmdrform").hidden = !!c && !pairing;
-  $("cmdrpair").hidden = !canPair;
-  $("cmdrpair").textContent = pairing ? "cancel" : `+ add ${c && c.pair ? c.pair.label : "partner"}`;
-  $("cmdrinput").placeholder = pairing ? `Name of the ${c.pair.label}` : "e.g. Atraxa";
+  $("cmdrpair").hidden = !canPair || pairing;
+  $("cmdrpair").textContent = `+ add ${c && c.pair ? c.pair.label : "partner"}`;
+  $("cmdrinput").placeholder = pairing ? `${c.pair.label[0].toUpperCase()}${c.pair.label.slice(1)} (optional)` : "e.g. Atraxa";
+  $("cmdrfirst").hidden = !pairing;
+  if (pairing && document.activeElement !== $("cmdrfirst")) $("cmdrfirst").value = c.names[0];
   $("cmdrnote").textContent = "";
   $("cmdrrow").classList.toggle("has", !!c && !pairing);
   $("cmdrrow").classList.toggle("pairing", pairing);
-  $("cmdrask").textContent = pairing ? `Add a ${c.pair.label} for ${commanderShort()}` : "Who's your commander?";
-  $("cmdrskip").textContent = pairing ? `or continue with just ${commanderShort()}` : "or just search";
+  $("cmdrask").textContent = pairing ? "Who are your commanders?" : "Who's your commander?";
   $("cmdrart").replaceChildren(...((c && c.arts) || []).filter(Boolean).map(src => {
     const img = document.createElement("img");
     img.src = src;
@@ -2000,6 +2006,28 @@ function canBeCommander(card) {
 
 // A changed commander redoes the search on screen, but not from the start screen: there it only takes effect
 // for the next search.
+// Set, with both fields open. The first field can be changed or emptied; the second is optional.
+async function settlePairing(firstName, secondName) {
+  if (!firstName) {
+    pairing = false;
+    state.commander = null;
+    store.set("commander", null);
+    $("cmdrinput").value = "";
+    renderCommander();
+    if (secondName) await setCommander(secondName);
+    else { rerunForCommander(); $("cmdrinput").focus(); }
+    return;
+  }
+  if (firstName !== state.commander.names[0]) {
+    pairing = false;
+    if (!await setCommander(firstName)) { pairing = true; return; }
+    if (!pairing) return;   // this commander has no second one
+    $("cmdrfirst").value = state.commander.names[0];
+    if (!secondName) return;   // a new first commander: keep waiting for its second
+  }
+  if (secondName) await setCommander(secondName);
+  else { finishPairing(); rerunForCommander(); }
+}
 // Going on without a second commander.
 function finishPairing() {
   pairing = false;
@@ -2040,28 +2068,30 @@ async function setCommander(name) {
     renderCommander();
     if (pairing) $("cmdrinput").focus();
     else rerunForCommander();
+    return true;
   } catch (err) {
     $("cmdrnote").textContent = err.message;
+    return false;
   }
 }
 
 // Suggestions while typing a commander: the most played commanders whose name starts with the text.
 let suggestTimer, suggestRun = 0;
-function suggestCommanders() {
+function suggestCommanders(input, list) {
   clearTimeout(suggestTimer);
-  const text = $("cmdrinput").value.trim();
+  const text = input.value.trim();
   // picking a suggestion fills in its exact name: set it right away
-  if ([...$("cmdrlist").options].some(o => o.value === text)) { setCommander(text); return; }
-  if (text.length < 2) { $("cmdrlist").replaceChildren(); return; }
+  if ([...list.options].some(o => o.value === text)) { list.replaceChildren(); $("cmdrform").requestSubmit(); return; }
+  if (text.length < 2) { list.replaceChildren(); return; }
   suggestTimer = setTimeout(async () => {
     const run = ++suggestRun;
     try {
       // name:/^…/ is a Scryfall regex: only names that begin with what was typed
       const prefix = text.replace(/[\\^$.|?*+()[\]{}\/]/g, "\\$&");
-      const base = pairing && state.commander && state.commander.pair ? `(${state.commander.pair.query})` : "is:commander";
+      const base = input === $("cmdrinput") && pairing && state.commander && state.commander.pair ? `(${state.commander.pair.query})` : "is:commander";
       const body = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q: `${base} name:/^${prefix}/`, order: "edhrec" }));
       if (run !== suggestRun) return;   // a newer request has started meanwhile
-      $("cmdrlist").replaceChildren(...(body.data || []).slice(0, 8).map(c => {
+      list.replaceChildren(...(body.data || []).slice(0, 8).map(c => {
         const o = document.createElement("option");
         o.value = c.name;
         return o;
@@ -3511,9 +3541,11 @@ $("viewswitch").addEventListener("click", () => {
 $("cmdrform").addEventListener("submit", e => {
   e.preventDefault();
   const name = $("cmdrinput").value.trim();
+  if (pairing) { settlePairing($("cmdrfirst").value.trim(), name); return; }
   if (name) setCommander(name);
 });
-$("cmdrinput").addEventListener("input", suggestCommanders);
+$("cmdrinput").addEventListener("input", () => suggestCommanders($("cmdrinput"), $("cmdrlist")));
+$("cmdrfirst").addEventListener("input", () => suggestCommanders($("cmdrfirst"), $("cmdrfirstlist")));
 // light / dark switch: follows the device until clicked, then remembers the choice
 function currentTheme() {
   return document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
@@ -3545,10 +3577,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeMore();
 $("opensettings").addEventListener("click", closeMore);
 
 // commander first: skipping it just goes to the search bar; the progress opens the list
-$("cmdrskip").addEventListener("click", () => {
-  if (pairing) { finishPairing(); rerunForCommander(); }
-  $("zin").focus();
-});
+$("cmdrskip").addEventListener("click", () => $("zin").focus());
 $("deckprogress").addEventListener("click", () => openList());
 
 // help window
@@ -3570,12 +3599,11 @@ $("compselect").addEventListener("change", () => {
   rerunForCommander();
 });
 $("cmdrpair").addEventListener("click", () => {
-  pairing = !pairing;
-  if (!pairing) state.commander = validCommander(store.get("commander", null));   // cancel: back to what was saved
+  pairing = true;
   $("cmdrinput").value = "";
   $("cmdrlist").replaceChildren();
   renderCommander();
-  if (pairing) $("cmdrinput").focus();
+  $("cmdrinput").focus();
 });
 $("cmdrclear").addEventListener("click", () => {
   pairing = false;
