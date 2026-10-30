@@ -1209,6 +1209,7 @@ const FUNCTIONS = [
   [/\b(?:board ?wipes?|wipes?|wraths?|sweepers?|mass removal)\b/, "otag:board-wipe", "board wipe"],
   [/\bremoval\b/, "otag:removal", "removal"],
   [/\bramp\b/, "otag:ramp", "ramp"],
+  [/\bprotection\b(?! from)/, "otag:protection", "protection"],
   [/\btutors?\b/, "otag:tutor", "tutor"],
   [/\bcounter ?spells?\b|\bcounters\b/, "otag:counterspell", "counterspell"],
   [/\bmana rocks?\b/, "otag:mana-rock", "mana rock"],
@@ -1719,33 +1720,7 @@ function renderCommander() {
 const cardText = card => [card.type_line, card.oracle_text, ...(card.card_faces || []).flatMap(f => [f.type_line, f.oracle_text])].filter(Boolean).join("\n");
 
 // Where to start with this commander: EDHREC's top cards, then searches that suit what it does and its colors.
-function starterSearches(c) {
-  // the rules text without type lines and reminder text
-  const text = (c.text || "").split("\n").filter(l => !/^(Legendary|Creature|Artifact|Enchantment|Planeswalker|Background)\b/.test(l))
-    .join("\n").replace(/\([^)]*\)/g, "");
-  const lower = text.toLowerCase();
-  const picks = [];
-  // a creature type it cares about ("other Goblins you control")
-  const tribe = TRIBES.find(t => t !== "human" && new RegExp(`\\b(${t}|${PLURAL[t] || t + "s"})\\b`).test(lower));
-  if (tribe) picks.push(PLURAL[tribe] || tribe + "s");
-  const themes = [
-    [/\btokens?\b/, "cards that make tokens"],
-    [/\bsacrific|\bdies\b/, "sacrifice outlets"],
-    [/(?:from|in) (?:your|a) graveyard|graveyard to the battlefield/, "reanimation"],
-    [/exile[^.]*return[^.]*to the battlefield/, "blink"],
-    [/gains? [^.]*life|lifelink/, "lifegain"],
-    [/\btreasure/, "treasure"],
-    [/\bdiscard/, "discard outlets"],
-    [/\bmill|into (?:your|their) graveyard/, "mill"],
-    [/\battacks?\b/, "haste enablers"]
-  ];
-  for (const [re, words] of themes) if (picks.length < 2 && re.test(lower)) picks.push(words);
-  const colors = c.colors || "";
-  picks.push("ramp", "card draw", "removal");
-  if (/[wbr]/.test(colors)) picks.push("board wipes");
-  if (colors.includes("u")) picks.push("counterspells");
-  return [...new Set(picks)].slice(0, 5);
-}
+const STARTER_SEARCHES = ["Ramp", "Card draw", "Removal", "Protection"];
 function renderStarters() {
   const c = state.commander;
   const box = $("starters");
@@ -1760,7 +1735,7 @@ function renderStarters() {
   const or = document.createElement("span");
   or.className = "startor";
   or.textContent = "or search for";
-  const chips = starterSearches(c).map(words => {
+  const chips = STARTER_SEARCHES.map(words => {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "btn small startchip";
