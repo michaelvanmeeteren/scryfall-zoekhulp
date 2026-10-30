@@ -8,7 +8,7 @@
 <script>try { const t = JSON.parse(localStorage.getItem("szh.theme")); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Young+Serif&display=swap" rel="stylesheet">
 <style>
 /* Layout: header on top, search + card grid on the left, a sticky list column on the right; stacked on narrow screens. */
 /* Colors: black & gold when dark, ivory & bronze-gold when light. The page follows the device,
@@ -25,43 +25,43 @@
   --danger: #b42318;
   --note-bg: #fbf0d2;
   --note-fg: #6b4a00;
-  --shadow: 0 1px 2px rgb(60 45 10 / 0.08), 0 4px 12px rgb(60 45 10 / 0.08);
-  --font: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --shadow: none;
+  --font: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "Young Serif", Georgia, "Times New Roman", serif;
   --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
   --radius: 4px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0b0b0c;
-    --surface: #151517;
-    --fg: #f2efe6;
-    --muted: #a39d8c;
-    --line: #3a3220;
-    --accent: #d4a73a;
+    --bg: #100e0b;
+    --surface: #1b1814;
+    --fg: #f4efe4;
+    --muted: #b0a896;
+    --line: #332d24;
+    --accent: #dcb152;
     --accent-fg: #0b0b0c;
-    --accent-soft: #262012;
+    --accent-soft: #2a2416;
     --danger: #f07167;
     --note-bg: #2a2312;
     --note-fg: #ecc96b;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(212 167 58 / 0.06);
+    --shadow: none;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0b0b0c;
-  --surface: #151517;
-  --fg: #f2efe6;
-  --muted: #a39d8c;
-  --line: #3a3220;
-  --accent: #d4a73a;
+  --bg: #100e0b;
+  --surface: #1b1814;
+  --fg: #f4efe4;
+  --muted: #b0a896;
+  --line: #332d24;
+  --accent: #dcb152;
   --accent-fg: #0b0b0c;
-  --accent-soft: #262012;
+  --accent-soft: #2a2416;
   --danger: #f07167;
   --note-bg: #2a2312;
   --note-fg: #ecc96b;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(212 167 58 / 0.06);
+  --shadow: none;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -321,7 +321,7 @@ html:not(.mobile) .mobilebar { display: none !important; }
 /* ---------- Scryfall-like layout ----------
    Home: a big centered search. Results: a sticky top bar with the search, an info strip and a full-width grid.
    The card list slides in from the right. */
-:root { --bar: #0d0c0e; --bar-fg: #f2efe6; --bar-line: #3a3220; --gold: #d4a73a; }
+:root { --bar: #100e0b; --bar-fg: #f4efe4; --bar-line: #332d24; --gold: #dcb152; }
 .topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 14px; padding: 10px max(16px, 2vw);
   background: var(--bar); color: var(--bar-fg); border-bottom: 1px solid var(--bar-line); }
 .brandbtn { background: none; border: 0; padding: 0; color: var(--gold); font-family: var(--serif); font-weight: 700; font-size: 22px; letter-spacing: 0.01em; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.3em; }
@@ -566,11 +566,48 @@ html.mobile .settings .sizer button { width: 44px; height: 40px; }
 /* phone results: the cards start high; Filters & sort sits beside the heading, the commander is one slim line */
 html.mobile .strip { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px 12px; padding: 4px 0 10px; margin-bottom: 10px; }
 html.mobile #results:not(.opts) .cmdrresults #deckprogress { display: none; }
+
+/* The look: flat surfaces, one serif voice for names and headings, and the page takes on the commander's colors:
+   a band of its mana across the top and a trace of its first color in the ground. */
+:root { --mana-w: #efe6c8; --mana-u: #4a8fd6; --mana-b: #8d7f99; --mana-r: #dc5b42; --mana-g: #46a36b; --mana-c: #a8a196; --field-line: #6a6050; font-synthesis: none; }
+:root[data-theme="light"] { --field-line: #8a8069; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --field-line: #8a8069; } }
+body { background: color-mix(in srgb, var(--id1, var(--bg)) 6%, var(--bg)); }
+.topbar { background: color-mix(in srgb, var(--id1, var(--bar)) 8%, var(--bar)); }
+body.home .topbar { background: transparent; }
+.identity { position: fixed; inset: 0 0 auto; z-index: 45; display: flex; height: 4px; pointer-events: none; }
+.identity:empty { display: none; }
+.identity i { flex: 1; }
+::selection { background: var(--accent); color: var(--accent-fg); }
+html { scrollbar-color: var(--line) transparent; }
+.brandbtn, .rtitle, .cmdrask, .rtitle.syntax .for { font-weight: 400; }
+.brandbtn { letter-spacing: -0.01em; }
+body.home .brandbtn { font-size: clamp(40px, 6vw, 64px); letter-spacing: -0.02em; }
+.rtitle { font-size: clamp(26px, 2.4vw, 32px); letter-spacing: -0.01em; line-height: 1.12; }
+.rtitle .for { font-size: 0.72em; }
+html.mobile .rtitle { font-size: 25px; }
+.cmdrask { font-size: 28px; }
+.btn, .sizer button, .pager button, .qty button, .remove, .searchrow input, .queryrow input, .fsel select, .compwrap select { border-radius: 6px; }
+.btn, .pager button, .fchips button { transition: border-color 0.12s, background-color 0.12s; }
+.btn.primary:hover { background: color-mix(in srgb, var(--accent) 86%, var(--fg)); }
+.topbar .searchrow input, body.home .topbar .searchrow input { border-color: var(--field-line); }
+.topbar .searchrow input:focus { outline: none; border-color: var(--gold); }
+.topbar .searchrow input:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.strip { border-bottom: 0; padding-bottom: 6px; margin-bottom: 8px; }
+.grid { gap: 18px 14px; }
+.card img { transition: transform 0.14s ease-out; }
+.card:hover img { transform: translateY(-3px); }
+.card .name { font-weight: 500; }
+.optspanel { border-color: transparent; }
+.list li.grouphead { letter-spacing: 0; text-transform: none; font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { .card img { transition: none; } .card:hover img { transform: none; } }
 html.mobile .cmdrresults .cmdrart img { width: 44px; height: 32px; border-radius: 5px; }
 html.mobile .cmdrresults:not(:empty) { margin-bottom: 10px; }
 </style>
 </head>
 <body>
+
+<div id="identity" class="identity" aria-hidden="true"></div>
 
 <header class="topbar">
   <button id="home" class="brandbtn" type="button" title="Back to the start"><img class="brandlogo" src="logo.svg" alt="">SpellSeekr</button>
@@ -1389,7 +1426,21 @@ function renderFilterbar() {
 
 // ---------- commander as the starting point ----------
 let pairing = false;   // the commander field is open for a partner, background or companion
+// The page in the commander's colors: a band of its mana on top, its first color as a trace in the ground.
+function renderIdentity() {
+  const c = state.commander;
+  const colors = c ? (c.colors || "c") : "";
+  $("identity").replaceChildren(...[...colors].map(x => {
+    const i = document.createElement("i");
+    i.style.background = `var(--mana-${x})`;
+    return i;
+  }));
+  if (colors) document.documentElement.style.setProperty("--id1", `var(--mana-${colors[0]})`);
+  else document.documentElement.style.removeProperty("--id1");
+}
+
 function renderCommander() {
+  renderIdentity();
   const c = state.commander;
   const canPair = !!(c && c.pair && c.names.length === 1);
   if (!canPair) pairing = false;
