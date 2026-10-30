@@ -450,12 +450,9 @@ html.mobile #listtoggle { display: none; }
 html.mobile .infobtn { width: 34px; height: 34px; font-size: 18px; }
 /* nothing to search: keep the explanation, hide the result controls */
 #results.nosearch .optstoggle, #results.nosearch #optspanel { display: none !important; }
-#results.static #querybar, #results.static .sortsel { display: none !important; }
-/* EDHREC lists keep only "Hide cards in my deck" from the filter bar: type, mana value and price don't apply to them */
-#results.static #filterbar > :not(.ownedtoggle) { display: none !important; }
 /* the commander in the results: a compact line; on a phone just the card, the rest comes with Filters & sort */
 .cmdrresults:not(:empty) { margin-bottom: 12px; }
-html.mobile #results:not(.opts) .cmdrresults :is(#compwrap, #compnote, #cmdrpair, #cmdredhrec, #cmdrclear, #cmdrnote) { display: none; }
+html.mobile #results:not(.opts) .cmdrresults :is(#compwrap, #compnote, #cmdrpair, #cmdrclear, #cmdrnote) { display: none; }
 html.mobile #results:not(.opts) .cmdrresults .cmdr:not(.has) { display: none; }
 /* phones: a closed drawer must not exist in the layout, or Android Chrome widens the page to include it */
 html.mobile .drawer:not(.open) { display: none; }
@@ -495,11 +492,8 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 /* start screen with a commander: where to begin */
 .starters { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; width: min(760px, 100%); }
 .starters[hidden], body:not(.home) .starters { display: none; }
-.starters .starteredh { border-color: var(--gold); color: var(--fg); font-weight: 600; }
-.topbar .starters .starteredh:hover { background: color-mix(in srgb, var(--gold) 14%, transparent); }
 .startor { color: var(--muted); font-size: 13.5px; margin: 0 2px; }
 .topbar .startchip { border-radius: 999px; }
-body.home #cmdredhrec { display: none; }
 body.home .cmdrart img { width: 112px; height: 82px; border-radius: 10px; }
 body.home .cmdrart img + img { margin-left: -24px; }
 html.mobile body.home .cmdrart img { width: 92px; height: 68px; }
@@ -552,7 +546,7 @@ html.mobile .toast button { min-height: 44px; padding: 0 6px; }
 .qchips span { padding: 2px 9px; border: 1px solid var(--line); border-radius: 999px; font-size: 12.5px; }
 .qchips .term { overflow: hidden; text-overflow: ellipsis; padding: 0; border: 0; font-size: inherit; display: block; }
 .qchips svg { flex: none; }
-#results.static .qchips, #results.nosearch .qchips { display: none; }
+#results.nosearch .qchips { display: none; }
 /* phone: the heading beside Filters & sort and the count, all terms on the full width below */
 html.mobile .stripinfo, html.mobile .countline { display: contents; }
 html.mobile .strip .rtitle { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
@@ -828,8 +822,7 @@ body:not(.home):has(#cmdrrow.has) .topbar .btn:not(.primary), #results:has(#cmdr
       <li>Set it on the start screen: every search stays in its colors. A color outside them is left out (in red).</li>
       <li>Partner, Background or Doctor? <b>+ add partner</b> adds the second one.</li>
       <li>A <b>Companion</b> adds its deck rule to every search, e.g. Lurrus: permanents of 2 mana or less.</li>
-      <li><b>EDHREC top cards</b> shows the cards most played with it, or type <i>recommended ramp for my commander</i>.
-        Every card in the results also shows how many of its decks play it.</li>
+      <li>Every card in the results also shows how many of its decks play it.</li>
     </ul>
 
     <h3>Your list and deck</h3>
@@ -942,7 +935,6 @@ body:not(.home):has(#cmdrrow.has) .topbar .btn:not(.primary), #results:has(#cmdr
           <button id="cmdrclear" class="linkbtn" type="button">remove</button>
         </span>
         <button id="cmdrpair" class="linkbtn" type="button" hidden></button>
-        <button id="cmdredhrec" class="btn small" type="button" hidden>EDHREC top cards</button>
         <form id="cmdrform" class="cmdrform">
           <input id="cmdrinput" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. Atraxa" aria-label="Commander name" list="cmdrlist">
           <datalist id="cmdrlist"></datalist>
@@ -1272,7 +1264,7 @@ const state = {
 };
 const settings = { code: store.get("code", "") };
 // Earlier versions kept an Anthropic API key and a model choice in the browser; neither is used any more.
-try { localStorage.removeItem("szh.apikey"); localStorage.removeItem("szh.model"); } catch { /* storage unavailable */ }
+try { localStorage.removeItem("szh.apikey"); localStorage.removeItem("szh.model"); localStorage.removeItem("szh.lastEdhrec"); } catch { /* storage unavailable */ }
 
 const $ = id => document.getElementById(id);
 const euro = new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" });
@@ -1540,7 +1532,6 @@ async function translateWithClaude(zin, previous = null) {
   }
   if (!res.ok) throw new Error(body.error || `The translator returned an error (${res.status}).`);
   // An empty query is an answer, not a failure: Claude says this isn't a card search (or no combos match).
-  if (body.edhrec) return { query: "", uitleg: body.uitleg || "", edhrec: body.edhrec };
   if (!body.query) return { query: "", uitleg: body.uitleg || "This isn't a search for Magic cards." };
   return { query: body.query, uitleg: body.uitleg || "", combos: body.combos || [], warn: body.warn === true };
 }
@@ -1870,7 +1861,6 @@ function renderCommander() {
   const c = state.commander;
   const canPair = !!(c && c.pair && c.names.length === 1);
   if (!canPair) pairing = false;
-  $("cmdredhrec").hidden = !c;
   $("cmdrpick").hidden = !c;
   $("cmdrform").hidden = !!c && !pairing;
   $("cmdrpair").hidden = !canPair;
@@ -1907,22 +1897,16 @@ function renderCommander() {
 // The rules text of a card, all faces together.
 const cardText = card => [card.type_line, card.oracle_text, ...(card.card_faces || []).flatMap(f => [f.type_line, f.oracle_text])].filter(Boolean).join("\n");
 
-// Where to start with this commander: EDHREC's top cards, then searches that suit what it does and its colors.
+// Where to start with this commander.
 const STARTER_SEARCHES = ["Ramp", "Card draw", "Removal", "Protection"];
 function renderStarters() {
   const c = state.commander;
   const box = $("starters");
   box.hidden = !c || pairing;
   if (box.hidden) { box.replaceChildren(); return; }
-  const edh = document.createElement("button");
-  edh.type = "button";
-  edh.className = "btn starteredh";
-  edh.textContent = "EDHREC top cards";
-  edh.title = `The cards played most with ${commanderShort()}`;
-  edh.addEventListener("click", () => runEdhrec(c.name, "", ""));
   const or = document.createElement("span");
   or.className = "startor";
-  or.textContent = "or search for";
+  or.textContent = "Search for";
   const chips = STARTER_SEARCHES.map(words => {
     const b = document.createElement("button");
     b.type = "button";
@@ -1931,7 +1915,7 @@ function renderStarters() {
     b.addEventListener("click", () => { $("zin").value = words; $("searchform").requestSubmit(); });
     return b;
   });
-  box.replaceChildren(edh, or, ...chips);
+  box.replaceChildren(or, ...chips);
 }
 
 // Commanders saved before the art and rules text were kept get them looked up once.
@@ -2004,7 +1988,7 @@ function canBeCommander(card) {
 // A changed commander redoes the search on screen, but not from the start screen: there it only takes effect
 // for the next search.
 function rerunForCommander() {
-  if (state.search && !state.search.static && !document.body.classList.contains("home")) runSearch(state.search.query);
+  if (state.search && !document.body.classList.contains("home")) runSearch(state.search.query);
 }
 
 async function setCommander(name) {
@@ -2016,7 +2000,7 @@ async function setCommander(name) {
     const text = cardText(card);
     const first = state.commander;
     if (pairing && first) {
-      // two commanders: one name for the translator and EDHREC, the colors of both
+      // two commanders: one name for the translator, the colors of both
       const both = "wubrg".split("").filter(c => (first.colors + colors).includes(c)).join("");
       const names = [first.names[0], card.name];
       state.commander = { name: names.join(" + "), names, colors: both, pair: first.pair, arts: [(first.arts || [])[0] || "", art],
@@ -2076,10 +2060,8 @@ function showNothing(title, uitleg) {
   message("");
 }
 
-// ---------- EDHREC recommendations for a commander ----------
+// ---------- how often a commander's decks play a card (EDHREC) ----------
 // EDHREC has no official API; its pages load this JSON and it may be read from other sites (it sends CORS headers).
-// Scryfall cuts a search off after about 1000 characters, so the names are fetched in batches that stay under that
-// (with the tag and companion rule added), and kept in EDHREC's order.
 const edhrecSlug = name => name.split(" // ")[0].toLowerCase().replace(/\u00e6/g, "ae").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
   .replace(/[^a-z0-9\s-]/g, "").trim().replace(/[\s-]+/g, "-");
 
@@ -2125,68 +2107,6 @@ function loadCommanderEdh() {
     cmdrEdh.stats = stats;
     for (const tile of $("grid").querySelectorAll(".tile")) if (tile.card) setMeta(tile);
   }, () => { /* no EDHREC numbers for this commander */ });
-}
-
-async function runEdhrec(name, tag, uitleg) {
-  setBusy(true, "Asking EDHREC…");
-  message("");
-  try {
-    const parts = [];
-    for (const part of name.split(" + ").slice(0, 2)) parts.push(await findCommander(part));
-    const commander = { name: parts.map(c => c.name).join(" + ") };
-    const stats = await edhrecStats(parts.map(c => c.name));
-    const names = [...stats.keys()].sort((a, b) => stats.get(b).pct - stats.get(a).pct);
-    const cleanTag = String(tag || "").replace(/[^a-z0-9-]/gi, "").toLowerCase();
-    const cards = [];
-    // the companion's deck rule applies to recommendations too
-    const tail = (cleanTag ? ` otag:${cleanTag}` : "") + " game:paper" + (companionRule() ? " " + companionRule() : "");
-    const batches = [[]];
-    for (const n of names) {
-      const term = `!"${n.replace(/"/g, "")}"`;
-      const batch = batches[batches.length - 1];
-      if (batch.length && (batch.join(" OR ").length + term.length + tail.length > 900)) batches.push([term]);
-      else batch.push(term);
-    }
-    for (const batch of batches) {
-      if (!batch.length) continue;
-      const body = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q: `(${batch.join(" OR ")})${tail}` }));
-      cards.push(...(body.data || []).map(normalise));
-    }
-    for (const c of cards) {
-      const st = stats.get(c.name) || stats.get(c.name.split(" // ")[0]);
-      c.edh = st ? st.pct : 0;
-    }
-    cards.sort((a, b) => b.edh - a.edh);
-    showEdhrec(commander.name, cleanTag, cards, uitleg);
-  } catch (err) {
-    // started from the start screen (a link or a typed request): switch to the results view to show the error
-    if (document.body.classList.contains("home")) showNothing("No EDHREC recommendations", "");
-    message(err.message, true);
-  } finally {
-    setBusy(false);
-  }
-}
-
-// EDHREC results are a fixed list, so they skip Scryfall's paging: every 175 cards are one cached "page".
-function showEdhrec(commanderName, tag, cards, uitleg) {
-  const label = `EDHREC: ${commanderName}${tag ? " · " + tag : ""}`;
-  state.edhrecFor = commanderName;
-  const cache = new Map();
-  for (let i = 0; i < cards.length; i += API_PAGE) cache.set(i / API_PAGE + 1, cards.slice(i, i + API_PAGE));
-  state.search = { query: label, full: label, order: state.order, size: state.size, total: cards.length, cache, page: 1, static: true, warnings: [], details: null };
-  setPrevious(null);
-  showQuery("", uitleg || "");
-  setTitle(`EDHREC top cards${tag ? ` · ${tag}` : ""}`);
-  $("uitleg").textContent = companionRule() ? `Only cards that fit your companion: ${$("compnote").textContent}.` : "";
-  setView(false);
-  $("results").classList.add("static");
-  $("toolbar").hidden = false;
-  renderFilterbar();
-  store.set("lastEdhrec", { name: commanderName, tag });
-  const params = new URLSearchParams({ edhrec: commanderName });
-  if (tag) params.set("tag", tag);
-  if (location.search !== "?" + params) history.pushState({}, "", location.pathname + "?" + params);
-  showPage(1);
 }
 
 // ---------- imported deck: mark cards you already have ----------
@@ -2422,7 +2342,7 @@ function sortParams(order) {
 }
 
 async function runSearch(query, page = 1) {
-  $("results").classList.remove("nosearch", "static");
+  $("results").classList.remove("nosearch");
   query = query.trim();
   if (!query) return;
   const { full, extra } = withFilters(query);
@@ -2435,7 +2355,6 @@ async function runSearch(query, page = 1) {
   applyHideOwned();
   store.set("lastsearch", { query, zin: $("rtitle").dataset.text || query });
   store.set("last", "");
-  store.set("lastEdhrec", null);
   await showPage(page);
 }
 
@@ -2493,7 +2412,7 @@ function render(cards, page, pages) {
   const search = state.search;
   const grid = $("grid");
   grid.replaceChildren();
-  $("count").textContent = search.static ? `${plural(search.total, "card")} · most played first` : plural(search.total, "card");
+  $("count").textContent = plural(search.total, "card");
 
   const notes = [];
   if (search.total === 0) {
@@ -2591,10 +2510,10 @@ const commanderShort = () => state.commander ? state.commander.names.map(n => n.
 // Under a card: set, price, and how often decks with this commander play it (EDHREC).
 function setMeta(tile) {
   const card = tile.card;
-  const st = card.edh ? { pct: card.edh } : edhFor(card.name);
+  const st = edhFor(card.name);
   const meta = tile.querySelector(".meta");
   meta.textContent = `${card.set.toUpperCase()} · ${priceText(card)}` + (st && st.pct ? ` · ${st.pct}% of decks` : "");
-  meta.title = st && st.pct ? `In ${st.pct}% of the ${card.edh ? state.edhrecFor || "" : commanderShort()} decks on EDHREC` : "";
+  meta.title = st && st.pct ? `In ${st.pct}% of the ${commanderShort()} decks on EDHREC` : "";
 }
 
 // No cards: say what limited the search, and offer the ways out that apply.
@@ -2602,7 +2521,7 @@ function emptyResults(search) {
   const box = document.createElement("div");
   box.className = "empty";
   const p = document.createElement("p");
-  const limits = [filterTerms() && "the filters", state.commander && !search.static && `${commanderShort()}'s colors`,
+  const limits = [filterTerms() && "the filters", state.commander && `${commanderShort()}'s colors`,
     companionRule() && "the companion's rule"].filter(Boolean);
   p.textContent = "No cards match this search" + (limits.length ? `, within ${limits.join(" and ")}.` : ".");
   const ways = document.createElement("div");
@@ -2620,13 +2539,12 @@ function emptyResults(search) {
   const cut = chain ? chain.lastIndexOf(" → ") : -1;
   const back = cut > 0 && state.history.find(h => h.zin === chain.slice(0, cut));
   if (back) way("Undo the last step", () => runHistory(back));
-  if (!search.static) way("Edit the query", () => {
+  way("Edit the query", () => {
     $("results").classList.add("opts");
     renderOptsToggle();
     $("querybar").open = true;
     $("query").focus();
   });
-  if (state.commander && !search.static) way("EDHREC top cards", () => runEdhrec(state.commander.name, "", ""));
   box.append(p, ways);
   return box;
 }
@@ -3052,8 +2970,8 @@ function renderCardButton() {
   const item = state.list.find(c => c.name === shownCard.name);
   $("cd-add").textContent = !item ? "Add to list" : shownCard.multi ? `Add another (${item.qty} in list)` : "Remove from list";
   // where the card stands for this deck
-  const st = shownCard.edh ? { pct: shownCard.edh } : edhFor(shownCard.name);
-  const who = shownCard.edh ? state.edhrecFor : commanderShort();
+  const st = edhFor(shownCard.name);
+  const who = commanderShort();
   $("cd-status").replaceChildren(...[
     item && (item.qty > 1 ? `In your list (${item.qty})` : "In your list"),
     ownsCard(shownCard.name) && "In your deck",
@@ -3090,7 +3008,7 @@ function withSymbols(text, marks) {
 
 // The rules-text words of the search on screen (o:"draw a card", o:/regex/), so the card page can show why it matched.
 function matchedWords(card) {
-  const query = state.search && !state.search.static ? state.search.query : "";
+  const query = state.search ? state.search.query : "";
   const words = [];
   for (const m of query.matchAll(/(?:^|[\s(])(?:o|oracle|fo):(?:"([^"]+)"|\/((?:\\.|[^/])+)\/|([^\s)"]+))/gi)) {
     if (m[2]) words.push(m[2]);
@@ -3156,7 +3074,7 @@ function runHistory(h) {
   runSearch(h.query);
 }
 
-// The search on screen that the Refine field changes; null for combos, EDHREC lists and "nothing to search".
+// The search on screen that the Refine field changes; null for combos and "nothing to search".
 function setPrevious(p) {
   state.previous = p;
   $("modeswitch").hidden = !p;
@@ -3251,7 +3169,6 @@ $("searchform").addEventListener("submit", async e => {
     }
   }
   else result = translate(zin);
-  if (result.edhrec) { runEdhrec(result.edhrec.commander, result.edhrec.tag, result.uitleg); return; }
   if (!result.query) {
     // Nothing to search: show why, without searching, logging or adding it to the history.
     showNothing("Nothing to search", result.uitleg);
@@ -3290,7 +3207,7 @@ async function refineSearch(text) {
       setBusy(false);
     }
   } else result = added();
-  if (!result.query || result.edhrec) { message("That can't be used to refine this search. Use the search bar for a new search.", true); return; }
+  if (!result.query) { message("That can't be used to refine this search. Use the search bar for a new search.", true); return; }
   const zin = `${prev.zin} → ${text}`;
   $("zin").value = "";
   showQuery(result.query, shownUitleg(result), result.combos, result.warn);
@@ -3320,7 +3237,6 @@ $("query").addEventListener("keydown", e => { if (e.key === "Enter") { e.prevent
 $("order").value = state.order;
 $("size").value = String(state.size);
 $("order").addEventListener("change", () => {
-  if (state.search && state.search.static) return;
   state.order = $("order").value;
   store.set("order", state.order);
   if (state.search) runSearch(state.search.query);
@@ -3385,7 +3301,6 @@ function goHome() {
   $("zin").value = "";
   store.set("last", "");
   store.set("lastsearch", null);
-  store.set("lastEdhrec", null);
   window.scrollTo(0, 0);
 }
 $("home").addEventListener("click", () => { goHome(); history.pushState({}, "", location.pathname); $("zin").focus(); });
@@ -3399,7 +3314,6 @@ function pushSearchUrl(query, zin) {
 }
 function searchFromUrl() {
   const params = new URLSearchParams(location.search);
-  if (params.get("edhrec")) { runEdhrec(params.get("edhrec"), params.get("tag") || "", ""); return true; }
   const query = params.get("q");
   if (!query) return false;
   $("zin").value = params.get("s") || query;
@@ -3575,7 +3489,6 @@ $("cmdrform").addEventListener("submit", e => {
   if (name) setCommander(name);
 });
 $("cmdrinput").addEventListener("input", suggestCommanders);
-$("cmdredhrec").addEventListener("click", () => { if (state.commander) runEdhrec(state.commander.name, "", ""); });
 // light / dark switch: follows the device until clicked, then remembers the choice
 function currentTheme() {
   return document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
@@ -3676,10 +3589,7 @@ setView(true);
 // Browsers put back the typed text of the previous visit after the page has loaded (also on a reload or Back);
 // on the start screen the search bar should be empty, so it is cleared once that has happened.
 window.addEventListener("pageshow", () => { if (document.body.classList.contains("home")) $("zin").value = ""; });
-const savedEdhrec = store.get("lastEdhrec", null);
-const lastEdhrec = savedEdhrec && typeof savedEdhrec.name === "string" ? savedEdhrec : null;
 if (searchFromUrl()) { /* the link decides */ }
-else if (lastEdhrec) runEdhrec(lastEdhrec.name, lastEdhrec.tag || "", "");
 else if (last) { showQuery(last.query, ""); setTitle(last.zin); setPrevious({ zin: last.zin, query: last.query }); runSearch(last.query); }
 watchHero();
 runSync();

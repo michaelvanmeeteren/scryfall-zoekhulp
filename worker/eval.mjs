@@ -8,7 +8,6 @@
 //            id    expected color identity filter, e.g. "<=wub" or "=rg" (letter order doesn't matter)
 //            min   minimum number of cards Scryfall must find (default 1)
 //            cmdr  commander sent along, { name, colors };  prev  previous search sent along, { zin, query }
-//            edhrec  the answer must ask for EDHREC recommendations for a commander whose name contains this
 //            empty  the answer must be an empty query (not a card search)
 //            say   the explanation must mention this (lower-cased substring);  calm  the answer must not be a warning
 const WORKER = "https://scryfall-zoekhulp.michaelvanmeeteren.workers.dev/translate";
@@ -183,11 +182,11 @@ const CASES = [
   // with a commander set
   { zin: "removal", cmdr: { name: "Atraxa, Praetors' Voice", colors: "wubg" }, any: [["removal"]], id: "<=wubg" },
   { zin: "goblins", cmdr: { name: "Krenko, Mob Boss", colors: "r" }, any: [["t:goblin"]], id: "<=r" },
-  { zin: "edhrec top cards", cmdr: { name: "Atraxa, Praetors' Voice", colors: "wubg" }, edhrec: "atraxa" },
-  { zin: "recommended ramp for my commander", cmdr: { name: "Glissa Sunseeker", colors: "g" }, edhrec: "glissa" },
+  { zin: "edhrec top cards", cmdr: { name: "Atraxa, Praetors' Voice", colors: "wubg" }, any: [["order:edhrec"]], id: "<=wubg" },
+  { zin: "recommended ramp for my commander", cmdr: { name: "Glissa Sunseeker", colors: "g" }, any: [["ramp"]], id: "<=g" },
   { zin: "board wipes", cmdr: { name: "Krenko, Mob Boss", colors: "r" }, any: [["sweeper", "wipe"]], id: "<=r" },
   { zin: "cards that proliferate", cmdr: { name: "Atraxa, Praetors' Voice", colors: "wubg" }, any: [["proliferate"]], id: "<=wubg" },
-  { zin: "recommended cards for Krenko, Mob Boss", edhrec: "krenko" },
+  { zin: "recommended cards for Krenko, Mob Boss", any: [["order:edhrec"]], id: "<=r" },
   { zin: "haste enablers", cmdr: { name: "Krenko, Mob Boss", colors: "r" }, any: [["haste"]], id: "<=r" },
   { zin: "board wipes in white", cmdr: { name: "Glissa Sunseeker", colors: "g" }, any: [["sweeper", "wipe"]], id: "<=g", say: "white" },
   { zin: "removal in red and black", cmdr: { name: "Atraxa, Praetors' Voice", colors: "wubg" }, any: [["removal"]], id: "<=b", say: "red" },
@@ -247,11 +246,10 @@ for (let i = from; i <= to; i++) {
   const query = body.query || "";
   const q = query.toLowerCase();
   const problems = [];
-  if (c.edhrec || c.empty) {
-    if (c.edhrec && !(body.edhrec && String(body.edhrec.commander).toLowerCase().includes(c.edhrec))) problems.push("no EDHREC request for " + c.edhrec);
+  if (c.empty) {
     if (c.empty && (query || body.error)) problems.push("expected an empty query");
     if (problems.length) fail++; else pass++;
-    console.log(`${problems.length ? "FAIL" : "ok  "} ${String(i).padStart(3)} ${c.zin}\n       ${query || JSON.stringify(body.edhrec || body.uitleg || body.error)}${problems.length ? "\n       -> " + problems.join("; ") : ""}`);
+    console.log(`${problems.length ? "FAIL" : "ok  "} ${String(i).padStart(3)} ${c.zin}\n       ${query || JSON.stringify(body.uitleg || body.error)}${problems.length ? "\n       -> " + problems.join("; ") : ""}`);
     if (i < to) await sleep(3200);
     continue;
   }

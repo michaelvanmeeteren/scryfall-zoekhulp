@@ -33,12 +33,12 @@ into their deck list with little effort.
 
 A plain-language front end to Scryfall built around one specific deck: it knows your commander (including partner,
 background and Doctor pairs), your companion's deck rule, and the deck you already have, and applies all of them to
-every search and to EDHREC's recommendations. Scryfall needs syntax; EDHREC doesn't take free-form questions; this does both.
+every search. Scryfall needs syntax; this takes plain language.
 
 ## Operating Context
 
 - Deck sites: Moxfield (main), Archidekt, MTG Arena-style lists. Lists go out via the clipboard and come in by pasting.
-- Data: Scryfall API (cards, prices in euro, Tagger tags), EDHREC JSON (recommendations, inclusion %),
+- Data: Scryfall API (cards, prices in euro, Tagger tags), EDHREC JSON (inclusion %),
   Commander Spellbook (combos).
 - Translation: Claude Haiku via a Cloudflare Worker, available to friends with a shared access code; without the code
   a simpler built-in translator is used.
@@ -50,7 +50,7 @@ every search and to EDHREC's recommendations. Scryfall needs syntax; EDHREC does
 - Plain-language search (English and Dutch with the code), `/s` for raw Scryfall syntax, a Search / Refine mode that
   narrows the results on screen step by step.
 - Commander (one or a legal pair), companion with its deck rule, imported deck with "In deck" marking and hiding.
-- Filters (type, mana value, price), sorting, EDHREC top cards per commander, combos from Commander Spellbook.
+- Filters (type, mana value, price), sorting, combos from Commander Spellbook.
 - A card list grouped by type with a mana curve, copied as a deck list. Double-faced cards can be turned over.
 - Always Commander-legal paper cards (`f:commander game:paper`). "Cheap" means low mana value; "budget" means price.
 - Hosting: one static page on GitHub Pages plus a Cloudflare Worker; no accounts, no server-side user data.
