@@ -507,7 +507,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 
 /* start screen with a commander: where to begin */
 .starters { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; width: min(760px, 100%); }
-.starters[hidden], body:not(.home) .starters { display: none; }
+.starters[hidden] { display: none; }
 .startor { color: var(--muted); font-size: 13.5px; margin: 0 2px; }
 .topbar .startchip { border-radius: 999px; }
 body.home .cmdrart img { width: 112px; height: 82px; border-radius: 10px; }
@@ -779,6 +779,14 @@ body { line-height: 1.5; font-weight: 300; }
 .rtitle .for { font-weight: 200; letter-spacing: -0.01em; }
 /* The logo takes the color of the text around it, so it works on the banner and in both themes. */
 .brandlogo { display: inline-block; flex: none; width: 2.3em; height: 2.3em; margin-block: -0.4em; background: currentColor; -webkit-mask: url(logo.svg) center / contain no-repeat; mask: url(logo.svg) center / contain no-repeat; }
+/* Quick search stays in reach: beside the search bar in the results, on a line of its own where that doesn't fit. */
+body:not(.home) .topbar { flex-wrap: wrap; }
+body:not(.home) .starters { flex: none; flex-wrap: nowrap; justify-content: flex-start; gap: 6px; width: auto; }
+body:not(.home) .starters .startor { white-space: nowrap; font-size: 13px; }
+body:not(.home) .topbar .startchip { white-space: nowrap; }
+@media (max-width: 1399px) { body:not(.home) .starters { order: 5; flex-basis: 100%; } }
+html.mobile body:not(.home) .starters { order: 5; flex-basis: 100%; overflow-x: auto; scrollbar-width: none; }
+html.mobile body:not(.home) .starters .startor { display: none; }
 </style>
 </head>
 <body>
@@ -1964,11 +1972,11 @@ const STARTER_SEARCHES = ["Ramp", "Card draw", "Removal", "Protection"];
 function renderStarters() {
   const c = state.commander;
   const box = $("starters");
-  box.hidden = !c || pairing;
+  box.hidden = pairing;
   if (box.hidden) { box.replaceChildren(); return; }
   const or = document.createElement("span");
   or.className = "startor";
-  or.textContent = "Search for";
+  or.textContent = "Quick search";
   const chips = STARTER_SEARCHES.map(words => {
     const b = document.createElement("button");
     b.type = "button";
