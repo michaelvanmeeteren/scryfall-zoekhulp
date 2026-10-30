@@ -1258,7 +1258,7 @@ function cardFacts(card) {
 const isPermanent = f => new RegExp(PERMANENT).test(f.type);
 const UMORI_TYPES = ["artifact", "creature", "enchantment", "instant", "sorcery", "planeswalker", "battle"];
 
-// The ten companions and their deck rule as a Scryfall filter ("" when it can't be one). Each search adds the rule.
+// The companions that can be used in Commander and their deck rule as a Scryfall filter ("" when it can't be one). Each search adds the rule.
 // fits: whether a commander meets the rule too, since the commanders are part of the starting deck.
 const COMPANIONS = {
   "Lurrus of the Dream-Den": { colors: "wb", rule: `(-${front(PERMANENT)} OR mv<=2)`, text: "permanents of 2 mana or less",
@@ -1280,9 +1280,7 @@ const COMPANIONS = {
     // an activated ability has a cost before a colon, or is a keyword like equip or crew
     fits: f => !isPermanent(f) || f.type.includes("land") || f.text.split("\n").some(l => /^[^"]*:/.test(l))
       || /\b(equip|crew|cycling|ninjutsu|outlast|reconfigure|unearth|level up|scavenge|embalm|eternalize)\b/i.test(f.text) },
-  "Umori, the Collector": { colors: "bg", rule: "", text: "all nonland cards share a card type: pick it" },   // rule: see companionRule
-  "Lutri, the Spellchaser": { colors: "ur", rule: "", text: "no extra rule in Commander" },
-  "Yorion, Sky Nomad": { colors: "wu", rule: "", text: "no extra rule in Commander" }
+  "Umori, the Collector": { colors: "bg", rule: "", text: "all nonland cards share a card type: pick it" }   // rule: see companionRule
 };
 const companionRule = () => state.companion === "Umori, the Collector"
   ? (state.umoriType ? `(${front("land")} OR ${front(state.umoriType)})` : "")
