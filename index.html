@@ -198,7 +198,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 h2, .help h3 { font-family: var(--serif); font-weight: 700; letter-spacing: 0.01em; }
 .list h2, .settings h2 { font-size: 21px; }
 .help h3 { font-size: 18px; }
-.qlabel, .cmdrlabel, .filterbar .group > span { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.qlabel, .cmdrlabel, .filterbar .group > span { font-size: 13px; font-weight: 600; color: var(--muted); }
 .keynote { margin: 0; padding: 2px 0 2px 10px; border-left: 2px solid var(--accent); font-size: 13.5px; color: var(--muted); }
 .qlabel { font-size: 13px; font-weight: 600; }
 .optional { font-weight: 400; color: var(--muted); }
@@ -222,6 +222,10 @@ html.mobile .topbar .searchrow { flex-wrap: wrap; }
 html.mobile .topbar .searchrow input { flex: 1 1 0; }   /* field and Search button stay on one line */
 html.mobile .modeswitch { flex: 1 1 100%; margin-bottom: 6px; }
 html.mobile .modeswitch button { padding: 7px 0; font-size: 14px; }
+.filterbar .fsel { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.filterbar .fsel select { padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
+.chip .mana { width: 1.05em; height: 1.05em; vertical-align: -0.2em; margin-left: 3px; }
+.chip .mana:first-of-type { margin-left: 8px; }
 .help ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 14px; }
 .help code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
 
@@ -403,17 +407,18 @@ html.mobile #listtoggle { display: none; }
   html:not(.mobile) .topbuttons > * { zoom: 1.3; }
 }
 /* phone: options folded until "Filters & sort" is tapped; bigger "i" for thumbs */
-.optstoggle { display: none; }
-html.mobile .optstoggle { display: inline-block; }
-html.mobile #results:not(.opts) .controls, html.mobile #results:not(.opts) #cmdrresults,
-html.mobile #results:not(.opts) #filterbar { display: none !important; }
+/* Filters & sort: one button opens sorting, sizes, filters, the query and recent searches (the phone also folds the commander) */
+#results:not(.opts) .controls, #results:not(.opts) #filterbar, #results:not(.opts) #querybar, #results:not(.opts) #history,
+html.mobile #results:not(.opts) #cmdrresults { display: none !important; }
+#results.opts .controls, #results.opts #filterbar { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.optstoggle .optcount { margin-left: 6px; padding: 0 6px; border-radius: 8px; background: var(--accent); color: var(--accent-fg); font-weight: 700; }
 html.mobile .infobtn { width: 34px; height: 34px; font-size: 18px; }
 /* nothing to search: keep the explanation, hide the result controls */
 #results.nosearch .controls, #results.nosearch .optstoggle, #results.nosearch #querybar { display: none !important; }
 #results.static #querybar, #results.static .controls label:first-child { display: none !important; }
 /* EDHREC lists keep only "Hide cards in my deck" from the filter bar: type, mana value and price don't apply to them */
-#results.static #filterbar > :not(label) { display: none !important; }
-#results.static #filterbar:not(:has(> label)) { display: none !important; }
+#results.static #filterbar > :not(.ownedtoggle) { display: none !important; }
+#results.static #filterbar:not(:has(> .ownedtoggle)) { display: none !important; }
 /* phones: a closed drawer must not exist in the layout, or Android Chrome widens the page to include it */
 html.mobile .drawer:not(.open) { display: none; }
 @media (max-width: 899px) { .drawer:not(.open) { display: none; } }
@@ -438,7 +443,6 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
 
 <header class="topbar">
   <button id="home" class="brandbtn" type="button" title="Back to the start"><img class="brandlogo" src="logo.svg" alt="">SpellSeekr</button>
-  <p class="tagline">Commander card search in plain words</p>
   <form id="searchform" class="searchrow">
     <div id="modeswitch" class="modeswitch" role="group" aria-label="What the search bar does" hidden
       title="Refine changes the results on screen. Tip: start with + to refine once.">
@@ -549,7 +553,7 @@ html.mobile body.home .topbar .searchrow .btn { min-height: 64px; box-shadow: 0 
   <section id="start" class="home" aria-label="Start">
     <p id="nokey" class="keynote" hidden>Have the access code? <button class="linkbtn" type="button" data-opensettings>Enter it</button> for smarter translation by Claude.</p>
     <div id="cmdrhome"><div id="cmdrrow" class="cmdr">
-        <span class="cmdrlabel">Commander <span class="optional">(optional)</span></span>
+        <span class="cmdrlabel">Commander</span>
         <span id="cmdrpick" class="cmdrpick" hidden>
           <span id="cmdrchip" class="chip"></span>
           <button id="cmdrclear" class="linkbtn" type="button">remove</button>
@@ -1133,33 +1137,30 @@ function resetFilters() {
 }
 
 function renderFilterbar() {
+  renderOptsToggle();
   const bar = $("filterbar");
   bar.replaceChildren();
   bar.hidden = !state.search;
   const f = state.filters;
-  const button = (label, pressed, onClick) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "f";
-    b.textContent = label;
-    b.setAttribute("aria-pressed", String(pressed));
-    b.addEventListener("click", () => { onClick(); renderFilterbar(); if (state.search) runSearch(state.search.query); });
-    return b;
+  // one small dropdown per kind of filter
+  const choose = (title, keys, current, set) => {
+    const label = document.createElement("label");
+    label.className = "fsel";
+    const sel = document.createElement("select");
+    sel.add(new Option("any", ""));
+    for (const k of keys) sel.add(new Option(k, k));
+    sel.value = current || "";
+    sel.addEventListener("change", () => { set(sel.value); renderFilterbar(); if (state.search) runSearch(state.search.query); });
+    label.append(title + " ", sel);
+    bar.append(label);
   };
-  const group = (title, items) => {
-    const g = document.createElement("span");
-    g.className = "group";
-    const t = document.createElement("span");
-    t.textContent = title;
-    g.append(t, ...items);
-    bar.append(g);
-  };
-  const toggle = (set, key) => () => set.has(key) ? set.delete(key) : set.add(key);
-  group("Type", FILTER_TYPES.map(t => button(t, f.types.has(t), toggle(f.types, t))));
-  group("Mana value", [...FILTER_MV.keys()].map(k => button(k, f.mv.has(k), toggle(f.mv, k))));
-  group("Price", Object.keys(FILTER_PRICE).map(k => button(k, f.price === k, () => { f.price = f.price === k ? "" : k; })));
+  const one = set => v => { set.clear(); if (v) set.add(v); };
+  choose("Type", FILTER_TYPES, [...f.types][0], one(f.types));
+  choose("Mana value", [...FILTER_MV.keys()], [...f.mv][0], one(f.mv));
+  choose("Price", Object.keys(FILTER_PRICE), f.price, v => { f.price = v; });
   if (state.deck.size) {
     const label = document.createElement("label");
+    label.className = "ownedtoggle";
     const box = document.createElement("input");
     box.type = "checkbox";
     box.checked = state.hideOwned;
@@ -1189,10 +1190,17 @@ function renderCommander() {
   $("cmdrpair").hidden = !canPair;
   $("cmdrpair").textContent = pairing ? "cancel" : `+ add ${c && c.pair ? c.pair.label : "partner"}`;
   $("cmdrinput").placeholder = pairing ? `Name of the ${c.pair.label}` : "e.g. Atraxa";
-  $("cmdrnote").textContent = pairing ? "" : c ? "Searches stay within these colors." : "Limits every search to its colors.";
+  $("cmdrnote").textContent = "";
   renderCompanion();
   if (c) {
-    $("cmdrchip").textContent = `${c.names.join(" + ")} · ${(c.colors || "c").toUpperCase()}`;
+    // the colors as Scryfall's own mana symbols
+    $("cmdrchip").replaceChildren(c.names.join(" + "), ...(c.colors || "c").toUpperCase().split("").map(x => {
+      const img = document.createElement("img");
+      img.className = "mana";
+      img.src = `https://svgs.scryfall.io/card-symbols/${x}.svg`;
+      img.alt = x;
+      return img;
+    }));
     $("cmdrchip").title = c.names.join(" + ");
   }
 }
@@ -1376,8 +1384,7 @@ function showEdhrec(commanderName, tag, cards, uitleg) {
   state.search = { query: label, full: label, order: state.order, size: state.size, total: cards.length, cache, page: 1, static: true, warnings: [], details: null };
   setPrevious(null);
   showQuery("", uitleg || `Most played cards in ${commanderName} decks on EDHREC${tag ? ` (${tag})` : ""}.`);
-  $("uitleg").textContent += " Percentages: share of EDHREC decks with this commander that play the card.";
-  if (companionRule()) $("uitleg").textContent += ` Only cards that fit your companion (${$("compnote").textContent}).`;
+  $("uitleg").textContent = companionRule() ? `Only cards that fit your companion: ${$("compnote").textContent}.` : "";
   setView(false);
   $("results").classList.add("static");
   $("toolbar").hidden = false;
@@ -1592,7 +1599,6 @@ function render(cards, page, pages) {
     if (search.details && !/didn.t match any cards/i.test(search.details)) notes.push(search.details);
   }
   if (search.warnings.length) notes.push("Scryfall: " + search.warnings.join(" "));
-  if (search.total > 500) notes.push("Lots of results. Add more detail to your search, or narrow it down with the filters.");
   if (notes.length) message(notes.join(" "));
 
   const counts = new Map(state.list.map(c => [c.name, c.qty]));
@@ -2157,6 +2163,15 @@ function refineExamples(query) {
   return options.filter(([fits]) => fits).map(([, text]) => text).slice(0, 2).join(", ");
 }
 
+// What to say under the count: a warning, an error or fallback, combos, or words the built-in translator skipped.
+// A normal search needs no running commentary: the cards are the answer.
+function shownUitleg(r) {
+  const u = r.uitleg || "";
+  if (r.warn || (r.combos && r.combos.length) || /built-in translator|isn.t a search|not a search|can.t be/i.test(u)) return u;
+  const skipped = u.match(/Not used: [^.]*\./);
+  return skipped ? skipped[0] : "";
+}
+
 // ---------- wiring ----------
 $("searchform").addEventListener("submit", async e => {
   e.preventDefault();
@@ -2189,7 +2204,7 @@ $("searchform").addEventListener("submit", async e => {
     showNothing("Nothing to search", result.uitleg);
     return;
   }
-  showQuery(result.query, result.uitleg, result.combos, result.warn);
+  showQuery(result.query, shownUitleg(result), result.combos, result.warn);
   pushSearchUrl(result.query, zin);
   addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
   // a combo result is a list of card names, which makes no sense to refine; anything else can be
@@ -2224,7 +2239,7 @@ async function refineSearch(text) {
   if (!result.query || result.edhrec) { message("That can't be used to refine this search. Use the search bar for a new search.", true); return; }
   const zin = `${prev.zin} → ${text}`;
   $("zin").value = "";
-  showQuery(result.query, result.uitleg, result.combos, result.warn);
+  showQuery(result.query, shownUitleg(result), result.combos, result.warn);
   pushSearchUrl(result.query, zin);
   addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
   setPrevious(result.combos && result.combos.length ? null : { zin, query: result.query });
@@ -2285,10 +2300,22 @@ $("openlist").addEventListener("click", openList);
 $("closelist").addEventListener("click", closeList);
 $("barcopy").addEventListener("click", copyList);
 document.addEventListener("keydown", e => { if (e.key === "Escape" && $("drawer").classList.contains("open")) closeList(); });
-$("optstoggle").addEventListener("click", () => {
-  const open = $("results").classList.toggle("opts");
+function renderOptsToggle() {
+  const open = $("results").classList.contains("opts");
+  const f = state.filters;
+  const n = f.types.size + f.mv.size + (f.price ? 1 : 0);
   $("optstoggle").setAttribute("aria-expanded", String(open));
   $("optstoggle").textContent = open ? "Hide filters & sort" : "Filters & sort";
+  if (n && !open) {
+    const badge = document.createElement("span");
+    badge.className = "optcount";
+    badge.textContent = n;
+    $("optstoggle").append(badge);
+  }
+}
+$("optstoggle").addEventListener("click", () => {
+  $("results").classList.toggle("opts");
+  renderOptsToggle();
 });
 $("listtoggle").addEventListener("click", () => $("drawer").classList.contains("open") ? closeList() : openList());
 $("scrim").addEventListener("click", closeList);
@@ -2468,7 +2495,7 @@ const savedEdhrec = store.get("lastEdhrec", null);
 const lastEdhrec = savedEdhrec && typeof savedEdhrec.name === "string" ? savedEdhrec : null;
 if (searchFromUrl()) { /* the link decides */ }
 else if (lastEdhrec) runEdhrec(lastEdhrec.name, lastEdhrec.tag || "", "");
-else if (last) { showQuery(last, "Your last search from the previous session."); runSearch(last); }
+else if (last) { showQuery(last, ""); runSearch(last); }
 // U1: on a computer the search field is ready for typing straight away
 if (!isMobile && document.body.classList.contains("home")) $("zin").focus();
 </script>
