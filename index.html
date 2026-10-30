@@ -643,7 +643,7 @@ html.mobile .cmdrresults:not(:empty) { margin-bottom: 10px; }
   --fill: var(--accent); --fill-ink: var(--accent-fg);
   --gold: var(--fill); --ink-on-gold: var(--fill-ink);
   --bar: var(--surface); --bar-fg: var(--fg); --bar-line: var(--line); --bar-field: var(--bg); --bar-placeholder: var(--muted);
-  --deep: #0a0a0a; --deep-2: hsl(var(--h) var(--s) 26%);
+  --deep: #0a0a0a; --deep-2: #0a0a0a; --deep-line: #262626;
   --on-deep: hsl(var(--h) 20% 97%); --on-deep-2: hsl(var(--h) 18% 80%); --on-deep-accent: hsl(var(--h) var(--s) 76%);
   --on-deep-well: hsl(var(--h) 25% 9%); --on-deep-line: hsl(var(--h) 18% 44%);
   --gutter: max(16px, 2vw);
@@ -741,7 +741,7 @@ html:not(.mobile) .mobilebar { display: flex !important; justify-content: space-
 html:not(.mobile) .mobilebar .btn { flex: none; min-height: 38px; }
 html:not(.mobile) body.home:has(#barcopy:disabled) .mobilebar { display: none !important; }
 html:not(.mobile) body { padding-bottom: 64px; }
-.mobilebar { --surface: var(--deep-2); --line: var(--on-deep-line); --fg: var(--on-deep); background: var(--deep-2); border-top: 0; color: var(--on-deep); }
+.mobilebar { --surface: var(--deep-2); --line: var(--on-deep-line); --fg: var(--on-deep); background: var(--deep-2); border-top: 1px solid var(--deep-line); color: var(--on-deep); }
 .mobilebar .btn { color: var(--on-deep); background: transparent; border-color: var(--on-deep-line); }
 .mobilebar .btn.primary { color: var(--on-deep-well); background: var(--on-deep-accent); border-color: var(--on-deep-accent); }
 .mobilebar .btn.primary:disabled, .mobilebar .btn.primary:disabled:hover { color: var(--on-deep-2); background: transparent; border-color: var(--on-deep-line); }
