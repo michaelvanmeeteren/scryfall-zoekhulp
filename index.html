@@ -280,6 +280,10 @@ html.mobile body.home .topbar .cmdrtop { order: 0; flex-basis: 100%; }
 .decksection { display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid var(--line); }
 .list li.deckcard { grid-template-columns: minmax(0, 1fr) auto; }
 .deckcard.unknown .cardname { text-transform: capitalize; }
+.list li.deckcard .cardname, .list li.deckcard .deckqty { color: var(--muted); }
+.list.withdeck li.addedcard { box-shadow: inset 2px 0 0 var(--accent); padding-left: 8px; }
+.listkey { display: flex; flex-wrap: wrap; gap: 2px 14px; }
+.keyadded { box-shadow: inset 2px 0 0 var(--accent); padding-left: 8px; color: var(--fg); }
 .deckcard .deckqty { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 .deckrow { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; }
 .tile.owned .card img { opacity: 0.5; }
@@ -1046,8 +1050,8 @@ body { line-height: 1.5; font-weight: 300; }
       <h2>Card list</h2>
       <button id="closelist" class="btn small closelist" type="button">Close</button>
     </div>
-    <h3 id="addedhead" class="listsub" hidden>Added here</h3>
     <div id="totals" class="totals"></div>
+    <p id="listkey" class="listkey hint" hidden><span class="keyadded">Bright: added here</span> <span>Faded: already in your deck</span></p>
     <div id="curve" class="curve" aria-label="Mana curve" hidden></div>
     <p id="emptylist" class="emptylist">Empty. Click cards in the results to add them.</p>
     <ul id="listitems"></ul>
@@ -1071,7 +1075,6 @@ body { line-height: 1.5; font-weight: 300; }
         <h3 id="deckinfo" class="hint"></h3>
         <button id="importdeck" class="btn small" type="button">Import deck</button>
       </div>
-      <ul id="deckitems"></ul>
     </section>
   </div>
 </aside>
@@ -1933,7 +1936,7 @@ function renderCommander() {
   } else {
     renderCompanion();
     renderDeckProgress();
-    renderDeckList();
+    renderList();
     loadCommanderEdh();
   }
   renderStarters();
@@ -2255,7 +2258,7 @@ async function loadDeckCards() {
       });
       if (!res.ok) throw new Error();
       for (const c of (await res.json()).data || []) {
-        const card = normalise(c), info = { name: c.name, group: card.group };
+        const card = normalise(c), info = { name: c.name, group: card.group, mv: card.mv };
         deckCards.set(c.name.toLowerCase(), info);
         deckCards.set(c.name.split(" // ")[0].toLowerCase(), info);
       }
@@ -2263,7 +2266,7 @@ async function loadDeckCards() {
       names.slice(i, i + 75).forEach(name => deckLookedUp.delete(name));   // offline: tried again next time
       break;
     }
-    renderDeckList();
+    renderList();
   }
 }
 // What counts towards the deck, so without the commander.
@@ -2271,42 +2274,10 @@ function deckCardsToShow() {
   const commanders = state.commander ? state.commander.names.map(n => n.toLowerCase()) : [];
   return deckEntries().filter(([name]) => !commanders.includes(name));
 }
-function renderDeckList() {
-  const ul = $("deckitems");
-  ul.replaceChildren();
-  const rows = deckCardsToShow().map(([key, qty]) => ({ key, qty, info: deckCards.get(key.split(" // ")[0]) }))
-    .sort((a, b) => (a.info ? a.info.name : a.key).localeCompare(b.info ? b.info.name : b.key));
-  const row = c => {
-    const li = document.createElement("li");
-    li.className = "deckcard" + (c.info ? "" : " unknown");
-    const name = document.createElement("span");
-    name.className = "cardname";
-    name.textContent = c.info ? c.info.name : c.key;
-    const qty = document.createElement("span");
-    qty.className = "deckqty";
-    qty.textContent = c.qty > 1 ? c.qty : "";
-    li.append(name, qty);
-    return li;
-  };
-  if (!rows.some(c => c.info)) { ul.append(...rows.map(row)); return; }   // not looked up yet: just the names
-  for (const group of LIST_GROUPS) {
-    const inGroup = rows.filter(c => ((c.info && c.info.group) || "Other") === group);
-    if (!inGroup.length) continue;
-    const head = document.createElement("li");
-    head.className = "grouphead";
-    head.textContent = `${group} (${inGroup.reduce((n, c) => n + c.qty, 0)})`;
-    ul.append(head, ...inGroup.map(row));
-  }
-}
 function renderDeck() {
   const total = deckEntries().reduce((n, [, qty]) => n + qty, 0);
-  const shown = deckCardsToShow().reduce((n, [, qty]) => n + qty, 0);
-  $("deckinfo").textContent = total ? `From your deck (${shown})` : "Import your own deck to see which cards you already have.";
-  $("deckinfo").parentElement.classList.toggle("has", total > 0);
-  $("deckinfo").className = total ? "" : "hint";
-  $("addedhead").hidden = !total;
+  $("deckinfo").textContent = total ? `${plural(total, "card")} imported from your deck` : "Import your own deck to see which cards you already have.";
   $("copyhint").hidden = !total;
-  renderDeckList();
   if ($("drawer").classList.contains("open")) loadDeckCards();
   $("importdeck").textContent = state.deck.size ? "Replace deck" : "Import deck";
   $("deckbutton").textContent = $("deckmenu").textContent = state.deck.size ? `Your deck · ${total}` : "Import deck";
@@ -2901,7 +2872,15 @@ function renderList() {
   const ul = $("listitems");
   ul.replaceChildren();
   const items = [...state.list].sort((a, b) => a.name.localeCompare(b.name));
-  $("emptylist").hidden = items.length > 0;
+  // the imported deck; a card that is also in the list shows once, unless it is a basic land, which add up
+  const deckRows = deckCardsToShow().map(([key, qty]) => {
+    const info = deckCards.get(key.split(" // ")[0]);
+    return { key, qty, info, name: info ? info.name : key, group: info && info.group, mv: info && info.mv, deck: true };
+  }).filter(d => !state.list.some(c => !c.multi && (c.name.toLowerCase() === d.key || c.name.toLowerCase().split(" // ")[0] === d.key.split(" // ")[0])));
+  const hasDeck = deckRows.length > 0;
+  $("list").classList.toggle("withdeck", hasDeck);
+  $("listkey").hidden = !hasDeck || !items.length;
+  $("emptylist").hidden = items.length > 0 || hasDeck;
   $("copy").disabled = items.length === 0;
   $("clear").disabled = items.length === 0;
   const total = items.reduce((n, c) => n + c.qty, 0);
@@ -2910,22 +2889,24 @@ function renderList() {
   const dollars = items.reduce((n, c) => n + (c.eur == null && c.usd != null ? c.usd * c.qty : 0), 0);
   const priceLabel = euro.format(price) + (dollars ? " + " + dollar.format(dollars) : "");
   const unpriced = items.some(c => c.eur == null && c.usd == null);
-  $("totals").textContent = items.length
-    ? `${plural(total, "card")} · ${priceLabel}${unpriced ? " (some prices unknown)" : ""}`
-    : "";
+  const inDeck = deckRows.reduce((n, d) => n + d.qty, 0);
+  const added = items.length ? `${hasDeck ? `${total} added` : plural(total, "card")} · ${priceLabel}${unpriced ? " (some prices unknown)" : ""}` : "";
+  $("totals").textContent = [added, hasDeck && `${inDeck} from your deck`].filter(Boolean).join(" + ");
   $("openlist").textContent = items.length ? `List: ${plural(total, "card")} · ${priceLabel}` : "List is empty";
   $("listcount").textContent = total;
   $("barcopy").disabled = items.length === 0;
-  renderCurve(items);
+  renderCurve([...items, ...deckRows]);
   for (const group of LIST_GROUPS) {
-    const inGroup = items.filter(c => (c.group || "Other") === group);
+    const inGroup = [...items, ...deckRows].filter(c => (c.group || "Other") === group).sort((a, b) => a.name.localeCompare(b.name));
     if (!inGroup.length) continue;
     const head = document.createElement("li");
     head.className = "grouphead";
     head.textContent = `${group} (${inGroup.reduce((n, c) => n + c.qty, 0)})`;
     ul.append(head);
     for (const c of inGroup) {
+      if (c.deck) { ul.append(deckRow(c)); continue; }
       const row = listRow(c);
+      row.classList.add("addedcard");
       if (!c.multi && ownsCard(c.name)) {
         const also = document.createElement("small");
         also.textContent = "also in your deck";
@@ -2937,6 +2918,19 @@ function renderList() {
   }
 }
 
+// An imported card: only its name and how many, because the deck is changed with Replace deck.
+function deckRow(c) {
+  const li = document.createElement("li");
+  li.className = "deckcard" + (c.info ? "" : " unknown");
+  const name = document.createElement("span");
+  name.className = "cardname";
+  name.textContent = c.name;
+  const qty = document.createElement("span");
+  qty.className = "deckqty";
+  qty.textContent = c.qty > 1 ? c.qty : "";
+  li.append(name, qty);
+  return li;
+}
 function listRow(c) {
   const li = document.createElement("li");
   if (!c.multi) li.className = "single";
