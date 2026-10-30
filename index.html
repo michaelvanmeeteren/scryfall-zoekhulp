@@ -275,6 +275,12 @@ html.mobile body.home .topbar .cmdrtop { order: 0; flex-basis: 100%; }
 .cmdrform { display: flex; gap: 6px; }
 .cmdrform input { width: 190px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); }
 .settings textarea { width: 100%; font-family: var(--mono); font-size: 12.5px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); padding: 8px; }
+.listsub, .deckrow.has #deckinfo { margin: 0; font-size: 16px; font-weight: 400; color: var(--fg); font-family: var(--serif); }
+#deckinfo { margin: 0; font-weight: 400; }
+.decksection { display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid var(--line); }
+.list li.deckcard { grid-template-columns: minmax(0, 1fr) auto; }
+.deckcard.unknown .cardname { text-transform: capitalize; }
+.deckcard .deckqty { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 .deckrow { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; }
 .tile.owned .card img { opacity: 0.5; }
 .ownedbadge { position: absolute; top: 6px; left: 6px; padding: 2px 7px; border-radius: 3px; background: var(--fg); color: var(--bg); font-size: 11.5px; font-weight: 700; pointer-events: none; }
@@ -1018,12 +1024,9 @@ body:not(.home):has(#cmdrrow.has) .topbar .btn:not(.primary), #results:has(#cmdr
       <h2>Card list</h2>
       <button id="closelist" class="btn small closelist" type="button">Close</button>
     </div>
+    <h3 id="addedhead" class="listsub" hidden>Added here</h3>
     <div id="totals" class="totals"></div>
     <div id="curve" class="curve" aria-label="Mana curve" hidden></div>
-    <div class="deckrow">
-      <span id="deckinfo" class="hint"></span>
-      <button id="importdeck" class="btn small" type="button">Import deck</button>
-    </div>
     <p id="emptylist" class="emptylist">Empty. Click cards in the results to add them.</p>
     <ul id="listitems"></ul>
     <div class="exportopts" role="radiogroup" aria-label="Export format">
@@ -1040,6 +1043,14 @@ body:not(.home):has(#cmdrrow.has) .topbar .btn:not(.primary), #results:has(#cmdr
       <button id="confirmno" class="btn small" type="button">Cancel</button>
     </div>
     <textarea id="exporttext" readonly hidden aria-label="List to copy"></textarea>
+    <p id="copyhint" class="hint" hidden>Copy decklist copies only the cards you added here.</p>
+    <section class="decksection" aria-labelledby="deckinfo">
+      <div class="deckrow">
+        <h3 id="deckinfo" class="hint"></h3>
+        <button id="importdeck" class="btn small" type="button">Import deck</button>
+      </div>
+      <ul id="deckitems"></ul>
+    </section>
   </div>
 </aside>
 
@@ -1270,7 +1281,7 @@ const state = {
   umoriType: store.get("umoritype", ""),        // the card type Umori's deck shares
   commander: validCommander(store.get("commander", null)),        // { name, colors } chosen as the starting point
   deck: new Set(store.get("deck", [])),            // lower-case card names of the imported deck
-  deckCounts: store.get("deckcounts", null),       // how many of each, without the sideboard: { name: qty }
+  deckCounts: store.get("deckcounts", null),       // how many of each: { name: qty }
   hideOwned: store.get("hideowned", false),
   filters: { types: new Set(), mv: new Set(), price: "" },   // filter buttons beside the results
   previous: null   // { zin, query } of the last search, so Claude can handle follow-up questions
@@ -1899,6 +1910,7 @@ function renderCommander() {
   } else {
     renderCompanion();
     renderDeckProgress();
+    renderDeckList();
     loadCommanderEdh();
   }
   renderStarters();
@@ -2175,20 +2187,22 @@ function loadCommanderEdh() {
 // ---------- imported deck: mark cards you already have ----------
 function parseDeck(text) {
   const names = new Set(), counts = {};
-  let spare = false;   // below a "Sideboard" or "Maybeboard" header: known cards, but not part of the 100
+  const SPARE = "sideboard|maybeboard|considering|considered";
+  let spare = false;   // below one of those headers: not part of the deck, so left out
   for (let line of text.split(/\r?\n/)) {
+    if (new RegExp(`\\[[^\\]]*\\b(?:${SPARE})\\b`, "i").test(line)) continue;   // Archidekt's category of a single card
     line = line.replace(/\s+\[[^\]]*\]|\s+\^[^^]*\^/g, "")   // Archidekt categories [Ramp] and labels ^Have,#37d67a^
       .replace(/#.*$/, "").trim();   // Moxfield tags
     // skip empty lines and section headers such as "// Commander", "Sideboard:" or "Deck"
-    if (/^(?:\/\/\s*)?(sideboard|maybeboard)\b:?\s*$/i.test(line)) { spare = true; continue; }
+    if (new RegExp(`^(?:\\/\\/\\s*)?(?:${SPARE})\\b:?\\s*$`, "i").test(line)) { spare = true; continue; }
     if (/^(?:\/\/\s*)?(commander|deck|mainboard)\b:?\s*$/i.test(line)) { spare = false; continue; }
-    if (!line || line.startsWith("//") || /^(companion|about|name)\b:?\s*$/i.test(line)) continue;
+    if (spare || !line || line.startsWith("//") || /^(companion|about|name)\b:?\s*$/i.test(line)) continue;
     const m = line.match(/^(?:(\d+)x?\s+)?(.+?)(?:\s+\([A-Za-z0-9]{2,6}\)(?:\s+\S+)?)?(?:\s+\*[A-Z]+\*)*\s*$/);
     if (!m) continue;
     const name = m[2].trim().toLowerCase();
     names.add(name);
     if (name.includes(" // ")) names.add(name.split(" // ")[0]);
-    if (!spare) counts[name] = (counts[name] || 0) + (Number(m[1]) || 1);
+    counts[name] = (counts[name] || 0) + (Number(m[1]) || 1);
   }
   return { names, counts };
 }
@@ -2204,15 +2218,80 @@ function ownsCard(name) {
   return state.deck.has(n) || state.deck.has(n.split(" // ")[0]);
 }
 
+// Names and card types of the imported deck, looked up the first time the list is opened (75 per request).
+const deckCards = new Map();   // lower-case name -> { name, group }
+const deckLookedUp = new Set();
+async function loadDeckCards() {
+  const names = deckEntries().map(([name]) => name).filter(name => !deckLookedUp.has(name));
+  names.forEach(name => deckLookedUp.add(name));
+  for (let i = 0; i < names.length; i += 75) {
+    try {
+      const res = await fetch("https://api.scryfall.com/cards/collection", {
+        method: "POST", headers: { "content-type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ identifiers: names.slice(i, i + 75).map(name => ({ name: name.split(" // ")[0] })) })
+      });
+      if (!res.ok) throw new Error();
+      for (const c of (await res.json()).data || []) {
+        const card = normalise(c), info = { name: c.name, group: card.group };
+        deckCards.set(c.name.toLowerCase(), info);
+        deckCards.set(c.name.split(" // ")[0].toLowerCase(), info);
+      }
+    } catch {
+      names.slice(i, i + 75).forEach(name => deckLookedUp.delete(name));   // offline: tried again next time
+      break;
+    }
+    renderDeckList();
+  }
+}
+// What counts towards the deck, so without the commander.
+function deckCardsToShow() {
+  const commanders = state.commander ? state.commander.names.map(n => n.toLowerCase()) : [];
+  return deckEntries().filter(([name]) => !commanders.includes(name));
+}
+function renderDeckList() {
+  const ul = $("deckitems");
+  ul.replaceChildren();
+  const rows = deckCardsToShow().map(([key, qty]) => ({ key, qty, info: deckCards.get(key.split(" // ")[0]) }))
+    .sort((a, b) => (a.info ? a.info.name : a.key).localeCompare(b.info ? b.info.name : b.key));
+  const row = c => {
+    const li = document.createElement("li");
+    li.className = "deckcard" + (c.info ? "" : " unknown");
+    const name = document.createElement("span");
+    name.className = "cardname";
+    name.textContent = c.info ? c.info.name : c.key;
+    const qty = document.createElement("span");
+    qty.className = "deckqty";
+    qty.textContent = c.qty > 1 ? c.qty : "";
+    li.append(name, qty);
+    return li;
+  };
+  if (!rows.some(c => c.info)) { ul.append(...rows.map(row)); return; }   // not looked up yet: just the names
+  for (const group of LIST_GROUPS) {
+    const inGroup = rows.filter(c => ((c.info && c.info.group) || "Other") === group);
+    if (!inGroup.length) continue;
+    const head = document.createElement("li");
+    head.className = "grouphead";
+    head.textContent = `${group} (${inGroup.reduce((n, c) => n + c.qty, 0)})`;
+    ul.append(head, ...inGroup.map(row));
+  }
+}
 function renderDeck() {
   const total = deckEntries().reduce((n, [, qty]) => n + qty, 0);
-  $("deckinfo").textContent = total ? `My deck: ${plural(total, "card")} imported` : "Import your own deck to see which cards you already have.";
+  const shown = deckCardsToShow().reduce((n, [, qty]) => n + qty, 0);
+  $("deckinfo").textContent = total ? `From your deck (${shown})` : "Import your own deck to see which cards you already have.";
+  $("deckinfo").parentElement.classList.toggle("has", total > 0);
+  $("deckinfo").className = total ? "" : "hint";
+  $("addedhead").hidden = !total;
+  $("copyhint").hidden = !total;
+  renderDeckList();
+  if ($("drawer").classList.contains("open")) loadDeckCards();
   $("importdeck").textContent = state.deck.size ? "Replace deck" : "Import deck";
   $("deckbutton").textContent = $("deckmenu").textContent = state.deck.size ? `Your deck · ${total}` : "Import deck";
   $("deckbutton").title = state.deck.size ? "Replace or remove your imported deck" : "Import your own deck to see which cards you already have";
   renderFilterbar();
   refreshOwned();
   renderDeckProgress();
+  renderList();
 }
 
 function refreshOwned() {
@@ -2824,6 +2903,11 @@ function renderList() {
     ul.append(head);
     for (const c of inGroup) {
       const row = listRow(c);
+      if (!c.multi && ownsCard(c.name)) {
+        const also = document.createElement("small");
+        also.textContent = "also in your deck";
+        row.querySelector(".cardname").append(" ", also);
+      }
       ul.append(row);
       if (c.name === justAdded) replay(row, "flash");
     }
@@ -2957,6 +3041,7 @@ function syncListMode() {
 narrowWindow.addEventListener("change", syncListMode);
 function openList() {
   listOpener = document.activeElement;
+  loadDeckCards();
   $("drawer").classList.add("open");
   document.body.classList.add("listopen");
   $("listtoggle").setAttribute("aria-expanded", "true");
