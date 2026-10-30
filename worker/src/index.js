@@ -85,6 +85,9 @@ Syntax:
   convoke, ward …), not o:. Use a tag like otag:gives-trample when the card gives the keyword to others.
 - Function tags from Scryfall Tagger: otag:<tag>, for example otag:removal, otag:ramp, otag:draw, otag:tutor,
   otag:counterspell, otag:sweeper, otag:anthem, otag:power-boost-to-all. The full list of tags is at the end.
+  A keyword goes before a tag with the same name, also when that tag is listed as close to the request: "cards with
+  flashback" = kw:flashback, not otag:flashback. Use a tag only for cards that give or care about the keyword.
+- "instant speed" = (t:instant OR kw:flash), so instants count too: "instant speed removal" = otag:removal (t:instant OR kw:flash).
 - Mana value: mv<3, mv=2, mv<=5
 - Power/toughness: pow>=4, tou<=2, pow>tou
 - Rarity: r:c, r:u, r:r, r:m
@@ -131,7 +134,8 @@ Rules:
 Commander knowledge (all syntax and tags below are checked against Scryfall):
 - Color groups. Guilds: azorius=wu, dimir=ub, rakdos=br, gruul=rg, selesnya=gw, orzhov=wb, izzet=ur, golgari=bg,
   boros=rw, simic=gu. Shards: bant=gwu, esper=wub, grixis=ubr, jund=brg, naya=rgw. Wedges: abzan=wbg, jeskai=urw,
-  sultai=bgu, mardu=rwb, temur=gur. Four colors: "no white"=ubrg, "no blue"=wbrg, "no black"=wurg, "no red"=wubg,
+  sultai=bgu, mardu=rwb, temur=gur. Four colors, where "without" means the same as "no" and the named color is the
+  one left out ("four color commanders without green" = is:commander id=wubr): "no white"=ubrg, "no blue"=wbrg, "no black"=wurg, "no red"=wubg,
   "no green"=wubr. Five color = wubrg.
 - Player slang: dork = otag:mana-dork, rock = otag:mana-rock, cantrip = otag:cantrip, tutor = otag:tutor,
   fixing / land ramp = otag:land-ramp, wheel = otag:wheel, draw engine = otag:draw-engine, wincon / alt win =
