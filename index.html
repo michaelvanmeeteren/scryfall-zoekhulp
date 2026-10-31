@@ -2235,7 +2235,7 @@ function parseDeck(text) {
     if (spare || !line || line.startsWith("//") || /^(companion|about|name)\b:?\s*$/i.test(line)) continue;
     const m = line.match(/^(?:(\d+)x?\s+)?(.+?)(?:\s+\(([A-Za-z0-9]{2,6})\)(?:\s+(\S+))?)?(?:\s+\*[A-Z]+\*)*\s*$/);
     if (!m) continue;
-    const name = m[2].trim().toLowerCase();
+    const name = m[2].trim().toLowerCase().replace(/\s+\/\/?\s+/, " // ");   // some sites write two-faced cards with one slash
     names.add(name);
     if (name.includes(" // ")) names.add(name.split(" // ")[0]);
     counts[name] = (counts[name] || 0) + (Number(m[1]) || 1);
