@@ -1749,6 +1749,8 @@ function withFilters(query) {
   let extra = "";
   if (!/(^|[\s(-])(f|format|legal|banned|restricted):/i.test(query)) extra += " f:commander";
   if (!/(^|[\s(-])game:/i.test(query)) extra += " game:paper";
+  // the cheapest printing: Scryfall's default is the newest, which has no price yet when a set is only just out
+  if (!query.includes("prefer:")) extra += " prefer:eur-low";
   // the chosen commander's colors, unless the query sets colors itself or looks for commanders
   if (state.commander && !/(^|[\s(-])(id|identity|ci)(:|<|>|=)/i.test(query) && !/is:commander/i.test(query)) {
     extra += " id<=" + (state.commander.colors || "c");
@@ -2245,6 +2247,18 @@ function ownsCard(name) {
   return state.deck.has(n) || state.deck.has(n.split(" // ")[0]);
 }
 
+// The cheapest printing of these cards that has a price, by lower-case front name; cards without any priced printing are left out.
+async function cheapestPrintings(names) {
+  const found = new Map();
+  for (let i = 0; i < names.length; i += 20) {
+    const q = `(${names.slice(i, i + 20).map(n => `!"${n.replace(/"/g, "")}"`).join(" OR ")}) game:paper prefer:eur-low`;
+    const body = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q }));
+    for (const c of (body.data || []).map(normalise)) {
+      if (c.eur != null || c.usd != null) found.set(c.name.split(" // ")[0].toLowerCase(), c);
+    }
+  }
+  return found;
+}
 // Puts a pasted deck in the list as chosen cards, replacing what an earlier import put there.
 async function importDeck(counts, prints = {}) {
   const commanders = (state.commander ? state.commander.names : []).map(n => n.toLowerCase());
@@ -2264,13 +2278,15 @@ async function importDeck(counts, prints = {}) {
   await lookUp(entries.filter(([name]) => prints[name]).map(([name]) => prints[name]));
   // no printing named, or Scryfall doesn't know it: any printing of the card will do
   await lookUp(entries.filter(([name]) => !found.has(front(name))).map(([name]) => ({ name: front(name) })));
+  const free = entries.map(([name]) => found.get(front(name))).filter(c => c && c.eur == null && c.usd == null && !entries.some(([name]) => prints[name] && front(name) === front(c.name.toLowerCase())));
+  if (free.length) for (const [name, c] of await cheapestPrintings(free.map(c => c.name))) found.set(name, c);
   const list = state.list.map(c => ({ ...c, qty: addedQty(c), deckQty: 0 })).filter(c => c.qty > 0);
   for (const [name, qty] of entries) {
     const card = found.get(front(name));
     const fullName = card ? card.name : name;
     const inList = list.find(c => c.name === fullName);
     if (inList) { inList.qty = inList.multi ? inList.qty + qty : 1; inList.deckQty = inList.multi ? qty : 1; continue; }
-    const fields = card ? { id: card.id, set: card.set, cn: card.cn, eur: card.eur, usd: card.usd, multi: card.multi, group: card.group, mv: card.mv }
+    const fields = card ? { id: card.id, set: card.set, cn: card.cn, eur: card.eur, usd: card.usd, multi: card.multi, group: card.group, mv: card.mv, keepPrint: !!prints[name] }
       : { id: "", set: "", cn: "", eur: null, usd: null, multi: false, group: "Other", mv: 0, unknown: true };
     const copies = fields.multi ? qty : 1;
     list.push({ ...fields, name: fullName, qty: copies, deckQty: copies });
@@ -2838,6 +2854,21 @@ function cardGroup(typeLine) {
   return "Other";
 }
 
+// A printing named in a pasted deck stays, even without a price.
+async function priceList() {
+  const unpriced = state.list.filter(c => c.eur == null && c.usd == null && c.id && !c.keepPrint);
+  if (!unpriced.length) return;
+  try {
+    const found = await cheapestPrintings(unpriced.map(c => c.name));
+    const moved = unpriced.filter(c => found.has(c.name.split(" // ")[0].toLowerCase()));
+    for (const item of moved) {
+      const { id, set, cn, eur, usd } = found.get(item.name.split(" // ")[0].toLowerCase());
+      Object.assign(item, { id, set, cn, eur, usd });
+    }
+    if (moved.length) saveList();
+  } catch { /* offline: tried again next time */ }
+}
+
 // Lists saved before grouping existed have no type or mana value: look those cards up once (75 per request).
 async function fillListTypes() {
   const missing = state.list.filter(c => !c.group && c.id);
@@ -2898,8 +2929,8 @@ function renderList() {
   const price = items.reduce((n, c) => n + (c.eur || 0) * c.qty, 0);
   // cards without a euro price count in dollars, shown separately rather than converted
   const dollars = items.reduce((n, c) => n + (c.eur == null && c.usd != null ? c.usd * c.qty : 0), 0);
-  const priceLabel = euro.format(price) + (dollars ? " + " + dollar.format(dollars) : "");
-  const unpriced = items.some(c => c.eur == null && c.usd == null);
+  const priceLabel = price || dollars ? euro.format(price) + (dollars ? " + " + dollar.format(dollars) : "") : "no prices yet";
+  const unpriced = (price || dollars) && items.some(c => c.eur == null && c.usd == null);
   const added = addedItems.reduce((n, c) => n + addedQty(c), 0), inDeck = total - added;
   $("totals").textContent = items.length
     ? `${plural(total, "card")}${hasDeck ? ` (${inDeck} from your deck, ${added} added)` : ""} · ${priceLabel}${unpriced ? " (some prices unknown)" : ""}`
@@ -3768,6 +3799,7 @@ renderDeck();
 renderList();
 fillCommanderArt();
 fillListTypes();
+priceList();
 renderHistory();
 // the last search: its words and query (older versions kept only the query)
 const savedSearch = store.get("lastsearch", null);
