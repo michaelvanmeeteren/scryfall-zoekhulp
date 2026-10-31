@@ -1959,11 +1959,16 @@ const cardText = card => [card.type_line, card.oracle_text, ...(card.card_faces 
 // Where to start with this commander.
 const STARTER_SEARCHES = { Ramp: "otag:ramp", "Card draw": "otag:draw", Removal: "otag:removal", Protection: "otag:protection" };
 const refiningResults = () => refining && state.previous && !document.body.classList.contains("home");
+// A button that would change nothing isn't shown: its tag is already in the search it would add to, or is all of the search it would replace.
+function starterUseless(tag) {
+  if (!state.previous || document.body.classList.contains("home")) return false;
+  const terms = splitQuery(state.previous.query);
+  return refining ? terms.includes(tag) : terms.length === 1 && terms[0] === tag;
+}
 // With New on a quick search replaces the search on screen, with Refine on it is added to it.
 function quickSearch(words, tag) {
   if (!refiningResults()) { $("zin").value = words; $("searchform").requestSubmit(); return; }
   const prev = state.previous;
-  if (splitQuery(prev.query).includes(tag)) { toast(`${words} is already in this search`); return; }
   resetFilters();
   stepSearch(`${prev.query} ${tag}`, `${prev.zin} → ${words}`);
 }
@@ -1975,7 +1980,7 @@ function renderStarters() {
   const or = document.createElement("span");
   or.className = "startor";
   or.textContent = refiningResults() ? "Add to search" : "Quick search";
-  const chips = Object.entries(STARTER_SEARCHES).map(([words, tag]) => {
+  const chips = Object.entries(STARTER_SEARCHES).filter(([, tag]) => !starterUseless(tag)).map(([words, tag]) => {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "btn small startchip";
@@ -1983,6 +1988,7 @@ function renderStarters() {
     b.addEventListener("click", () => quickSearch(words, tag));
     return b;
   });
+  box.hidden = !chips.length;
   box.replaceChildren(or, ...chips);
   alignStarters();
 }
@@ -3107,6 +3113,7 @@ function setView(home) {
   $("start").hidden = !home;
   $("results").hidden = home;
   (home ? $("cmdrtop") : $("cmdrresults")).append($("cmdrrow"));
+  renderStarters();
   sizeHero();
 }
 
