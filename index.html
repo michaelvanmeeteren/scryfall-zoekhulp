@@ -1093,7 +1093,6 @@ html.mobile body:not(.home) .starters .startor { display: none; }
       <button id="confirmno" class="btn small" type="button">Cancel</button>
     </div>
     <textarea id="exporttext" readonly hidden aria-label="List to copy"></textarea>
-    <p id="copyhint" class="hint" hidden>Copy decklist copies only the cards you added here.</p>
     <section class="decksection" aria-labelledby="deckinfo">
       <div class="deckrow">
         <h3 id="deckinfo" class="hint"></h3>
@@ -2280,7 +2279,6 @@ function renderDeck() {
   rebuildDeck();
   const total = state.list.reduce((n, c) => n + (c.deckQty || 0), 0);
   $("deckinfo").textContent = total ? `${plural(total, "card")} from your deck` : "Import your own deck to see which cards you already have.";
-  $("copyhint").hidden = !total;
   $("importdeck").textContent = total ? "Replace deck" : "Import deck";
   $("deckbutton").textContent = $("deckmenu").textContent = total ? `Your deck · ${total}` : "Import deck";
   $("deckbutton").title = total ? "Replace or remove your imported deck" : "Import your own deck to see which cards you already have";
@@ -2879,7 +2877,7 @@ function renderList() {
   $("list").classList.toggle("withdeck", hasDeck);
   $("listkey").hidden = !hasDeck || !addedItems.length;
   $("emptylist").hidden = items.length > 0;
-  $("copy").disabled = addedItems.length === 0;
+  $("copy").disabled = items.length === 0;
   $("clear").disabled = items.length === 0;
   const total = items.reduce((n, c) => n + c.qty, 0);
   const price = items.reduce((n, c) => n + (c.eur || 0) * addedQty(c), 0);
@@ -2892,7 +2890,7 @@ function renderList() {
   $("totals").textContent = [addedText, hasDeck && `${inDeck} from your deck`].filter(Boolean).join(" + ");
   $("openlist").textContent = items.length ? `List: ${plural(total, "card")} · ${priceLabel}` : "List is empty";
   $("listcount").textContent = total;
-  $("barcopy").disabled = addedItems.length === 0;
+  $("barcopy").disabled = items.length === 0;
   renderCurve(items);
   for (const group of LIST_GROUPS) {
     const inGroup = items.filter(c => (c.group || "Other") === group);
@@ -2968,9 +2966,9 @@ function renderCurve(items) {
 
 function exportText() {
   const full = document.querySelector('input[name="fmt"]:checked').value === "full";
-  return state.list.filter(c => addedQty(c) > 0)
+  return [...state.list]
     .sort((a, b) => a.name.localeCompare(b.name))
-    .map(c => full ? `${addedQty(c)} ${c.name} (${c.set.toUpperCase()}) ${c.cn}` : `${addedQty(c)} ${c.name}`)
+    .map(c => full && c.set ? `${c.qty} ${c.name} (${c.set.toUpperCase()}) ${c.cn}` : `${c.qty} ${c.name}`)
     .join("\n");
 }
 
