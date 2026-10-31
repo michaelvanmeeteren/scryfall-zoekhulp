@@ -278,9 +278,8 @@ html.mobile body.home .topbar .cmdrtop { order: 0; flex-basis: 100%; }
 .listsub, .deckrow.has #deckinfo { margin: 0; font-size: 16px; font-weight: 400; color: var(--fg); font-family: var(--serif); }
 #deckinfo { margin: 0; font-weight: 400; }
 .decksection { display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid var(--line); }
-.list li.deckcard { grid-template-columns: minmax(0, 1fr) auto; }
-.deckcard.unknown .cardname { text-transform: capitalize; }
-.list li.deckcard .cardname, .list li.deckcard .deckqty { color: var(--muted); }
+.list li.unknown .cardname { text-transform: capitalize; }
+.list li.fromdeck .cardname, .list li.fromdeck .cardname small, .list li.fromdeck .qty span { color: var(--muted); }
 .list.withdeck li.addedcard { box-shadow: inset 2px 0 0 var(--accent); padding-left: 8px; }
 .listkey { display: flex; flex-wrap: wrap; gap: 2px 14px; }
 .keyadded { box-shadow: inset 2px 0 0 var(--accent); padding-left: 8px; color: var(--fg); }
@@ -1148,7 +1147,7 @@ const store = {
 // A device with a sync code keeps when each setting and each list card last changed, and removed cards as well.
 // The Worker stores one document per code. Devices merge it with their own data: the list card by card, everything
 // else newest first. A write based on an old revision is refused, so a device can't overwrite what it hasn't seen.
-const SYNC_KEYS = ["commander", "companion", "umoritype", "deck", "deckcounts", "decktext", "hideowned", "history", "order", "size"];
+const SYNC_KEYS = ["commander", "companion", "umoritype", "hideowned", "history", "order", "size"];
 const SYNC_KEEP_REMOVED = 180 * 86400000;   // how long a removed card is remembered, in ms
 const SYNC_CODE = /^[a-z2-9]{4}(-[a-z2-9]{4}){5}$/;
 let sync = store.get("sync", null);         // { code, rev, dirty, at: {key: ms}, listAt: {name: ms}, gone: {name: ms}, last: ms }
@@ -1230,11 +1229,6 @@ function applySynced(keys, listChanged) {
   if (keys.has("companion")) state.companion = store.get("companion", "");
   if (keys.has("umoritype")) state.umoriType = store.get("umoritype", "");
   if (keys.has("commander") || keys.has("companion") || keys.has("umoritype")) { renderCommander(); fillCommanderArt(); }
-  if (keys.has("deck") || keys.has("deckcounts")) {
-    state.deck = new Set(store.get("deck", []));
-    state.deckCounts = store.get("deckcounts", null);
-    renderDeck();
-  }
   if (keys.has("hideowned")) { state.hideOwned = store.get("hideowned", false); applyHideOwned(); }
   if (keys.has("history")) { state.history = store.get("history", []); renderHistory(); }
   if (keys.has("order")) { state.order = store.get("order", "edhrec"); $("order").value = state.order; }
@@ -1330,8 +1324,7 @@ const state = {
   companion: store.get("companion", ""),        // name of the companion, see COMPANIONS
   umoriType: store.get("umoritype", ""),        // the card type Umori's deck shares
   commander: validCommander(store.get("commander", null)),        // { name, colors } chosen as the starting point
-  deck: new Set(store.get("deck", [])),            // lower-case card names of the imported deck
-  deckCounts: store.get("deckcounts", null),       // how many of each: { name: qty }
+  deck: new Set(),            // lower-case names of the list's cards that came from an imported deck (deckQty)
   hideOwned: store.get("hideowned", false),
   filters: { types: new Set(), mv: new Set(), price: "" },   // filter buttons beside the results
   previous: null   // { zin, query } of the last search, so Claude can handle follow-up questions
@@ -2010,11 +2003,8 @@ function renderDeckProgress() {
   const c = state.commander;
   $("deckprogress").hidden = !c;
   if (!c) return;
-  // the imported deck plus the list: a card in both counts once, but extra basic lands add up
-  const commanders = c.names.map(n => n.toLowerCase());
-  const imported = deckEntries().filter(([name]) => !commanders.includes(name)).reduce((n, [, qty]) => n + qty, 0);
-  const added = state.list.filter(x => x.multi || !ownsCard(x.name)).reduce((n, x) => n + x.qty, 0);
-  $("deckprogress").textContent = `${imported + added} / ${100 - c.names.length} in your deck`;
+  const total = state.list.filter(x => !c.names.includes(x.name)).reduce((n, x) => n + x.qty, 0);
+  $("deckprogress").textContent = `${total} / ${100 - c.names.length} in your deck`;
 }
 
 // The commander card for a (partial) name; ambiguous names ("atraxa") give the most played commander containing it.
@@ -2237,59 +2227,66 @@ function parseDeck(text) {
   return { names, counts };
 }
 
-// [name, qty] of the imported deck. Decks imported before quantities were kept count each card once.
-function deckEntries() {
-  if (state.deckCounts) return Object.entries(state.deckCounts);
-  const names = [...state.deck];
-  return names.filter(n => !names.some(other => other.startsWith(n + " // "))).map(n => [n, 1]);
+const addedQty = c => c.qty - (c.deckQty || 0);
+function rebuildDeck() {
+  state.deck = new Set(state.list.filter(c => c.deckQty).flatMap(c => [c.name.toLowerCase(), c.name.toLowerCase().split(" // ")[0]]));
 }
 function ownsCard(name) {
   const n = name.toLowerCase();
   return state.deck.has(n) || state.deck.has(n.split(" // ")[0]);
 }
 
-// Names and card types of the imported deck, looked up the first time the list is opened (75 per request).
-const deckCards = new Map();   // lower-case name -> { name, group }
-const deckLookedUp = new Set();
-async function loadDeckCards() {
-  const names = deckEntries().map(([name]) => name).filter(name => !deckLookedUp.has(name));
-  names.forEach(name => deckLookedUp.add(name));
-  for (let i = 0; i < names.length; i += 75) {
-    try {
-      const res = await fetch("https://api.scryfall.com/cards/collection", {
-        method: "POST", headers: { "content-type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ identifiers: names.slice(i, i + 75).map(name => ({ name: name.split(" // ")[0] })) })
-      });
-      if (!res.ok) throw new Error();
-      for (const c of (await res.json()).data || []) {
-        const card = normalise(c), info = { name: c.name, group: card.group, mv: card.mv };
-        deckCards.set(c.name.toLowerCase(), info);
-        deckCards.set(c.name.split(" // ")[0].toLowerCase(), info);
-      }
-    } catch {
-      names.slice(i, i + 75).forEach(name => deckLookedUp.delete(name));   // offline: tried again next time
-      break;
-    }
-    renderList();
+// Puts a pasted deck in the list as chosen cards, replacing what an earlier import put there.
+async function importDeck(counts) {
+  const commanders = (state.commander ? state.commander.names : []).map(n => n.toLowerCase());
+  const entries = Object.entries(counts).filter(([name]) => !commanders.includes(name));
+  const front = name => name.split(" // ")[0];
+  const found = new Map();
+  for (let i = 0; i < entries.length; i += 75) {
+    const res = await fetch("https://api.scryfall.com/cards/collection", {
+      method: "POST", headers: { "content-type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ identifiers: entries.slice(i, i + 75).map(([name]) => ({ name: front(name) })) })
+    });
+    if (!res.ok) throw new Error("Scryfall returned an error.");
+    for (const c of (await res.json()).data || []) found.set(front(c.name.toLowerCase()), normalise(c));
   }
+  const list = state.list.map(c => ({ ...c, qty: addedQty(c), deckQty: 0 })).filter(c => c.qty > 0);
+  for (const [name, qty] of entries) {
+    const card = found.get(front(name));
+    const fullName = card ? card.name : name;
+    const inList = list.find(c => c.name === fullName);
+    if (inList) { inList.qty = inList.multi ? inList.qty + qty : 1; inList.deckQty = inList.multi ? qty : 1; continue; }
+    const fields = card ? { id: card.id, set: card.set, cn: card.cn, eur: card.eur, usd: card.usd, multi: card.multi, group: card.group, mv: card.mv }
+      : { id: "", set: "", cn: "", eur: null, usd: null, multi: false, group: "Other", mv: 0, unknown: true };
+    const copies = fields.multi ? qty : 1;
+    list.push({ ...fields, name: fullName, qty: copies, deckQty: copies });
+  }
+  state.list = list;
+  saveList();
+  return { total: entries.reduce((n, [, qty]) => n + qty, 0), missing: entries.filter(([name]) => !found.has(front(name))).map(([name]) => name) };
 }
-// What counts towards the deck, so without the commander.
-function deckCardsToShow() {
-  const commanders = state.commander ? state.commander.names.map(n => n.toLowerCase()) : [];
-  return deckEntries().filter(([name]) => !commanders.includes(name));
+// Decks imported before they went into the list were kept apart; they move over once.
+async function moveOldDeck() {
+  const names = store.get("deck", []);
+  const counts = store.get("deckcounts", null) || Object.fromEntries(names.filter(n => !names.some(o => o.startsWith(n + " // "))).map(n => [n, 1]));
+  if (!Object.keys(counts).length || state.list.some(c => c.deckQty)) { for (const k of ["deck", "deckcounts", "decktext"]) { try { localStorage.removeItem("szh." + k); } catch { /* storage unavailable */ } } return; }
+  try {
+    await importDeck(counts);
+    for (const k of ["deck", "deckcounts", "decktext"]) { try { localStorage.removeItem("szh." + k); } catch { /* storage unavailable */ } }
+  } catch { /* offline: tried again next time */ }
 }
+let hadDeck = false;
 function renderDeck() {
-  const total = deckEntries().reduce((n, [, qty]) => n + qty, 0);
-  $("deckinfo").textContent = total ? `${plural(total, "card")} imported from your deck` : "Import your own deck to see which cards you already have.";
+  rebuildDeck();
+  const total = state.list.reduce((n, c) => n + (c.deckQty || 0), 0);
+  $("deckinfo").textContent = total ? `${plural(total, "card")} from your deck` : "Import your own deck to see which cards you already have.";
   $("copyhint").hidden = !total;
-  if ($("drawer").classList.contains("open")) loadDeckCards();
-  $("importdeck").textContent = state.deck.size ? "Replace deck" : "Import deck";
-  $("deckbutton").textContent = $("deckmenu").textContent = state.deck.size ? `Your deck · ${total}` : "Import deck";
-  $("deckbutton").title = state.deck.size ? "Replace or remove your imported deck" : "Import your own deck to see which cards you already have";
-  renderFilterbar();
+  $("importdeck").textContent = total ? "Replace deck" : "Import deck";
+  $("deckbutton").textContent = $("deckmenu").textContent = total ? `Your deck · ${total}` : "Import deck";
+  $("deckbutton").title = total ? "Replace or remove your imported deck" : "Import your own deck to see which cards you already have";
+  if (hadDeck !== total > 0) { hadDeck = total > 0; renderFilterbar(); }
   refreshOwned();
   renderDeckProgress();
-  renderList();
 }
 
 function refreshOwned() {
@@ -2798,7 +2795,7 @@ function movePreview(e) {
 function hidePreview() { $("preview").hidden = true; }
 
 // ---------- card list ----------
-function saveList() { store.set("list", state.list); renderList(); refreshBadges(); renderDeckProgress(); }
+function saveList() { store.set("list", state.list); renderList(); refreshBadges(); renderDeck(); }
 
 // The list is keyed by card name, so another printing of a card already in the list counts as the same card.
 let justAdded = "";   // name of the card added by the last click, animated once
@@ -2853,6 +2850,7 @@ function changeQty(name, delta) {
   const item = state.list.find(c => c.name === name);
   if (!item) return;
   item.qty += delta;
+  if (item.deckQty) item.deckQty = Math.min(item.deckQty, item.qty);
   if (item.qty <= 0) state.list = state.list.filter(c => c.name !== name);
   saveList();
 }
@@ -2876,65 +2874,43 @@ function renderList() {
   const ul = $("listitems");
   ul.replaceChildren();
   const items = [...state.list].sort((a, b) => a.name.localeCompare(b.name));
-  // the imported deck; a card that is also in the list shows once, unless it is a basic land, which add up
-  const deckRows = deckCardsToShow().map(([key, qty]) => {
-    const info = deckCards.get(key.split(" // ")[0]);
-    return { key, qty, info, name: info ? info.name : key, group: info && info.group, mv: info && info.mv, deck: true };
-  }).filter(d => !state.list.some(c => !c.multi && (c.name.toLowerCase() === d.key || c.name.toLowerCase().split(" // ")[0] === d.key.split(" // ")[0])));
-  const hasDeck = deckRows.length > 0;
+  const hasDeck = items.some(c => c.deckQty);
+  const addedItems = items.filter(c => addedQty(c) > 0);
   $("list").classList.toggle("withdeck", hasDeck);
-  $("listkey").hidden = !hasDeck || !items.length;
-  $("emptylist").hidden = items.length > 0 || hasDeck;
-  $("copy").disabled = items.length === 0;
+  $("listkey").hidden = !hasDeck || !addedItems.length;
+  $("emptylist").hidden = items.length > 0;
+  $("copy").disabled = addedItems.length === 0;
   $("clear").disabled = items.length === 0;
   const total = items.reduce((n, c) => n + c.qty, 0);
-  const price = items.reduce((n, c) => n + (c.eur || 0) * c.qty, 0);
+  const price = items.reduce((n, c) => n + (c.eur || 0) * addedQty(c), 0);
   // cards without a euro price count in dollars, shown separately rather than converted
-  const dollars = items.reduce((n, c) => n + (c.eur == null && c.usd != null ? c.usd * c.qty : 0), 0);
+  const dollars = items.reduce((n, c) => n + (c.eur == null && c.usd != null ? c.usd * addedQty(c) : 0), 0);
   const priceLabel = euro.format(price) + (dollars ? " + " + dollar.format(dollars) : "");
-  const unpriced = items.some(c => c.eur == null && c.usd == null);
-  const inDeck = deckRows.reduce((n, d) => n + d.qty, 0);
-  const added = items.length ? `${hasDeck ? `${total} added` : plural(total, "card")} · ${priceLabel}${unpriced ? " (some prices unknown)" : ""}` : "";
-  $("totals").textContent = [added, hasDeck && `${inDeck} from your deck`].filter(Boolean).join(" + ");
+  const unpriced = addedItems.some(c => c.eur == null && c.usd == null);
+  const added = addedItems.reduce((n, c) => n + addedQty(c), 0), inDeck = total - added;
+  const addedText = added ? `${hasDeck ? `${added} added` : plural(added, "card")} · ${priceLabel}${unpriced ? " (some prices unknown)" : ""}` : "";
+  $("totals").textContent = [addedText, hasDeck && `${inDeck} from your deck`].filter(Boolean).join(" + ");
   $("openlist").textContent = items.length ? `List: ${plural(total, "card")} · ${priceLabel}` : "List is empty";
   $("listcount").textContent = total;
-  $("barcopy").disabled = items.length === 0;
-  renderCurve([...items, ...deckRows]);
+  $("barcopy").disabled = addedItems.length === 0;
+  renderCurve(items);
   for (const group of LIST_GROUPS) {
-    const inGroup = [...items, ...deckRows].filter(c => (c.group || "Other") === group).sort((a, b) => a.name.localeCompare(b.name));
+    const inGroup = items.filter(c => (c.group || "Other") === group);
     if (!inGroup.length) continue;
     const head = document.createElement("li");
     head.className = "grouphead";
     head.textContent = `${group} (${inGroup.reduce((n, c) => n + c.qty, 0)})`;
     ul.append(head);
     for (const c of inGroup) {
-      if (c.deck) { ul.append(deckRow(c)); continue; }
       const row = listRow(c);
-      row.classList.add("addedcard");
-      if (!c.multi && ownsCard(c.name)) {
-        const also = document.createElement("small");
-        also.textContent = "also in your deck";
-        row.querySelector(".cardname").append(" ", also);
-      }
+      row.classList.add(addedQty(c) > 0 ? "addedcard" : "fromdeck");
+      if (c.unknown) row.classList.add("unknown");
       ul.append(row);
       if (c.name === justAdded) replay(row, "flash");
     }
   }
 }
 
-// An imported card: only its name and how many, because the deck is changed with Replace deck.
-function deckRow(c) {
-  const li = document.createElement("li");
-  li.className = "deckcard" + (c.info ? "" : " unknown");
-  const name = document.createElement("span");
-  name.className = "cardname";
-  name.textContent = c.name;
-  const qty = document.createElement("span");
-  qty.className = "deckqty";
-  qty.textContent = c.qty > 1 ? c.qty : "";
-  li.append(name, qty);
-  return li;
-}
 function listRow(c) {
   const li = document.createElement("li");
   if (!c.multi) li.className = "single";
@@ -2954,7 +2930,7 @@ function listRow(c) {
   name.title = c.name;
   name.textContent = c.name;
   const set = document.createElement("small");
-  set.textContent = `${c.set.toUpperCase()} ${c.cn}`;
+  set.textContent = `${c.set.toUpperCase()} ${c.cn || ""}`;
   name.append(set);
   const remove = document.createElement("button");
   remove.type = "button"; remove.className = "remove"; remove.textContent = "×";
@@ -2992,9 +2968,9 @@ function renderCurve(items) {
 
 function exportText() {
   const full = document.querySelector('input[name="fmt"]:checked').value === "full";
-  return [...state.list]
+  return state.list.filter(c => addedQty(c) > 0)
     .sort((a, b) => a.name.localeCompare(b.name))
-    .map(c => full ? `${c.qty} ${c.name} (${c.set.toUpperCase()}) ${c.cn}` : `${c.qty} ${c.name}`)
+    .map(c => full ? `${addedQty(c)} ${c.name} (${c.set.toUpperCase()}) ${c.cn}` : `${addedQty(c)} ${c.name}`)
     .join("\n");
 }
 
@@ -3062,7 +3038,6 @@ function syncListMode() {
 narrowWindow.addEventListener("change", syncListMode);
 function openList() {
   listOpener = document.activeElement;
-  loadDeckCards();
   $("drawer").classList.add("open");
   document.body.classList.add("listopen");
   $("listtoggle").setAttribute("aria-expanded", "true");
@@ -3747,9 +3722,9 @@ $("cmdrclear").addEventListener("click", () => {
   renderCommander();
   rerunForCommander();
 });
-// The deck as it was pasted, so it can be changed; decks imported before this was kept are written out from their names.
+// The deck as it stands now: cards taken out of the list are gone from it too.
 function currentDeckText() {
-  return store.get("decktext", "") || deckEntries().map(([name, qty]) => `${qty} ${name}`).join("\n");
+  return state.list.filter(c => c.deckQty).map(c => `${c.deckQty} ${c.name}`).join("\n");
 }
 function openDeckImport() { $("decktext").value = currentDeckText(); $("deckdialog").showModal(); $("decktext").focus(); }
 $("importdeck").addEventListener("click", openDeckImport);
@@ -3757,23 +3732,17 @@ $("deckbutton").addEventListener("click", openDeckImport);
 $("deckmenu").addEventListener("click", () => { closeMore(); openDeckImport(); });
 $("deckform").addEventListener("submit", e => {
   if (!e.submitter || e.submitter.value !== "save") return;
-  const parsed = parseDeck($("decktext").value);
-  state.deck = parsed.names;
-  state.deckCounts = parsed.counts;
-  store.set("deck", [...state.deck]);
-  store.set("deckcounts", state.deckCounts);
-  store.set("decktext", $("decktext").value);
-  renderDeck();
-  const total = deckEntries().reduce((n, [, qty]) => n + qty, 0);
-  toast(total ? `Deck saved: ${plural(total, "card")}` : "No cards found in that text.");
+  const { counts } = parseDeck($("decktext").value);
+  toast("Importing your deck…");
+  importDeck(counts).then(({ total, missing }) => {
+    if (!total) toast("No cards found in that text.");
+    else if (missing.length) toast(`Deck added: ${plural(total, "card")}. Not found: ${missing.slice(0, 3).join(", ")}${missing.length > 3 ? "…" : ""}`);
+    else toast(`Deck added: ${plural(total, "card")}`);
+  }, () => toast("Couldn't reach Scryfall, so the deck wasn't imported. Try again."));
 });
 $("removedeck").addEventListener("click", () => {
-  state.deck = new Set();
-  state.deckCounts = {};
-  store.set("deck", []);
-  store.set("deckcounts", {});
-  store.set("decktext", "");
-  renderDeck();
+  state.list = state.list.map(c => ({ ...c, qty: addedQty(c), deckQty: 0 })).filter(c => c.qty > 0);
+  saveList();
   $("deckdialog").close();
   toast("Deck removed");
 });
@@ -3795,6 +3764,7 @@ window.addEventListener("pageshow", () => { if (document.body.classList.contains
 if (searchFromUrl()) { /* the link decides */ }
 else if (last) { showQuery(last.query, ""); setTitle(last.zin); setPrevious({ zin: last.zin, query: last.query }); runSearch(last.query); }
 watchHero();
+moveOldDeck();
 runSync();
 // A sync link from another device: the code is in the # part, which never reaches a server. Connecting stays a click.
 function openSyncLink() {
