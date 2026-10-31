@@ -1887,7 +1887,12 @@ function alignStarters() {
   if (isMobile || innerWidth < 1024 || document.body.classList.contains("home")) return;
   const room = $("zin").getBoundingClientRect().left - $("starters").getBoundingClientRect().left - parseFloat(getComputedStyle($("starters")).columnGap || 0);
   if (room < 70) label.style.display = "none";   // no New and Refine buttons here: the field starts right above
-  else label.style.width = room + "px";
+  else {
+    label.style.width = room + "px";
+    // whatever else stands between them (a margin, a gap) is taken off by measuring the first button itself
+    const first = label.nextElementSibling;
+    if (first) label.style.width = room - (first.getBoundingClientRect().left - $("zin").getBoundingClientRect().left) + "px";
+  }
 }
 function sizeHero() {
   alignStarters();
