@@ -2205,7 +2205,7 @@ function loadCommanderEdh() {
 
 // ---------- imported deck: mark cards you already have ----------
 function parseDeck(text) {
-  const names = new Set(), counts = {};
+  const names = new Set(), counts = {}, prints = {};
   const SPARE = "sideboard|maybeboard|considering|considered";
   let spare = false;   // below one of those headers: not part of the deck, so left out
   for (let line of text.split(/\r?\n/)) {
@@ -2216,14 +2216,15 @@ function parseDeck(text) {
     if (new RegExp(`^(?:\\/\\/\\s*)?(?:${SPARE})\\b:?\\s*$`, "i").test(line)) { spare = true; continue; }
     if (/^(?:\/\/\s*)?(commander|deck|mainboard)\b:?\s*$/i.test(line)) { spare = false; continue; }
     if (spare || !line || line.startsWith("//") || /^(companion|about|name)\b:?\s*$/i.test(line)) continue;
-    const m = line.match(/^(?:(\d+)x?\s+)?(.+?)(?:\s+\([A-Za-z0-9]{2,6}\)(?:\s+\S+)?)?(?:\s+\*[A-Z]+\*)*\s*$/);
+    const m = line.match(/^(?:(\d+)x?\s+)?(.+?)(?:\s+\(([A-Za-z0-9]{2,6})\)(?:\s+(\S+))?)?(?:\s+\*[A-Z]+\*)*\s*$/);
     if (!m) continue;
     const name = m[2].trim().toLowerCase();
     names.add(name);
     if (name.includes(" // ")) names.add(name.split(" // ")[0]);
     counts[name] = (counts[name] || 0) + (Number(m[1]) || 1);
+    if (m[3] && m[4]) prints[name] = { set: m[3].toLowerCase(), collector_number: m[4] };
   }
-  return { names, counts };
+  return { names, counts, prints };
 }
 
 const addedQty = c => c.qty - (c.deckQty || 0);
@@ -2236,19 +2237,24 @@ function ownsCard(name) {
 }
 
 // Puts a pasted deck in the list as chosen cards, replacing what an earlier import put there.
-async function importDeck(counts) {
+async function importDeck(counts, prints = {}) {
   const commanders = (state.commander ? state.commander.names : []).map(n => n.toLowerCase());
   const entries = Object.entries(counts).filter(([name]) => !commanders.includes(name));
   const front = name => name.split(" // ")[0];
   const found = new Map();
-  for (let i = 0; i < entries.length; i += 75) {
-    const res = await fetch("https://api.scryfall.com/cards/collection", {
-      method: "POST", headers: { "content-type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ identifiers: entries.slice(i, i + 75).map(([name]) => ({ name: front(name) })) })
-    });
-    if (!res.ok) throw new Error("Scryfall returned an error.");
-    for (const c of (await res.json()).data || []) found.set(front(c.name.toLowerCase()), normalise(c));
-  }
+  const lookUp = async identifiers => {
+    for (let i = 0; i < identifiers.length; i += 75) {
+      const res = await fetch("https://api.scryfall.com/cards/collection", {
+        method: "POST", headers: { "content-type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ identifiers: identifiers.slice(i, i + 75) })
+      });
+      if (!res.ok) throw new Error("Scryfall returned an error.");
+      for (const c of (await res.json()).data || []) found.set(front(c.name.toLowerCase()), normalise(c));
+    }
+  };
+  await lookUp(entries.filter(([name]) => prints[name]).map(([name]) => prints[name]));
+  // no printing named, or Scryfall doesn't know it: any printing of the card will do
+  await lookUp(entries.filter(([name]) => !found.has(front(name))).map(([name]) => ({ name: front(name) })));
   const list = state.list.map(c => ({ ...c, qty: addedQty(c), deckQty: 0 })).filter(c => c.qty > 0);
   for (const [name, qty] of entries) {
     const card = found.get(front(name));
@@ -2880,14 +2886,15 @@ function renderList() {
   $("copy").disabled = items.length === 0;
   $("clear").disabled = items.length === 0;
   const total = items.reduce((n, c) => n + c.qty, 0);
-  const price = items.reduce((n, c) => n + (c.eur || 0) * addedQty(c), 0);
+  const price = items.reduce((n, c) => n + (c.eur || 0) * c.qty, 0);
   // cards without a euro price count in dollars, shown separately rather than converted
-  const dollars = items.reduce((n, c) => n + (c.eur == null && c.usd != null ? c.usd * addedQty(c) : 0), 0);
+  const dollars = items.reduce((n, c) => n + (c.eur == null && c.usd != null ? c.usd * c.qty : 0), 0);
   const priceLabel = euro.format(price) + (dollars ? " + " + dollar.format(dollars) : "");
-  const unpriced = addedItems.some(c => c.eur == null && c.usd == null);
+  const unpriced = items.some(c => c.eur == null && c.usd == null);
   const added = addedItems.reduce((n, c) => n + addedQty(c), 0), inDeck = total - added;
-  const addedText = added ? `${hasDeck ? `${added} added` : plural(added, "card")} · ${priceLabel}${unpriced ? " (some prices unknown)" : ""}` : "";
-  $("totals").textContent = [addedText, hasDeck && `${inDeck} from your deck`].filter(Boolean).join(" + ");
+  $("totals").textContent = items.length
+    ? `${plural(total, "card")}${hasDeck ? ` (${inDeck} from your deck, ${added} added)` : ""} · ${priceLabel}${unpriced ? " (some prices unknown)" : ""}`
+    : "";
   $("openlist").textContent = items.length ? `List: ${plural(total, "card")} · ${priceLabel}` : "List is empty";
   $("listcount").textContent = total;
   $("barcopy").disabled = items.length === 0;
@@ -2966,10 +2973,11 @@ function renderCurve(items) {
 
 function exportText() {
   const full = document.querySelector('input[name="fmt"]:checked').value === "full";
-  return [...state.list]
+  const commanders = state.commander ? state.commander.names.filter(n => !state.list.some(c => c.name === n)) : [];
+  const cards = [...state.list]
     .sort((a, b) => a.name.localeCompare(b.name))
-    .map(c => full && c.set ? `${c.qty} ${c.name} (${c.set.toUpperCase()}) ${c.cn}` : `${c.qty} ${c.name}`)
-    .join("\n");
+    .map(c => full && c.set ? `${c.qty} ${c.name} (${c.set.toUpperCase()}) ${c.cn}` : `${c.qty} ${c.name}`);
+  return [...commanders.map(n => `1 ${n}`), ...cards].join("\n");
 }
 
 let copiedTimer;
@@ -3722,7 +3730,7 @@ $("cmdrclear").addEventListener("click", () => {
 });
 // The deck as it stands now: cards taken out of the list are gone from it too.
 function currentDeckText() {
-  return state.list.filter(c => c.deckQty).map(c => `${c.deckQty} ${c.name}`).join("\n");
+  return state.list.filter(c => c.deckQty).map(c => `${c.deckQty} ${c.name}${c.set ? ` (${c.set.toUpperCase()}) ${c.cn}` : ""}`).join("\n");
 }
 function openDeckImport() { $("decktext").value = currentDeckText(); $("deckdialog").showModal(); $("decktext").focus(); }
 $("importdeck").addEventListener("click", openDeckImport);
@@ -3730,9 +3738,9 @@ $("deckbutton").addEventListener("click", openDeckImport);
 $("deckmenu").addEventListener("click", () => { closeMore(); openDeckImport(); });
 $("deckform").addEventListener("submit", e => {
   if (!e.submitter || e.submitter.value !== "save") return;
-  const { counts } = parseDeck($("decktext").value);
+  const { counts, prints } = parseDeck($("decktext").value);
   toast("Importing your deck…");
-  importDeck(counts).then(({ total, missing }) => {
+  importDeck(counts, prints).then(({ total, missing }) => {
     if (!total) toast("No cards found in that text.");
     else if (missing.length) toast(`Deck added: ${plural(total, "card")}. Not found: ${missing.slice(0, 3).join(", ")}${missing.length > 3 ? "…" : ""}`);
     else toast(`Deck added: ${plural(total, "card")}`);
