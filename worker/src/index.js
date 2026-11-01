@@ -121,6 +121,9 @@ Syntax:
 - Color shorthand: w=white, u=blue, b=black, r=red, g=green.
   "g/w/b", "gwb", "in green white black" and "abzan" all mean id<=bgw. "mono red" means id<=r.
 - Type: t:creature, t:legendary, t:dragon, -t:basic
+  A subtype is a type, with or without the word "spells", also when a commander is set: "arcane spells" = t:arcane,
+  "lessons" = t:lesson, "traps" = t:trap, "goblin spells" = t:goblin. Never answer it with synergy tags, cantrips or
+  plain t:instant OR t:sorcery: "i need arcane spells" and "every arcane spell" are both t:arcane.
 - Rules text: o:"draw a card", o:damage
 - Keyword: kw:flying, kw:trample. Always use kw: for a keyword ability the card itself has (storm, cascade, flash,
   convoke, ward …), not o:. Use a tag like otag:gives-trample when the card gives the keyword to others.

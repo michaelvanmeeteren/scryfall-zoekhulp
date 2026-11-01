@@ -128,6 +128,10 @@ const CASES = [
   { zin: "creatures with hexproof in green", any: [["hexproof"]], id: "<=g" },
   { zin: "double strike creatures in red", any: [["double"]], id: "<=r" },
   { zin: "cards with flashback", any: [["kw:flashback"]] },
+  { zin: "i need arcane spells", any: [["t:arcane"]], none: ["otag:", " or "] },
+  { zin: "every arcane spell", any: [["t:arcane"]], none: ["otag:", " or "] },
+  { zin: "lessons in blue", any: [["t:lesson"]], none: ["otag:"], id: "<=u" },
+  { zin: "i need arcane spells", cmdr: { name: "Goro-Goro and Satoru", colors: "ubr", text: "Whenever one or more creatures you control that entered this turn deal combat damage to a player, create a 5/5 red Dragon Spirit creature token with flying. {1}{R}: Creatures you control gain haste until end of turn." }, any: [["t:arcane"]], none: ["otag:", " or "], id: "<=bru" },
   { zin: "cards with partner", any: [["partner"]] },
   // functions
   { zin: "mana rocks under 3 mana", any: [["mana-rock"], ["mv<3", "mv<=2"]] },
