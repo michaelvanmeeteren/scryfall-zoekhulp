@@ -18,6 +18,8 @@ const CASES = [
   { zin: "mono black commanders", any: [["is:commander"]], id: "=b" },
   { zin: "five color commanders", any: [["is:commander"]], id: "=wubrg" },
   { zin: "four color commanders without blue", any: [["is:commander"]], id: "=wbrg" },
+  { zin: "four color commanders without black", any: [["is:commander"]], id: "=wurg" },
+  { zin: "vier kleuren commanders zonder blauw", any: [["is:commander"]], id: "=wbrg" },
   { zin: "temur commanders", any: [["is:commander"]], id: "=urg" },
   { zin: "goblin commanders", any: [["is:commander"], ["t:goblin"]] },
   { zin: "planeswalkers that can be my commander", any: [["t:planeswalker"], ["is:commander"]] },

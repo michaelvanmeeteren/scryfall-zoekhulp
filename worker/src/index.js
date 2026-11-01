@@ -236,6 +236,13 @@ function requestText(zin, commander, previous, companion) {
   const prevZin = clean(previous && previous.zin, MAX_SENTENCE);
   const prevQuery = clean(previous && previous.query, 500);
   if (prevZin && prevQuery) lines.push(`Refine my search: "${prevZin}" => ${prevQuery}`);
+  // Claude mixes up blue (u) and black (b) here often enough that the letters are worked out for it
+  const fourColors = /\b(?:four|4|vier)[ -]?(?:colou?rs?|kleur)/i.test(zin) && zin.match(/\b(?:without|no|except|minus|non|zonder|geen)[ -]?(white|blue|black|red|green|wit|blauw|zwart|rood|groen)\b/i);
+  if (fourColors) {
+    const left = { white: "white", wit: "white", blue: "blue", blauw: "blue", black: "black", zwart: "black", red: "red", rood: "red", green: "green", groen: "green" }[fourColors[1].toLowerCase()];
+    const letters = { white: "ubrg", blue: "wbrg", black: "wurg", red: "wubg", green: "wubr" }[left];
+    lines.push(`Four colors with ${left} left out: use exactly these four letters, ${letters}.`);
+  }
   const close = closeTags(zin);
   if (close.length) lines.push(`Tags close to this request: ${close.join(", ")}`);
   if (!lines.length) return zin;   // same message as always, so nothing changes for plain searches
