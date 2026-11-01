@@ -143,7 +143,7 @@ const CASES = [
   { zin: "lifegain payoffs", any: [["lifegain", "life-gain", "gain life", "gain-life", "lifelink"]] },
   { zin: "spot removal for creatures in black", any: [["removal"]], id: "<=b" },
   { zin: "card draw in red", any: [["draw", "impulse", "card-advantage"]], id: "<=r" },
-  { zin: "protection spells for my creatures in white", any: [["protect", "indestructible", "hexproof"]], id: "<=w" },
+  { zin: "protection spells for my creatures in white", any: [["(t:instant or t:sorcery", "(t:sorcery or t:instant"], ["protect", "indestructible", "hexproof"]], id: "<=w" },
   { zin: "cards that copy creatures", any: [["clone", "copy"]] },
   { zin: "discard outlets", any: [["discard"]] },
   { zin: "graveyard recursion for artifacts", any: [["recursion", "reanimat", "return", "regrowth"], ["artifact"]] },
@@ -169,7 +169,7 @@ const CASES = [
   { zin: "cards illustrated by Seb McKinnon", any: [["a:", "artist:"]] },
   { zin: "game changers in black", any: [["is:gamechanger"]], id: "<=b" },
   { zin: "reserved list cards", any: [["is:reserved"]], min: 10 },
-  { zin: "cards with flavor text about elves", any: [["ft:", "flavor"]] },
+  { zin: "cards with flavor text about elves", any: [["ft:"], ["ft:", "flavor"]] },
   // Dutch
   { zin: "vliegende wezens in wit", any: [["t:creature"], ["kw:flying"]], id: "<=w" },
   { zin: "goedkope ramp in groen", any: [["ramp"], ["mv<=2", "mv<3"]], none: ["eur"], id: "<=g" },

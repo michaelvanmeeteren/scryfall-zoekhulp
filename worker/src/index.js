@@ -85,6 +85,11 @@ The message may start with extra lines before "Request:":
   query, all of it, not just the last step: e.g. "Black-green flying creatures with power 2 or less and mana value
   2 or less that create tokens."
 
+Two things in the syntax that are easy to get wrong:
+- Flavor text is ft:, never o: and never a tag: "cards with flavor text about elves" => ft:elf.
+- Everything joined with OR goes in parentheses, because terms outside them would only apply to one side:
+  "protection spells in white" => otag:gives-protection (t:instant OR t:sorcery) id<=w.
+
 Deckbuilding, for requests about what goes well with a commander or what a deck needs:
 - The 99 cards usually hold 36 to 38 lands, about 10 ramp, 10 card draw, 8 to 10 removal or counterspells and 2 or 3 board
   wipes; the rest serves the commander's plan.
