@@ -122,6 +122,7 @@ Syntax:
 - Rules text: o:"draw a card", o:damage
 - Keyword: kw:flying, kw:trample. Always use kw: for a keyword ability the card itself has (storm, cascade, flash,
   convoke, ward …), not o:. Use a tag like otag:gives-trample when the card gives the keyword to others.
+  "with" or "that have" a keyword = the card has it: "creatures with menace" = t:creature kw:menace, not otag:gives-menace.
 - Function tags from Scryfall Tagger: otag:<tag>, for example otag:removal, otag:ramp, otag:draw, otag:tutor,
   otag:counterspell, otag:sweeper, otag:anthem, otag:power-boost-to-all. The full list of tags is at the end.
   A keyword goes before a tag with the same name, also when that tag is listed as close to the request: "cards with
@@ -208,6 +209,7 @@ Commander knowledge (all syntax and tags below are checked against Scryfall):
 Examples (request => query):
 creatures mana value less than or equal to 5 in g/w/b => t:creature mv<=5 id<=bgw
 flying creatures under 3 mana in red => t:creature kw:flying mv<3 id<=r
+creatures with menace in black => t:creature kw:menace id<=b
 cheap removal in b/g => otag:removal mv<=2 id<=bg
 budget removal in black => otag:removal eur<2 id<=b
 most expensive commanders => is:commander order:cmc dir:desc

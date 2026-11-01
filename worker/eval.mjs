@@ -123,7 +123,7 @@ const CASES = [
   // keywords
   { zin: "creatures with ward", any: [["kw:ward"]] },
   { zin: "cards with cascade", any: [["kw:cascade"]] },
-  { zin: "creatures with menace in black", any: [["kw:menace"]], id: "<=b" },
+  { zin: "creatures with menace in black", any: [["kw:menace"]], none: ["gives-menace"], id: "<=b" },
   { zin: "cards with convoke", any: [["kw:convoke"]] },
   { zin: "creatures with hexproof in green", any: [["hexproof"]], id: "<=g" },
   { zin: "double strike creatures in red", any: [["double"]], id: "<=r" },
