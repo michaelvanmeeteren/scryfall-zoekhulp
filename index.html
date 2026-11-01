@@ -1792,6 +1792,8 @@ function withFilters(query) {
   if (!/(^|[\s(-])game:/i.test(query)) extra += " game:paper";
   // the cheapest printing: Scryfall's default is the newest, which has no price yet when a set is only just out
   if (!query.includes("prefer:")) extra += " prefer:eur-low";
+  // the cheapest printing can be a foreign one, so stick to English unless the query asks for a language
+  if (!/(^|[\s(-])(lang|language):/i.test(query)) extra += " lang:en";
   // the chosen commander's colors, unless the query sets colors itself or looks for commanders
   if (state.commander && !/(^|[\s(-])(id|identity|ci)(:|<|>|=)/i.test(query) && !/is:commander/i.test(query)) {
     extra += " id<=" + (state.commander.colors || "c");
@@ -2298,7 +2300,7 @@ function ownsCard(name) {
 async function cheapestPrintings(names) {
   const found = new Map();
   for (let i = 0; i < names.length; i += 20) {
-    const q = `(${names.slice(i, i + 20).map(n => `!"${n.replace(/"/g, "")}"`).join(" OR ")}) game:paper prefer:eur-low`;
+    const q = `(${names.slice(i, i + 20).map(n => `!"${n.replace(/"/g, "")}"`).join(" OR ")}) game:paper lang:en prefer:eur-low`;
     const body = await scryfall("https://api.scryfall.com/cards/search?" + new URLSearchParams({ q }));
     for (const c of (body.data || []).map(normalise)) {
       if (c.eur != null || c.usd != null) found.set(c.name.split(" // ")[0].toLowerCase(), c);
