@@ -78,7 +78,7 @@ const CASES = [
   { zin: "removal for enchantments in white", any: [["removal-enchantment", "enchantment-removal"]], id: "<=w" },
   { zin: "lands that make any color", any: [["t:land"], ["any color", "produces:wubrg"]] },
   { zin: "best ramp in green", any: [["ramp"]], id: "<=g" },   // the page sorts by EDHREC rank anyway
-  { zin: "cards that give my team trample", any: [["trample"]], none: ["kw:trample"] },
+  { zin: "cards that give my team trample", any: [["trample"]], none: ["kw:trample", "id<", "id="] },
   { zin: "cards that draw when a creature dies", any: [["death-trigger", "dies"], ["draw"]] },
   { zin: "showcase versions of Lightning Bolt", any: [["lightning bolt"], ["unique:prints", "unique:art"]] },
   { zin: "budget boros commander", any: [["is:commander"], ["eur<", "eur<="]], id: "=rw" },
@@ -89,7 +89,7 @@ const CASES = [
   { zin: "dinosaurs with power 6 or more", any: [["t:dinosaur"], ["pow>=6"]] },
   { zin: "cards with storm", any: [["kw:storm"]] },
   { zin: "graveyard hate artifacts", any: [["hate-graveyard", "graveyard-hate"], ["t:artifact"]] },
-  { zin: "cards that make my creatures indestructible", any: [["indestructible"]] },
+  { zin: "cards that make my creatures indestructible", any: [["indestructible"]], none: ["id<", "id="] },
   { zin: "commanders voor een draken deck", any: [["is:commander"], ["dragon"]] },
   { zin: "goedkope board wipes", any: [["sweeper"], ["mv<=2", "mv<3"]], none: ["eur"] },
   { zin: "expensive dragons in red", any: [["t:dragon"], ["mv>=6", "mv>5"]], none: ["eur"], id: "<=r" },
@@ -149,7 +149,7 @@ const CASES = [
   { zin: "graveyard recursion for artifacts", any: [["recursion", "reanimat", "return", "regrowth"], ["artifact"]] },
   { zin: "counterspells that cost 2 or less", any: [["counterspell"], ["mv<=2", "mv<3"]] },
   { zin: "cards that put +1/+1 counters on creatures in green", any: [["counter"]], id: "<=g" },
-  { zin: "evasion for my whole team", any: [["evasion", "flying", "unblockable", "can't be blocked", "trample", "menace"]] },
+  { zin: "evasion for my whole team", any: [["evasion", "flying", "unblockable", "can't be blocked", "trample", "menace"]], none: ["id<", "id="] },
   // mana value, price, sorting
   { zin: "cheap draw spells in blue", any: [["draw", "card-advantage"], ["mv<=2", "mv<3"]], none: ["eur"], id: "<=u" },
   { zin: "budget ramp in green", any: [["ramp"], ["eur<2"]], id: "<=g" },

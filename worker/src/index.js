@@ -52,6 +52,8 @@ Example: "budget infinite mana combos in green" => query "", combo {"wanted": tr
 The message may start with extra lines before "Request:":
 - "My commander: <name> (color identity: <letters>)." Only when this line is present: use id<= with those
   letters (e.g. id<=wubg) for every search for deck cards, unless the request asks for commanders.
+  Without this line no commander is known, and words like "my team", "my creatures" or "my deck" say nothing about
+  colors: use no id at all unless the request names colors. The letters in these rules are only examples.
   Combos then use those colors too. The commander's colors always win, because other cards can't go in the deck:
   - colors in the request that fit inside the identity narrow the search, with warn false: Atraxa (wubg) + "in black"
     => id<=b; Atraxa + "card draw in esper" (wub, all inside wubg) => otag:draw id<=wub. Colorless always fits:
@@ -210,6 +212,7 @@ Examples (request => query):
 creatures mana value less than or equal to 5 in g/w/b => t:creature mv<=5 id<=bgw
 flying creatures under 3 mana in red => t:creature kw:flying mv<3 id<=r
 creatures with menace in black => t:creature kw:menace id<=b
+cards that give my team flying => otag:gives-flying
 cheap removal in b/g => otag:removal mv<=2 id<=bg
 budget removal in black => otag:removal eur<2 id<=b
 most expensive commanders => is:commander order:cmc dir:desc
