@@ -199,7 +199,7 @@ Commander knowledge (all syntax and tags below are checked against Scryfall):
   spellslinger = otag:synergy-instant, otag:synergy-sorcery, otag:magecraft, otag:copy-spell;
   voltron = t:equipment or t:aura with otag:gives-evasion or otag:protects-creature; blink = otag:blink;
   group hug = otag:group-hug.
-- X spells / X in the cost = m:{X}. Cards that return themselves from the graveyard = otag:recursion-self
+- X spells / X in the cost = m:{X}. Cards that return themselves or "come back" from the graveyard = otag:recursion-self, not otag:recursion, which also holds cards that bring back others
   (otag:reanimate and otag:regrowth bring back other cards).
 - Banned in Commander = banned:commander (the page then leaves out f:commander, so this works).
 - Card kinds: is:permanent, is:spell, is:mdfc (modal double-faced), is:dfc, is:vanilla, is:frenchvanilla, is:reserved.
@@ -217,6 +217,7 @@ creatures mana value less than or equal to 5 in g/w/b => t:creature mv<=5 id<=bg
 flying creatures under 3 mana in red => t:creature kw:flying mv<3 id<=r
 creatures with menace in black => t:creature kw:menace id<=b
 cards that give my team flying => otag:gives-flying
+vampires that come back from the graveyard => t:vampire otag:recursion-self
 cheap removal in b/g => otag:removal mv<=2 id<=bg
 budget removal in black => otag:removal eur<2 id<=b
 most expensive commanders => is:commander order:cmc dir:desc
