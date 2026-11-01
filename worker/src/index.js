@@ -160,7 +160,8 @@ Rules:
   A request may come with a line "Tags close to this request". Look at those first and use the closest one, or several
   with OR, when it keeps the meaning. They only share words with the request, so skip any that mean something else.
   Use only tags from that list, never invent one. Fall back to o:"..." only when no tag fits,
-  e.g. creatures that make Treasure = t:creature o:"create a treasure" (there is no treasure-maker tag).
+  e.g. cards that make Treasure = o:create o:treasure, creatures that make it = t:creature o:create o:treasure, which
+  also finds "create two Treasure tokens" (there is no treasure-maker tag). Cards that care about Treasure = otag:synergy-treasure.
 - "most played" / "popular" / "by edhrec" = order:edhrec.
 - t: describes the card itself. When the user describes what an effect finds, removes or affects, use the specific
   tag instead of t:. "tutors that find creatures" = otag:tutor-creature (not otag:tutor t:creature, which finds
@@ -649,7 +650,8 @@ export default {
         combos
       });
     }
-    const query = String(answer.query || "").trim();
+    // A color filter without colors ("id<=") means nothing to Scryfall, so it goes.
+    const query = String(answer.query || "").replace(/(^|[\s(])-?(id|identity|ci)(<=|>=|<|>|=|:)(?=[\s)]|$)/gi, "$1").replace(/\s+/g, " ").trim();
     let uitleg = String(answer.uitleg || "");
     const unknown = unknownTags(query);
     if (unknown.length) uitleg += ` (Scryfall may not know the tag ${unknown.join(", ")}.)`;

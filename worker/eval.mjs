@@ -140,7 +140,7 @@ const CASES = [
   { zin: "extra turns", any: [["extra-turn"]] },
   { zin: "tutors in black", any: [["tutor"]], id: "<=b" },
   { zin: "board wipes that exile", any: [["sweeper", "wipe"], ["exile"]] },
-  { zin: "cards that make treasures", any: [["treasure"]] },
+  { zin: "cards that make treasures", any: [["o:create", "o:/create"], ["treasure"]], none: ["otag:", "id<", "id="], min: 300 },
   { zin: "landfall payoffs in green", any: [["landfall"]], id: "<=g" },
   { zin: "blink effects in white", any: [["blink", "flicker"]], id: "<=w" },
   { zin: "reanimation in black", any: [["reanimat"]], id: "<=b" },
