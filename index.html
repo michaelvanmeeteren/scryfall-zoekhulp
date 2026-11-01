@@ -136,6 +136,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .list li.single { grid-template-columns: minmax(0, 1fr) auto; }
 .card .name { font-size: 13px; font-weight: 600; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.card .why { display: block; margin-top: 4px; font-size: 13px; line-height: 1.35; color: var(--fg); white-space: normal; text-align: left; }
 
 .pager { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; margin: 14px 0; }
 .pager button { min-width: 34px; padding: 5px 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 4px; font-variant-numeric: tabular-nums; }
@@ -1582,7 +1583,7 @@ async function translateWithClaude(zin, previous = null) {
     res = await fetch(WORKER_URL + "/translate", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ zin, code: settings.code, commander: state.commander, previous,
+      body: JSON.stringify({ zin, code: settings.code, commander: state.commander, previous, deck: deckForClaude(),
         companion: state.companion ? { name: state.companion, rule: $("compnote").textContent } : null })
     });
   } catch {
@@ -1600,7 +1601,47 @@ async function translateWithClaude(zin, previous = null) {
   if (!res.ok) throw new Error(body.error || `The translator returned an error (${res.status}).`);
   // An empty query is an answer, not a failure: Claude says this isn't a card search (or no combos match).
   if (!body.query) return { query: "", uitleg: body.uitleg || "This isn't a search for Magic cards." };
-  return { query: body.query, uitleg: body.uitleg || "", combos: body.combos || [], warn: body.warn === true };
+  return { query: body.query, uitleg: body.uitleg || "", combos: body.combos || [], warn: body.warn === true, rank: body.rank === true };
+}
+
+// The card list per group, for the requests where Claude looks at the deck.
+function deckForClaude() {
+  const groups = {};
+  for (const c of state.list) (groups[c.group || "Other"] ||= []).push(c.qty > 1 ? `${c.qty} ${c.name}` : c.name);
+  return Object.entries(groups).map(([group, names]) => `${group}: ${names.join(", ")}`).join(" | ");
+}
+
+// A synergy search: Claude reads the most played cards it found and puts the best fits first, each with its reason.
+// The results are on screen meanwhile, and stay as they are if this fails.
+async function rankResults(search) {
+  search.ranking = true;
+  const c = state.commander;
+  const skip = new Set([...state.list.map(x => x.name), ...(c ? c.names : [])]);
+  const page = search.cache.get(1) || [];
+  const pool = page.filter(x => !skip.has(x.name)).slice(0, 60);
+  if (!settings.code || !c || pool.length < 3) return;
+  message("Reading these cards to find the best fits for your commander…");
+  try {
+    const res = await fetch(WORKER_URL + "/rank", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code: settings.code, zin: $("rtitle").dataset.text || "", commander: c, deck: deckForClaude(),
+        cards: pool.map(x => ({ name: x.name, type: x.faces.map(f => f.type).join(" // "), text: x.faces.map(f => f.text).join(" // ") })) })
+    });
+    const body = await res.json().catch(() => ({}));
+    if (search !== state.search) return;
+    if (!res.ok || !Array.isArray(body.ranked)) throw new Error(body.error);
+    const best = [];
+    for (const r of body.ranked) {
+      const card = pool[r.i];
+      if (card && !best.includes(card)) { card.why = String(r.why || ""); best.push(card); }
+    }
+    search.cache.set(1, [...best, ...page.filter(x => !best.includes(x))]);
+    search.ranked = best.length > 0;
+    await showPage(search.page);
+  } catch {
+    if (search === state.search) message("Couldn't read these cards just now, so they stay most played first.");
+  }
 }
 
 // Search query for exactly these card names.
@@ -2540,7 +2581,8 @@ async function runSearch(query, page = 1) {
   const { full, extra } = withFilters(query);
   $("filters").textContent = extra ? "+ " + extra : "own filters";
   $("scryfalllink").href = "https://scryfall.com/search?" + new URLSearchParams({ q: full, ...sortParams(state.order) });
-  state.search = { query, full, order: state.order, size: state.size, total: null, cache: new Map(), page: 1 };
+  state.search = { query, full, order: state.order, size: state.size, total: null, cache: new Map(), page: 1, rank: !!state.rankNext };
+  state.rankNext = false;
   $("toolbar").hidden = false;
   renderQueryChips(query);
   renderFilterbar();
@@ -2577,6 +2619,7 @@ async function showPage(n) {
     }
     search.page = n;
     render(cards, n, pages);
+    if (search.rank && !search.ranking) rankResults(search);
   } catch (err) {
     // don't leave the cards and count of the previous search standing under the new query
     if (search === state.search) {
@@ -2604,7 +2647,7 @@ function render(cards, page, pages) {
   const search = state.search;
   const grid = $("grid");
   grid.replaceChildren();
-  $("count").textContent = plural(search.total, "card");
+  $("count").textContent = plural(search.total, "card") + (search.ranked ? ", best fits first" : "");
 
   const notes = [];
   if (search.total === 0) {
@@ -2637,6 +2680,12 @@ function render(cards, page, pages) {
     const meta = document.createElement("span");
     meta.className = "meta";
     btn.append(img, name, meta);
+    if (card.why) {
+      const why = document.createElement("span");
+      why.className = "why";
+      why.textContent = card.why;
+      btn.append(why);
+    }
     tile.card = card;
     btn.addEventListener("click", () => addToList(card));
     const info = document.createElement("button");
@@ -3409,6 +3458,7 @@ $("searchform").addEventListener("submit", async e => {
   // a combo result is a list of card names, which makes no sense to refine; anything else can be
   setPrevious(result.combos && result.combos.length ? null : { zin, query: result.query });
   resetFilters();
+  state.rankNext = result.rank;
   runSearch(result.query);
 });
 
@@ -3444,6 +3494,8 @@ async function refineSearch(text) {
   addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
   setPrevious(result.combos && result.combos.length ? null : { zin, query: result.query });
   resetFilters();
+  // narrowing a ranked search keeps it ranked
+  state.rankNext = result.rank || !!(settings.code && state.search && state.search.rank);
   runSearch(result.query);
 }
 for (const b of $("modeswitch").querySelectorAll("button")) b.addEventListener("click", () => {

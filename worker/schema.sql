@@ -36,3 +36,12 @@ CREATE TABLE IF NOT EXISTS sync (
   data TEXT NOT NULL,         -- JSON: card list, commander, deck, recent searches, result settings
   updated INTEGER NOT NULL    -- Unix seconds; the cron trigger removes rows unused for a year
 );
+
+-- Searches Claude had to correct (a tag that doesn't exist, no cards found, an empty query), to learn from.
+-- Holds the words typed, never who typed them. The cron trigger removes rows after 90 days.
+CREATE TABLE IF NOT EXISTS misses (
+  at TEXT NOT NULL,       -- ISO time
+  zin TEXT NOT NULL,      -- what the person typed
+  query TEXT NOT NULL,    -- the query that went wrong
+  problem TEXT NOT NULL   -- what was wrong with it
+);
