@@ -53,7 +53,8 @@ The message may start with extra lines before "Request:":
 - "My commander: <name> (color identity: <letters>)." Only when this line is present: use id<= with those
   letters (e.g. id<=wubg) for every search for deck cards, unless the request asks for commanders.
   Without this line no commander is known, and words like "my team", "my creatures" or "my deck" say nothing about
-  colors: use no id at all unless the request names colors. The letters in these rules are only examples.
+  colors: use no id at all unless the request names colors or a commander ("recommended cards for Krenko, Mob Boss" =
+  order:edhrec id<=r). The letters in these rules are only examples.
   Combos then use those colors too. The commander's colors always win, because other cards can't go in the deck:
   - colors in the request that fit inside the identity narrow the search, with warn false: Atraxa (wubg) + "in black"
     => id<=b; Atraxa + "card draw in esper" (wub, all inside wubg) => otag:draw id<=wub. Colorless always fits:
@@ -652,13 +653,38 @@ export default {
       });
     }
     // A color filter without colors ("id<=") means nothing to Scryfall, so it goes.
-    const query = String(answer.query || "").replace(/(^|[\s(])-?(id|identity|ci)(<=|>=|<|>|=|:)(?=[\s)]|$)/gi, "$1").replace(/\s+/g, " ").trim();
+    let query = String(answer.query || "").replace(/(^|[\s(])-?(id|identity|ci)(<=|>=|<|>|=|:)(?=[\s)]|$)/gi, "$1").replace(/\s+/g, " ").trim();
+    query = groupOr(query);
     let uitleg = String(answer.uitleg || "");
     const unknown = unknownTags(query);
     if (unknown.length) uitleg += ` (Scryfall may not know the tag ${unknown.join(", ")}.)`;
     return reply(200, { query, uitleg, warn: answer.warn === true, rank: answer.rank === true });
   }
 };
+
+// Scryfall reads "t:spirit a OR b" as (t:spirit a) OR b, which is never what the translator means:
+// the terms joined by OR outside parentheses get their own pair, "t:spirit (a OR b)".
+function groupOr(query) {
+  const terms = [];
+  let term = "", depth = 0, quoted = false;
+  for (const ch of query) {
+    if (ch === '"') quoted = !quoted;
+    if (!quoted && ch === "(") depth++;
+    if (!quoted && ch === ")") depth--;
+    if (ch === " " && !quoted && depth <= 0) { terms.push(term); term = ""; }
+    else term += ch;
+  }
+  terms.push(term);
+  const isOr = t => /^or$/i.test(t);
+  if (!terms.some(isOr)) return query;
+  const grouped = [];
+  for (let i = 0; i < terms.length; i++) {
+    const chain = [terms[i]];
+    while (isOr(terms[i + 1] || "") && terms[i + 2]) { chain.push(terms[i + 2]); i += 2; }
+    grouped.push(chain.length > 1 ? `(${chain.join(" OR ")})` : chain[0]);
+  }
+  return grouped.join(" ");
+}
 
 // Compares two strings without leaking how many characters matched.
 async function sameText(a, b) {

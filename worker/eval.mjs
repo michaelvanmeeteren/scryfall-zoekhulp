@@ -128,6 +128,7 @@ const CASES = [
   { zin: "creatures with hexproof in green", any: [["hexproof"]], id: "<=g" },
   { zin: "double strike creatures in red", any: [["double"]], id: "<=r" },
   { zin: "cards with flashback", any: [["kw:flashback"]] },
+  { zin: "that have the synergy with instant or sorcery tag", prev: { zin: "spirits", query: "t:spirit id<=wurg" }, any: [["t:spirit"], ["(otag:synergy-instant or otag:synergy-sorcery)", "(otag:synergy-sorcery or otag:synergy-instant)"]], id: "<=gruw" },
   { zin: "i need arcane spells", any: [["t:arcane"]], none: ["otag:", " or "] },
   { zin: "every arcane spell", any: [["t:arcane"]], none: ["otag:", " or "] },
   { zin: "lessons in blue", any: [["t:lesson"]], none: ["otag:"], id: "<=u" },

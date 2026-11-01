@@ -1802,7 +1802,14 @@ function withFilters(query) {
   if (companionRule() && !/is:commander/i.test(query)) extra += " " + companionRule();
   const f = filterTerms();
   if (f) extra += " " + f;
-  return { full: query.trim() + extra, extra: extra.trim() };
+  // a loose OR would split the search in two and the filters above would only reach the last part
+  let flat = query.replace(/"[^"]*"/g, '""');
+  while (/\([^()]*\)/.test(flat)) flat = flat.replace(/\([^()]*\)/g, "");
+  if (!/(^|\s)or(\s|$)/i.test(flat)) return { full: query.trim() + extra, extra: extra.trim() };
+  // Scryfall refuses display options like order: inside parentheses
+  const options = /(^|\s)(order|dir|direction|unique|prefer|display|include):\S+/gi;
+  const moved = (query.match(options) || []).map(o => " " + o.trim()).join("");
+  return { full: `(${query.replace(options, "").trim()})${moved}${extra}`, extra: extra.trim() };
 }
 
 // ---------- filter buttons beside the results ----------
