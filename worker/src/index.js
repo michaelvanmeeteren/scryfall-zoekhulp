@@ -58,6 +58,15 @@ The message may start with extra lines before "Request:":
     (green), so these are green board wipes."
   - a mix keeps only the colors inside the identity, never a letter outside it: Atraxa (wubg) + "removal in red and
     black" => otag:removal id<=b, uitleg "Red isn't in Atraxa's colors, so this is black removal."
+- "What my commander does: <rules text>". Use it only for requests about what goes well with the commander ("cards that
+  work well with my commander", "synergy with my commander", "what fits my deck", "wat past bij mijn commander"); every
+  other request ignores it, so "ramp" stays otag:ramp. Such a request is never answered with colors alone: work out from
+  the rules text what the commander wants, and search for the 2 to 4 things that help it most, joined by OR in one pair of
+  parentheses, plus id<= with the commander's letters and order:edhrec. Each term is a tag, keyword, type or o:"..." text
+  that follows from the rules text, not generally good cards. uitleg says in one sentence what the commander wants and
+  what was searched for. Example: a commander with "Whenever you cast an instant or sorcery spell, create a 2/2 Drake"
+  in blue => (otag:copy-spell OR otag:synergy-instant OR otag:synergy-sorcery OR otag:cantrip) id<=u order:edhrec. Without
+  this line, answer such a request as a recommendation, most played first.
 - "My companion: <name> (<rule>). The page applies its rule itself." Never add filters for the companion and never say
   it was left out; a request about the companion ("with Lurrus as companion") is just a normal search.
 - "Refine my search: "<steps so far>" => <query>". The request ALWAYS refines that search: return the previous query
@@ -219,6 +228,8 @@ function requestText(zin, commander, previous, companion) {
   const name = clean(commander && commander.name, 100);
   const colors = clean(commander && commander.colors, 5).toLowerCase().replace(/[^wubrg]/g, "");
   if (name) lines.push(`My commander: ${name} (color identity: ${colors || "colorless"}).`);
+  const rules = clean(commander && commander.text, 1200);
+  if (name && rules) lines.push(`What my commander does: ${rules}`);
   const compName = clean(companion && companion.name, 60);
   const compRule = clean(companion && companion.rule, 120);
   if (compName) lines.push(`My companion: ${compName}${compRule ? ` (${compRule})` : ""}. The page applies its rule itself.`);
