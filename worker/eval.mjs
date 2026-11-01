@@ -183,7 +183,7 @@ const CASES = [
   { zin: "kaarten die tokens maken in wit", any: [["token"]], id: "<=w" },
   { zin: "bordwipes in wit", any: [["sweeper", "wipe"]], id: "<=w" },
   { zin: "commanders in rood en zwart", any: [["is:commander"]], id: "=br" },
-  { zin: "landen die elke kleur mana maken", any: [["t:land"], ["any color", "produces:wubrg", "produces=wubrg", "any-color"]] },
+  { zin: "landen die elke kleur mana maken", any: [["t:land"], ["any color", "produces:wubrg", "produces=wubrg", "any-color", "produces:w"]] },
   { zin: "kaarten onder de 1 euro in blauw", any: [["eur<1"]], id: "<=u" },
   { zin: "nieuwste elfen", any: [["t:elf"], ["order:released"]] },
   { zin: "instants die een kaart laten trekken", any: [["t:instant"], ["draw"]] },

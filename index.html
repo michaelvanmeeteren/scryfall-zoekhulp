@@ -3348,15 +3348,39 @@ function renderHistory() {
     ul.append(li);
   }
 }
+// Older answers from Claude can hold a loose OR, "t:spirit a OR b", that means "t:spirit (a OR b)".
+// A search typed in Scryfall syntax stays as it was typed.
+function repairedQuery(query, zin) {
+  if (!zin || zin === query || /^(\/s|!)/i.test(zin)) return query;
+  const terms = [];
+  let term = "", depth = 0, quoted = false;
+  for (const ch of query) {
+    if (ch === '"') quoted = !quoted;
+    if (!quoted && ch === "(") depth++;
+    if (!quoted && ch === ")") depth--;
+    if (ch === " " && !quoted && depth <= 0) { terms.push(term); term = ""; }
+    else term += ch;
+  }
+  terms.push(term);
+  const isOr = t => /^or$/i.test(t);
+  const grouped = [];
+  for (let i = 0; i < terms.length; i++) {
+    const chain = [terms[i]];
+    while (isOr(terms[i + 1] || "") && terms[i + 2]) { chain.push(terms[i + 2]); i += 2; }
+    grouped.push(chain.length > 1 ? `(${chain.join(" OR ")})` : chain[0]);
+  }
+  return grouped.join(" ");
+}
 // A search from the history again, without asking Claude.
 function runHistory(h) {
+  const query = repairedQuery(h.query, h.zin);
   $("zin").value = refining ? "" : h.zin;   // when refining, the steps are already shown before the field
-  showQuery(h.query, "", h.combos);
+  showQuery(query, "", h.combos);
   setTitle(h.zin);
-  setPrevious(h.combos && h.combos.length ? null : { zin: h.zin, query: h.query });
-  pushSearchUrl(h.query, h.zin);
+  setPrevious(h.combos && h.combos.length ? null : { zin: h.zin, query });
+  pushSearchUrl(query, h.zin);
   resetFilters();
-  runSearch(h.query);
+  runSearch(query);
 }
 
 // The search on screen that the Refine field changes; null for combos and "nothing to search".
@@ -3603,8 +3627,8 @@ function pushSearchUrl(query, zin) {
 }
 function searchFromUrl() {
   const params = new URLSearchParams(location.search);
-  const query = params.get("q");
-  if (!query) return false;
+  if (!params.get("q")) return false;
+  const query = repairedQuery(params.get("q"), params.get("s"));
   $("zin").value = params.get("s") || query;
   showQuery(query, "");
   setTitle((params.get("s") || query).replace(/^(\/s|!)\s*/i, ""));

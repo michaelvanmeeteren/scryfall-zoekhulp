@@ -162,7 +162,8 @@ Rules:
   with OR, when it keeps the meaning. They only share words with the request, so skip any that mean something else.
   Use only tags from that list, never invent one. Fall back to o:"..." only when no tag fits,
   e.g. cards that make Treasure = o:create o:treasure, creatures that make it = t:creature o:create o:treasure, which
-  also finds "create two Treasure tokens" (there is no treasure-maker tag). Cards that care about Treasure = otag:synergy-treasure.
+  also finds "create two Treasure tokens" (there is no treasure-maker tag). "cards" includes creatures: never add -t:creature
+  or another excluded type the request doesn't ask for. Cards that care about Treasure = otag:synergy-treasure.
 - "most played" / "popular" / "by edhrec" = order:edhrec.
 - t: describes the card itself. When the user describes what an effect finds, removes or affects, use the specific
   tag instead of t:. "tutors that find creatures" = otag:tutor-creature (not otag:tutor t:creature, which finds
@@ -218,6 +219,7 @@ creatures mana value less than or equal to 5 in g/w/b => t:creature mv<=5 id<=bg
 flying creatures under 3 mana in red => t:creature kw:flying mv<3 id<=r
 creatures with menace in black => t:creature kw:menace id<=b
 cards that give my team flying => otag:gives-flying
+cards that make treasures => o:create o:treasure
 vampires that come back from the graveyard => t:vampire otag:recursion-self
 cheap removal in b/g => otag:removal mv<=2 id<=bg
 budget removal in black => otag:removal eur<2 id<=b
