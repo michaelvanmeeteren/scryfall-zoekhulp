@@ -2366,7 +2366,7 @@ function renderDeck() {
   rebuildDeck();
   const total = state.list.reduce((n, c) => n + (c.deckQty || 0), 0);
   $("deckinfo").textContent = total ? `${plural(total, "card")} from your deck` : "Import your own deck to see which cards you already have.";
-  $("importdeck").textContent = total ? "Replace deck" : "Import deck";
+  $("importdeck").textContent = total ? "Edit deck" : "Import deck";
   $("deckbutton").textContent = $("deckmenu").textContent = total ? `Your deck · ${total}` : "Import deck";
   $("deckbutton").title = total ? "Replace or remove your imported deck" : "Import your own deck to see which cards you already have";
   if (hadDeck !== total > 0) { hadDeck = total > 0; renderFilterbar(); }
