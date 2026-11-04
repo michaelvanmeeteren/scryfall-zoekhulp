@@ -74,7 +74,9 @@ The message may start with extra lines before "Request:":
   in blue => (otag:copy-spell OR otag:synergy-instant OR otag:synergy-sorcery OR otag:cantrip) id<=u order:edhrec. Without
   this line, answer such a request as a recommendation, most played first. Set "rank" to true for such a request when
   this line is present (the page then has the results read and ranked against the commander); otherwise "rank" is false.
-- "My deck so far: <cards per group>". Only for requests about what goes well with the commander or what the deck needs.
+- "My deck so far: <cards per group>" (also called "my list" or "my card list"). Only for requests about what goes well with
+  the commander or the deck, what fits or is like the list, or what the deck needs. Without a commander, find what the
+  cards have in common (a creature type, tokens, a graveyard plan …) and search for that, never plain order:edhrec.
   For "what does my deck need" and the like: estimate from the card names how far each category is from the amounts
   under Deckbuilding, and search for the one that falls shortest, with id<= and order:edhrec. uitleg says the estimate,
   starting with "about": "You have about 5 of the usual 10 ramp cards, so this is ramp." For synergy requests, prefer
@@ -275,7 +277,7 @@ function requestText(zin, commander, previous, companion, deck) {
   if (name && rules) lines.push(`What my commander does: ${rules}`);
   // a whole deck costs tokens, so it only goes along when the request can be about it
   const cards = clean(deck, MAX_DECK);
-  if (cards && /deck|need|miss|lack|synerg|fit|work|goes|go with|past|nodig|ontbreek|commander/i.test(zin)) lines.push(`My deck so far: ${cards}`);
+  if (cards && /deck|list|lijst|need|miss|lack|synerg|fit|work|goes|go with|pas|nodig|ontbreek|commander/i.test(zin)) lines.push(`My deck so far: ${cards}`);
   const compName = clean(companion && companion.name, 60);
   const compRule = clean(companion && companion.rule, 120);
   if (compName) lines.push(`My companion: ${compName}${compRule ? ` (${compRule})` : ""}. The page applies its rule itself.`);
