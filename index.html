@@ -475,6 +475,7 @@ body:not(.home) #topcmdrbtn, .cmdr:is(.has, .pairing) #topcmdrbtn { display: non
 .cmdrshead input { grid-column: 1 / -1; font-family: var(--font); font-size: 16px; }
 .cmdrshead .hint { grid-column: 1 / -1; }
 .cmdrscolors { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cmdrscolors[hidden] { display: none; }
 .cmdrscolors button { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--bg); cursor: pointer; opacity: 0.55; transition: opacity 0.12s, border-color 0.12s; }
 .cmdrscolors button img { width: 24px; height: 24px; }
 .cmdrscolors button:hover { opacity: 0.85; }
@@ -2265,6 +2266,8 @@ const manaPips = colors => {
 };
 function renderColorFilter() {
   const box = $("cmdrscolors");
+  box.hidden = !!allCommanders && allCommanders.every(c => c.colors === "?");
+  if (box.hidden) cmdrsColors.clear();
   const buttons = "wubrgc".split("").map(x => {
     const b = document.createElement("button");
     b.type = "button";
@@ -2326,7 +2329,9 @@ function cmdrsRender() {
   cmdrsRows = cmdrsMatches();
   cmdrsShown = 0;
   $("cmdrslist").replaceChildren();
-  $("cmdrsnote").textContent = cmdrsRows.length ? "" : "No commander with that name.";
+  const named = $("cmdrsfilter").value.trim();
+  $("cmdrsnote").textContent = cmdrsRows.length ? "" : named && cmdrsColors.size ? "No commander with that name in these colors."
+    : named ? "No commander with that name." : "No commander in exactly these colors.";
   cmdrsMore();
 }
 // A pair from the list ("A // B") is set as both commanders.
@@ -2344,11 +2349,12 @@ async function openCommanderList() {
   if (!allCommanders) {
     $("cmdrsnote").textContent = "Loading…";
     try {
-      const data = await fetch("commanders.json").then(r => { if (!r.ok) throw new Error(); return r.json(); });
+      const data = await fetch("commanders.json", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error(); return r.json(); });
       allCommanders = data.list.map(([name, decks, id, v, colors = "?"], i) => ({ name, decks, rank: i + 1, art: cmdrArt(id, v), colors,
         large: id ? `https://cards.scryfall.io/large/front/${id[0]}/${id[1]}/${id}.jpg?${v}` : "",
         key: foldName(name) }));
       $("cmdrsnote").textContent = "";
+      renderColorFilter();
       $("cmdrstitle").title = `EDHREC, decks of the past two years. Updated ${data.updated}.`;
     } catch {
       $("cmdrsnote").textContent = "Couldn't load the list. Try again later.";
