@@ -23,10 +23,36 @@ while (more) {
   more = next.more;
 }
 
+// The color identity of every card that can lead a deck, from Scryfall (about 25 pages, once a month).
+const identity = new Map();
+let url = "https://api.scryfall.com/cards/search?" + new URLSearchParams({ q: "is:commander OR t:background", unique: "cards" });
+while (url) {
+  await sleep(200);   // Scryfall asks for at most 10 requests a second
+  const res = await fetch(url, { headers: { "User-Agent": "SpellSeekr/1.0 (monthly commander list)", Accept: "application/json" } });
+  if (!res.ok) throw new Error(`Scryfall: ${res.status}`);
+  const body = await res.json();
+  for (const c of body.data) {
+    const ci = "wubrg".split("").filter(x => c.color_identity.includes(x.toUpperCase())).join("");
+    identity.set(c.name, ci);
+    identity.set(c.name.split(" // ")[0], ci);
+  }
+  url = body.has_more ? body.next_page : "";
+}
+// a pair has the colors of both; "?" when a name isn't known to Scryfall
+const colorsOf = name => {
+  const parts = name.split(" // ");
+  if (parts.length > 1 && identity.has(name)) return identity.get(name);   // one card with two faces
+  if (!parts.every(n => identity.has(n))) return "?";
+  const all = parts.map(n => identity.get(n)).join("");
+  return "wubrg".split("").filter(x => all.includes(x)).join("");
+};
+
 const seen = new Set();
-// [name, decks, Scryfall card id, image version]: the art is built from the id, no Scryfall request needed
+// [name, decks, Scryfall card id, image version, colors]: the art is built from the id, no Scryfall request needed
 const list = views.filter(v => v.name && !seen.has(v.name) && seen.add(v.name))
-  .map(v => [v.name, v.num_decks || 0, v.id || "", v.image_version || ""]);
+  .map(v => [v.name, v.num_decks || 0, v.id || "", v.image_version || "", colorsOf(v.name)]);
+const unknown = list.filter(c => c[4] === "?");
+if (unknown.length) console.log(`${unknown.length} without colors, e.g. ${unknown.slice(0, 5).map(c => c[0]).join("; ")}`);
 if (list.length < 1000) throw new Error(`Only ${list.length} commanders found: not written.`);
 fs.writeFileSync(new URL("../commanders.json", import.meta.url), JSON.stringify({ updated: new Date().toISOString().slice(0, 10), list }));
 console.log(`${list.length} commanders written.`);

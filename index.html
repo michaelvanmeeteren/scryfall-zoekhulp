@@ -474,6 +474,16 @@ body:not(.home) #topcmdrbtn, .cmdr:is(.has, .pairing) #topcmdrbtn { display: non
 .cmdrshead h2 { font-family: var(--serif); font-size: 20px; }
 .cmdrshead input { grid-column: 1 / -1; font-family: var(--font); font-size: 16px; }
 .cmdrshead .hint { grid-column: 1 / -1; }
+.cmdrscolors { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cmdrscolors button { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--bg); cursor: pointer; opacity: 0.55; transition: opacity 0.12s, border-color 0.12s; }
+.cmdrscolors button img { width: 24px; height: 24px; }
+.cmdrscolors button:hover { opacity: 0.85; }
+.cmdrscolors button[aria-pressed="true"] { opacity: 1; border-color: var(--accent); }
+.cmdrscolors button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cmdrscolors .hint { margin-left: 4px; }
+@media (prefers-reduced-motion: reduce) { .cmdrscolors button { transition: none; } }
+.cmdrslist .nm .pips { margin-left: 6px; }
+.cmdrslist .nm .mana { width: 14px; height: 14px; vertical-align: -2px; margin-left: 1px; }
 .cmdrslist { list-style: none; margin: 0; padding: 6px 10px 10px; }
 .cmdrslist button { display: grid; grid-template-columns: 3.4em 72px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 6px 8px; border: 0; border-radius: 6px; background: none; color: var(--fg); font: inherit; font-size: 14.5px; text-align: left; cursor: pointer; }
 .cmdrslist button:hover { background: var(--bg); }
@@ -929,6 +939,7 @@ html.mobile body:not(.home) .starters .startor { display: none; }
     <h2 id="cmdrstitle">Most played commanders</h2>
     <button id="cmdrsclose" class="btn small" type="button">Close</button>
     <input id="cmdrsfilter" type="search" autocomplete="off" spellcheck="false" placeholder="Filter by name" aria-label="Filter commanders by name">
+    <div id="cmdrscolors" class="cmdrscolors" role="group" aria-label="Filter by color identity"></div>
     <p id="cmdrsnote" class="hint"></p>
   </div>
   <ol id="cmdrslist" class="cmdrslist"></ol>
@@ -2239,12 +2250,51 @@ function suggestCommanders(input, list) {
 // Every commander on EDHREC, most played first: commanders.json, made once a month by tools/update-commanders.mjs.
 // The art comes straight from Scryfall's image server (no API request).
 let allCommanders = null, cmdrsRows = [], cmdrsShown = 0;
+const cmdrsColors = new Set();
+const manaPips = colors => {
+  const pips = document.createElement("span");
+  pips.className = "pips";
+  pips.append(...(colors || "c").toUpperCase().split("").map(x => {
+    const img = document.createElement("img");
+    img.className = "mana";
+    img.src = `https://svgs.scryfall.io/card-symbols/${x}.svg`;
+    img.alt = x;
+    return img;
+  }));
+  return pips;
+};
+function renderColorFilter() {
+  const box = $("cmdrscolors");
+  const buttons = "wubrgc".split("").map(x => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(cmdrsColors.has(x)));
+    b.setAttribute("aria-label", { w: "White", u: "Blue", b: "Black", r: "Red", g: "Green", c: "Colorless" }[x]);
+    const img = document.createElement("img");
+    img.src = `https://svgs.scryfall.io/card-symbols/${x.toUpperCase()}.svg`;
+    img.alt = "";
+    b.append(img);
+    b.addEventListener("click", () => {
+      // colorless can't go with a color
+      if (cmdrsColors.has(x)) cmdrsColors.delete(x);
+      else { if (x === "c") cmdrsColors.clear(); else cmdrsColors.delete("c"); cmdrsColors.add(x); }
+      renderColorFilter();
+      $("cmdrsdialog").scrollTop = 0;
+      cmdrsRender();
+    });
+    return b;
+  });
+  const note = Object.assign(document.createElement("span"), { className: "hint", textContent: cmdrsColors.size ? "exactly these colors" : "any colors" });
+  box.replaceChildren(...buttons, note);
+}
 const cmdrArt = (id, v) => id ? `https://cards.scryfall.io/art_crop/front/${id[0]}/${id[1]}/${id}.jpg?${v}` : "";
 // lower case without accents, so "dul" finds "Lim-Dûl"
 const foldName = text => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 function cmdrsMatches() {
   const words = foldName($("cmdrsfilter").value).split(/\s+/).filter(Boolean);
-  return allCommanders.filter(c => words.every(w => c.key.includes(w)));
+  // exactly the chosen color identity; "c" is colorless
+  const want = cmdrsColors.has("c") ? "" : "wubrg".split("").filter(x => cmdrsColors.has(x)).join("");
+  return allCommanders.filter(c => words.every(w => c.key.includes(w)) && (!cmdrsColors.size || c.colors === want));
 }
 function cmdrsMore() {
   const next = cmdrsRows.slice(cmdrsShown, cmdrsShown + 60);
@@ -2259,6 +2309,12 @@ function cmdrsMore() {
     img.alt = "";
     img.loading = "lazy";
     const nm = Object.assign(document.createElement("span"), { className: "nm", textContent: c.name, title: c.name });
+    if (c.colors !== "?") nm.append(manaPips(c.colors));
+    if (c.large) {
+      b.addEventListener("mouseenter", e => showPreview({ name: c.name, large: c.large }, e));
+      b.addEventListener("mousemove", movePreview);
+      b.addEventListener("mouseleave", hidePreview);
+    }
     const decks = Object.assign(document.createElement("span"), { className: "decks", textContent: c.decks.toLocaleString("en") + (c.decks === 1 ? " deck" : " decks") });
     b.append(rank, img, nm, decks);
     b.addEventListener("click", () => pickListedCommander(c.name));
@@ -2283,11 +2339,14 @@ async function pickListedCommander(name) {
 }
 async function openCommanderList() {
   $("cmdrsdialog").showModal();
+  $("cmdrsdialog").append($("preview"));
+  renderColorFilter();
   if (!allCommanders) {
     $("cmdrsnote").textContent = "Loading…";
     try {
       const data = await fetch("commanders.json").then(r => { if (!r.ok) throw new Error(); return r.json(); });
-      allCommanders = data.list.map(([name, decks, id, v], i) => ({ name, decks, rank: i + 1, art: cmdrArt(id, v),
+      allCommanders = data.list.map(([name, decks, id, v, colors = "?"], i) => ({ name, decks, rank: i + 1, art: cmdrArt(id, v), colors,
+        large: id ? `https://cards.scryfall.io/large/front/${id[0]}/${id[1]}/${id}.jpg?${v}` : "",
         key: foldName(name) }));
       $("cmdrsnote").textContent = "";
       $("cmdrstitle").title = `EDHREC, decks of the past two years. Updated ${data.updated}.`;
@@ -2976,6 +3035,11 @@ function movePreview(e) {
   if (x + w > innerWidth - 8) x = e.clientX - w - pad;
   // beside the list instead of over the rows around the one pointed at
   if (e.currentTarget.closest && e.currentTarget.closest("#drawer")) x = $("drawer").getBoundingClientRect().left - w - pad;
+  if (e.currentTarget.closest && e.currentTarget.closest("#cmdrsdialog")) {
+    const box = $("cmdrsdialog").getBoundingClientRect();
+    if (box.right + pad + w <= innerWidth - 8) x = box.right + pad;
+    else if (box.left - pad - w >= 8) x = box.left - pad - w;
+  }
   const y = Math.min(Math.max(8, e.clientY - h / 2), innerHeight - h - 8);
   p.style.left = Math.max(8, x) + "px";
   p.style.top = y + "px";
@@ -3931,6 +3995,7 @@ $("opensettings").addEventListener("click", closeMore);
 $("cmdrskip").addEventListener("click", () => $("zin").focus());
 $("topcmdrbtn").addEventListener("click", openCommanderList);
 $("cmdrsclose").addEventListener("click", () => $("cmdrsdialog").close());
+$("cmdrsdialog").addEventListener("close", () => { hidePreview(); document.body.append($("preview")); });
 let cmdrsTimer;
 $("cmdrsfilter").addEventListener("input", () => { clearTimeout(cmdrsTimer); cmdrsTimer = setTimeout(() => { $("cmdrsdialog").scrollTop = 0; cmdrsRender(); }, 150); });
 // more rows as the end of the list comes near: scrolls on to the last commander
