@@ -198,7 +198,6 @@ h2, .help h3 { font-family: var(--serif); font-weight: 700; letter-spacing: 0.01
 .list h2, .settings h2 { font-size: 21px; }
 .help h3 { font-size: 18px; }
 .qlabel, .cmdrlabel { font-size: 13px; font-weight: 600; color: var(--muted); }
-.keynote { margin: 0; padding: 2px 0 2px 10px; border-left: 2px solid var(--accent); font-size: 13.5px; color: var(--muted); }
 .qlabel { font-size: 13px; font-weight: 600; }
 .optional { font-weight: 400; color: var(--muted); }
 .help { width: min(620px, calc(100% - 32px)); max-height: calc(100vh - 48px); overflow: auto; }
@@ -228,7 +227,7 @@ html.mobile .modeswitch button { padding: 7px 0; font-size: 14px; }
 .cmdrtop { width: min(760px, 100%); }
 body:not(.home) .cmdrtop { display: none; }
 .cmdrask { flex-basis: 100%; margin: 0 0 4px; text-align: center; font-family: var(--serif); font-size: 26px; font-weight: 700; color: var(--fg); }
-body:not(.home) .cmdrask, body:not(.home) #cmdrskip, .cmdr.has .cmdrask, .cmdr.has #cmdrskip, .cmdr.has > .cmdrlabel { display: none; }
+body:not(.home) .cmdrask, .cmdr.has .cmdrask, .cmdr.has > .cmdrlabel { display: none; }
 body.home .cmdr:not(.has) > .cmdrlabel { display: none; }
 body.home #cmdrinput { width: min(340px, 70vw); font-size: 16px; padding: 9px 12px; }
 body.home .cmdr { margin-bottom: 14px; }
@@ -245,8 +244,7 @@ body.home #cmdrchip { font-size: 18px; }
 /* results: the question leads, the count follows */
 .rtitle { margin: 0; font-family: var(--serif); font-size: 28px; font-weight: 700; line-height: 1.15; overflow-wrap: anywhere; text-wrap: balance; }
 .rtitle .for { color: var(--muted); }
-.rtitle.syntax { font-family: var(--mono); font-size: 22px; font-weight: 600; }
-.rtitle.syntax .for { font-family: var(--serif); font-size: 26px; }
+.rtitle .q { font-family: var(--mono); font-size: 0.55em; font-weight: 400; color: var(--muted); letter-spacing: 0; overflow-wrap: anywhere; }
 .countline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .stripinfo .countline .count { font-family: var(--font); font-size: 13.5px; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
 .fchips { display: inline-flex; flex-wrap: wrap; gap: 6px; }
@@ -416,7 +414,6 @@ html.mobile .flipbtn { width: 36px; height: 36px; font-size: 20px; }
 html.mobile .topbar { flex-wrap: wrap; }
 html.mobile .topbar .searchrow { flex-basis: 100%; order: 3; max-width: none; }
 html.mobile body:not(.home) .brandbtn { font-size: 19px; }
-.home .keynote { justify-self: center; }
 .note:not(.error) { background: none; color: var(--muted); border-left: 2px solid var(--accent); border-radius: 0; padding: 2px 10px; }
 body.home .topbar { padding-bottom: 18px; }
 /* phone: the bar scrolls away with the page, and the bottom bar already opens the list */
@@ -460,15 +457,50 @@ html.mobile #listtoggle { display: none; }
 html.mobile .infobtn { width: 34px; height: 34px; font-size: 18px; }
 /* nothing to search: keep the explanation, hide the result controls */
 #results.nosearch .optstoggle, #results.nosearch #optspanel { display: none !important; }
-/* the commander in the results: a compact line; on a phone just the card, the rest comes with Filters & sort */
-.cmdrresults:not(:empty) { margin-bottom: 12px; }
-html.mobile #results:not(.opts) .cmdrresults :is(#compwrap, #compnote, #cmdrpair, #cmdrclear, #cmdrnote) { display: none; }
-html.mobile #results:not(.opts) .cmdrresults .cmdr:not(.has):not(.pairing) { display: none; }
+/* the results: the commander is part of the heading ("… for Tymna + Kraum"); its setup opens from there */
+.forcmdr { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; min-height: 34px; margin-left: 4px; padding: 3px 10px 3px 4px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface); color: var(--fg); font-family: var(--font); font-size: 15px; font-weight: 400; letter-spacing: 0; line-height: 1.25; vertical-align: 0.18em; cursor: pointer; transition: border-color 0.15s; }
+.forcmdr:hover, .forcmdr[aria-expanded="true"] { border-color: var(--accent); }
+.forcmdr:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.forcmdr.none { padding-left: 12px; color: var(--muted); }
+.forcmdr .thumbs { display: inline-flex; flex: none; }
+.forcmdr .thumbs img { width: 34px; height: 26px; object-fit: cover; border-radius: 999px 6px 6px 999px; }
+.forcmdr .thumbs img + img { margin-left: -10px; border-radius: 6px 999px 999px 6px; outline: 2px solid var(--surface); }
+.forcmdr .thumbs img:only-child { border-radius: 999px; width: 26px; }
+.forcmdr .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.forcmdr .pips { display: inline-flex; flex: none; gap: 2px; }
+.forcmdr .mana { width: 14px; height: 14px; margin: 0; }
+.forcmdr svg { flex: none; width: 14px; height: 14px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .forcmdr { transition: none; } }
+/* a phone: the heading wraps, the commander keeps its art and name; its colors are in the setup */
+html.mobile .forcmdr { margin-left: 0; font-size: 14px; }
+html.mobile .forcmdr .pips { display: none; }
+html.mobile .forcmdr { gap: 6px; padding-right: 8px; }
+html.mobile .forcmdr .thumbs img { width: 26px; height: 22px; }
+html.mobile .forcmdr .thumbs img:only-child { width: 22px; }
+.cmdrresults[popover] { position: fixed; inset: auto; margin: 0; width: min(440px, calc(100vw - 16px)); max-height: calc(100vh - 24px); overflow: auto; padding: 16px 18px 18px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--fg); box-shadow: 0 14px 36px var(--float-shadow); }
+.cmdrresults .setuphead { margin: 0 0 12px; font-size: 15px; font-weight: 400; color: var(--muted); }
+#cmdrresults #cmdrrow, #cmdrresults #cmdrrow.has { --bg: inherit; --surface: inherit; --fg: inherit; --muted: inherit; --accent: inherit; --accent-fg: inherit; --line: inherit;
+  position: static; isolation: auto; overflow: visible; display: grid; justify-items: start; align-content: start; gap: 12px; width: 100%; min-height: 0; margin: 0; padding: 0; background: none; color: var(--fg); text-align: left; }
+#cmdrresults #cmdrrow.has .cmdrpick { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 4px 14px; width: 100%; }
+#cmdrresults #cmdrrow.has .cmdrart { grid-row: 1 / 3; }
+#cmdrresults #cmdrrow.has #cmdrchip { grid-column: 2 / -1; }
+#cmdrresults #cmdrrow.has #cmdrclear { justify-self: start; }
+#cmdrresults #cmdrrow.has .cmdrart { display: inline-flex; }
+#cmdrresults #cmdrrow.has #cmdrchip { flex: 1 1 auto; min-width: 0; max-width: 100%; color: var(--fg); font-family: var(--font); font-size: 19px; font-weight: 400; line-height: 1.25; letter-spacing: 0; text-shadow: none; white-space: normal; }
+#cmdrresults #cmdrrow.has .mana { width: 16px; height: 16px; vertical-align: -2px; }
+#cmdrresults #cmdrrow :is(.linkbtn, .deckprogress, .cmdrlabel, .hint) { text-shadow: none; }
+#cmdrresults #cmdrrow.has :is(.linkbtn, .deckprogress) { color: var(--accent); }
+#cmdrresults #cmdrrow.has :is(.cmdrlabel, .hint) { color: var(--muted); }
+#cmdrresults #cmdrrow .compwrap { width: 100%; }
+#cmdrresults #cmdrrow .compwrap select { flex: 1; min-width: 0; min-height: 36px; }
+#cmdrresults #cmdrrow .cmdrform { width: 100%; }
+#cmdrresults #cmdrrow .cmdrform input { flex: 1; min-width: 0; font-size: 16px; padding: 8px 10px; }
 body:not(.home) #cmdrrow.pairing .cmdrask { display: block; }
 #cmdrrow.pairing { justify-content: center; }
-#cmdrrow.pairing #cmdrskip { display: none; }
 /* every commander on EDHREC, most played first, to start from */
-body:not(.home) #topcmdrbtn, .cmdr:is(.has, .pairing) #topcmdrbtn { display: none; }
+.cmdr:is(.has, .pairing) #topcmdrbtn { display: none; }
 .cmdrsdialog { width: min(640px, calc(100% - 24px)); height: min(820px, calc(100vh - 32px)); padding: 0; overflow: auto; overscroll-behavior: contain; }
 .cmdrshead { position: sticky; top: 0; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 16px 18px 12px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .cmdrshead h2 { font-family: var(--serif); font-size: 20px; }
@@ -580,7 +612,7 @@ html.mobile .toast button { min-height: 44px; padding: 0 6px; }
 .topbar .searchrow { min-width: 0; }
 .topbar .searchrow input { width: 0; }
 @media (max-width: 1023px) {
-  html:not(.mobile) .topbuttons > #deckbutton, html:not(.mobile) .topbuttons > [data-openhelp] { display: none; }
+  html:not(.mobile) .topbuttons > [data-openhelp] { display: none; }
   html:not(.mobile) .menuonly { display: block; }
   .refinechain { max-width: 30%; }
 }
@@ -619,7 +651,6 @@ html.mobile .optsrow .linkbtn { justify-self: start; min-height: 44px; }
 html.mobile .settings .sizer button { width: 44px; height: 40px; }
 /* phone results: the cards start high; Filters & sort sits beside the heading, the commander is one slim line */
 html.mobile .strip { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px 12px; padding: 4px 0 10px; margin-bottom: 10px; }
-html.mobile #results:not(.opts) .cmdrresults #deckprogress { display: none; }
 
 /* The look: flat surfaces, one serif voice for names and headings, and the page takes on the commander's colors:
    a band of its mana across the top and a trace of its first color in the ground. */
@@ -660,15 +691,13 @@ html.mobile .rtitle { font-size: 25px; }
 #filters { font-family: var(--mono); }
 .btn.primary:disabled, .btn.primary:disabled:hover, .topbar .btn.primary:disabled { background: var(--accent-soft); color: var(--muted); border-color: var(--line); }
 /* phone: the logo and ••• share one line, Import deck and Help are in the menu */
-html.mobile .topbuttons > #deckbutton, html.mobile .topbuttons > [data-openhelp] { display: none; }
+html.mobile .topbuttons > [data-openhelp] { display: none; }
 html.mobile .menuonly { display: block; }
 html.mobile .moremenu .btn { min-height: 44px; font-size: 15px; }
 html.mobile body:not(.home) .topbar { padding-top: 8px; padding-bottom: 8px; row-gap: 8px; }
 html.mobile .qchips { gap: 4px; }
 html.mobile .qchips button { padding: 2px 6px 2px 9px; }
 @media (prefers-reduced-motion: reduce) { .card img { transition: none; } .card:hover img, .card:active img { transform: none; } .btn:active, .pager button:active, .fchips button:active, .qty button:active, .remove:active, .sizer button:active, .modeswitch button:active { transform: none; } }
-html.mobile .cmdrresults .cmdrart img { width: 44px; height: 32px; border-radius: 5px; }
-html.mobile .cmdrresults:not(:empty) { margin-bottom: 10px; }
 
 /* The commander's art as a banner. The accent is always crimson: --accent is for text and lines, --fill for what is filled with it. */
 :root {
@@ -739,14 +768,6 @@ body { background: var(--bg); }
 .heroart.two i + i { display: block; -webkit-mask-image: linear-gradient(90deg, transparent, var(--deep) 42%); mask-image: linear-gradient(90deg, transparent, var(--deep) 42%); }
 .heroart::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 56px; background: linear-gradient(transparent, var(--bg)); }
 .layout, .foot { position: relative; z-index: 1; }
-body:not(.home):has(#cmdrrow.has) .topbar {
-  --bar: transparent; --bar-fg: var(--on-deep); --bar-line: var(--on-deep-line); --bar-field: var(--on-deep-well); --bar-placeholder: var(--on-deep-2);
-  --fg: var(--on-deep); --field-line: var(--on-deep-line); border-bottom-color: transparent; }
-body:not(.home):has(#cmdrrow.has) .brandbtn { color: var(--on-deep); }
-body.scrolled:not(.home):has(#cmdrrow.has) .topbar { --bar: var(--deep); }
-#results:has(#cmdrrow.has) #toolbar {
-  --fg: var(--on-deep); --muted: var(--on-deep-2); --line: var(--on-deep-line); --surface: var(--on-deep-well); --accent: var(--on-deep-accent); --accent-fg: var(--on-deep-well);
-  color: var(--on-deep); }
 #cmdrrow.has .cmdrart { display: none; }
 #cmdrrow.has .hint:empty { display: none; }
 #cmdrrow.has .cmdrpick { display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
@@ -766,20 +787,23 @@ body.home:has(#cmdrrow.has) .brandbtn { color: var(--on-deep); }
 body.home .topbuttons { z-index: 2; }
 body.home:has(#cmdrrow.has) .topbuttons .btn { color: var(--on-deep); border-color: var(--on-deep-line); background: var(--on-deep-well); }
 body.home .cmdr:not(.has) { padding: 88px 16px 8px; margin: 0; }
+.homeask { display: none; }
+body.home:not(:has(#cmdrrow.has)) .homeask { display: block; padding: 96px 16px 4px; margin: 0; }
+.homecmdr { display: flex; justify-content: center; }
+.homecmdr[hidden] { display: none; }
+body:not(.home) .homecmdr { display: none; }
+#cmdrresults .cmdrask { display: none; }
+#cmdrresults #cmdrrow.pairing .cmdrask { display: block; font-size: 19px; text-align: left; }
 body.home .topbar .searchrow, body.home .starters { width: min(760px, calc(100% - 32px)); }
 html:not(.mobile) body.home .topbar > :not(.topbuttons), html:not(.mobile) body.home main, html:not(.mobile) .topbuttons > * { zoom: 1; }
 body.home .cmdr { margin-bottom: 0; }
 body.home .cmdrart img { border-radius: 4px; }
 
-/* results: the same banner, smaller, above the title */
-#results { display: flex; flex-direction: column; }
-#results > * { min-width: 0; }
-#cmdrresults { order: -1; }
-#cmdrresults:not(:empty) { margin: -14px calc(var(--gutter) * -1) 10px; }
-html:not(.mobile) #cmdrresults #cmdrrow.has { min-height: 176px; padding-top: 28px; padding-bottom: 18px; }
-html:not(.mobile) #cmdrresults #cmdrchip { font-size: clamp(28px, 3.2vw, 42px); }
 
 /* the bar at the bottom: list, price and copy, always in reach and in the commander's color */
+#results { display: flex; flex-direction: column; }
+#results > * { min-width: 0; }
+
 html:not(.mobile) .mobilebar { display: flex !important; justify-content: space-between; align-items: center; padding: 10px var(--gutter); }
 html:not(.mobile) .mobilebar .btn { flex: none; min-height: 38px; }
 html:not(.mobile) body.home:has(#barcopy:disabled) .mobilebar { display: none !important; }
@@ -789,8 +813,6 @@ html:not(.mobile) body { padding-bottom: 64px; }
 .mobilebar .btn.primary { color: #ffffff; background: #b11226; border-color: #b11226; }
 .mobilebar .btn.primary:disabled, .mobilebar .btn.primary:disabled:hover { color: var(--on-deep-2); background: transparent; border-color: var(--on-deep-line); }
 
-html.mobile #cmdrresults #cmdrrow.has { min-height: 104px; padding: 16px var(--gutter) 12px; }
-html.mobile #cmdrresults #cmdrchip { font-size: 24px; }
 html.mobile #cmdrrow.has { min-height: 230px; padding-top: 64px; }
 html.mobile #cmdrrow.has #cmdrchip { font-size: 34px; }
 html.mobile .heroart i { width: 86%; }
@@ -806,9 +828,7 @@ body.home .topbar, html:not(.mobile) body.home .topbar { z-index: 2; }
   background: linear-gradient(color-mix(in srgb, var(--on-deep-well) 68%, transparent), color-mix(in srgb, var(--on-deep-well) 22%, transparent) 130px); }
 html.mobile .heroart::before { background: color-mix(in srgb, var(--on-deep-well) 58%, transparent); }
 .heroart::after { z-index: 1; }
-#cmdrrow.has #cmdrchip, #cmdrrow.has .linkbtn, #cmdrrow.has .cmdrlabel, #results:has(#cmdrrow.has) #toolbar .rtitle, #results:has(#cmdrrow.has) #toolbar .count { text-shadow: 0 1px 12px var(--on-deep-well); }
-#results:has(#cmdrrow.has) #toolbar .count { color: var(--on-deep); }
-body:not(.home):has(#cmdrrow.has) .topbar .btn:not(.primary), #results:has(#cmdrrow.has) #toolbar .btn { background: color-mix(in srgb, var(--on-deep-well) 60%, transparent); }
+#cmdrrow.has #cmdrchip, #cmdrrow.has .linkbtn, #cmdrrow.has .cmdrlabel { text-shadow: 0 1px 12px var(--on-deep-well); }
 /* One family throughout: Noto Sans JP, extra light where it is large: 200 for names and titles, 300 for text, 400 where small text has to stay readable. */
 :root { --font: "Noto Sans JP", system-ui, -apple-system, "Segoe UI", sans-serif; --serif: var(--font); }
 body { line-height: 1.5; font-weight: 300; }
@@ -831,13 +851,11 @@ body:not(.home) .topbar .startchip { white-space: nowrap; }
   html:not(.mobile) body:not(.home) .topbuttons { grid-area: 1 / 3; }
 }
 @media (max-width: 1023px) { body:not(.home) .starters { order: 5; flex-basis: 100%; } }
-body:not(.home):has(#cmdrrow.has) .starters .startor { color: var(--on-deep); text-shadow: 0 1px 8px var(--on-deep-well); }
 html.mobile body:not(.home) .starters { order: 5; flex-basis: 100%; overflow-x: auto; scrollbar-width: none; }
 html.mobile body:not(.home) .starters .startor { display: none; }
 /* The accent marks what is chosen or filled; it stays crimson even though --accent itself is neutral in the dark theme. */
 .tile.picked .card img { outline-color: var(--fill); }
 .list.withdeck li.addedcard, .keyadded { box-shadow: inset 2px 0 0 var(--fill); }
-.keynote { border-left-color: var(--fill); }
 </style>
 </head>
 <body>
@@ -847,10 +865,10 @@ html.mobile body:not(.home) .starters .startor { display: none; }
 
 <header class="topbar">
   <button id="home" class="brandbtn" type="button" title="Back to the start"><span class="brandlogo" aria-hidden="true"></span>SpellSeekr</button>
-  <div id="cmdrtop" class="cmdrtop"></div>
+  <div id="cmdrtop" class="cmdrtop"><p id="homeask" class="cmdrask homeask">Find cards for your Commander deck</p></div>
   <form id="searchform" class="searchrow">
     <div id="modeswitch" class="modeswitch" role="group" aria-label="What the search bar does" hidden
-      title="Refine changes the results on screen. Tip: start with + to refine once.">
+      title="New starts a new search. Refine narrows the results on screen with your next search.">
       <button type="button" data-mode="search" aria-pressed="true">New</button>
       <button type="button" data-mode="refine" aria-pressed="false">Refine</button>
     </div>
@@ -858,9 +876,9 @@ html.mobile body:not(.home) .starters .startor { display: none; }
     <input id="zin" type="search" autocomplete="off" placeholder="Describe the cards you want, e.g. cheap removal in black" aria-label="Describe the cards you want">
     <button id="zoek" class="btn primary" type="submit">Search</button>
   </form>
+  <div id="homecmdr" class="homecmdr" hidden></div>
   <div id="starters" class="starters" hidden></div>
   <nav class="topbuttons" aria-label="Page">
-    <button id="deckbutton" class="btn small" type="button" title="Import your own deck to see which cards you already have">Import deck</button>
     <button id="listtoggle" class="btn small" type="button" aria-controls="drawer">List<span id="listcount">0</span></button>
     <button class="btn small" type="button" data-openhelp>Help</button>
     <div class="more">
@@ -868,7 +886,6 @@ html.mobile body:not(.home) .starters .startor { display: none; }
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
       </button>
       <div id="moremenu" class="moremenu" role="menu" hidden>
-        <button id="deckmenu" class="btn small menuonly" type="button" role="menuitem">Import deck</button>
         <button class="btn small menuonly" type="button" role="menuitem" data-openhelp>Help</button>
         <button id="themetoggle" class="btn small" type="button" role="menuitem"></button>
         <button id="opensettings" class="btn small" type="button" role="menuitem">Settings</button>
@@ -908,15 +925,15 @@ html.mobile body:not(.home) .starters .startor { display: none; }
       <li>Describe what you need: <i>cheap removal in black</i>, <i>blue instants that draw a card</i>. Dutch works with the access code.</li>
       <li><b>Cheap</b> = mana value 2 or less, <b>expensive</b> = 6 or more. For price: <i>budget</i> (under €2) or <i>under 1 euro</i>.</li>
       <li>Know Scryfall's syntax? Start with <code>/s</code>: <code>/s t:elf mv=1</code>. Only Commander-legal paper cards are shown.</li>
-      <li>To change the results instead of searching again, switch the search bar from <b>New</b> to <b>Refine</b> (or start with <b>+</b>): <i>only instants</i>, <i>under 1 euro</i>.</li>
+      <li>To narrow the results instead of searching again, switch the search bar from <b>New</b> to <b>Refine</b> (or start with <b>+</b>): <i>only instants</i>, <i>under 1 euro</i>. After that search it goes back to <b>New</b>.</li>
       <li>The chips under the heading show what your words were translated into. Take one out with its <b>×</b> to widen the search.</li>
-      <li><b>Filters &amp; sort</b> narrows the results by type, mana value and price. Card size and cards per page are under <b>Settings</b>.</li>
+      <li><b>Filters &amp; sort</b> sets the type, mana value and price of the search; what you choose shows up as a chip. Card size and cards per page are under <b>Settings</b>.</li>
       <li>With the access code you can ask for combos: <i>2 card combos in dimir</i>.</li>
     </ul>
 
     <h3>Commander</h3>
     <ul>
-      <li>Set it on the start screen: every search stays in its colors. A color outside them is left out (in red).</li>
+      <li>Choose it under the search bar on the start screen, or from the heading of the results (<i>… for Tymna</i>): every search stays in its colors. A color outside them is left out (in red).</li>
       <li>Partner, Background or Doctor? <b>+ add partner</b> adds the second one.</li>
       <li>A <b>Companion</b> adds its deck rule to every search, e.g. Lurrus: permanents of 2 mana or less.</li>
       <li>Every card in the results also shows how many of its decks play it.</li>
@@ -926,7 +943,7 @@ html.mobile body:not(.home) .starters .startor { display: none; }
     <ul>
       <li>Click a card to add it (a mistake? <b>Undo</b>), click again to remove it. <b>List</b> (top right) shows it grouped by type, with a mana curve.</li>
       <li><b>Copy decklist</b> puts it on the clipboard for Moxfield, Archidekt and other deck sites.</li>
-      <li><b>Import deck</b> marks the cards you already have (<b>In deck</b>), and you can hide them.</li>
+      <li><b>Import deck</b> in the list marks the cards you already have (<b>In deck</b>), and you can hide them.</li>
       <li>The <i>i</i> on a card shows its details; <b>⟲</b> turns a double-faced card over.</li>
     </ul>
 
@@ -939,6 +956,8 @@ html.mobile body:not(.home) .starters .startor { display: none; }
     <div class="listactions"><button class="btn primary" type="submit">Got it</button></div>
   </form>
 </dialog>
+
+<div id="cmdrresults" class="cmdrresults" popover aria-labelledby="setuphead"><h2 id="setuphead" class="setuphead">Deck setup</h2></div>
 
 <dialog id="cmdrsdialog" class="settings cmdrsdialog" aria-labelledby="cmdrstitle">
   <div class="cmdrshead">
@@ -971,7 +990,7 @@ html.mobile body:not(.home) .starters .startor { display: none; }
     <label>Access code
       <input id="accesscode" type="password" autocomplete="off" spellcheck="false">
     </label>
-    <p class="hint">Ask the owner of this page for the code. With it, Claude (<code>claude-haiku-5-5</code>) translates your searches;
+    <p class="hint">Ask the owner of this page for the code. With it, Claude translates your searches and understands much more;
       without it the built-in translator is used. The code is stored only in this browser on this device.</p>
     <h3 class="settingshead">Results</h3>
     <div class="settingsrow">
@@ -1033,13 +1052,13 @@ html.mobile body:not(.home) .starters .startor { display: none; }
 
 <main class="layout">
   <section id="start" class="home" aria-label="Start">
-    <p id="nokey" class="keynote" hidden>Have the access code? <button class="linkbtn" type="button" data-opensettings>Enter it</button> for smarter translation by Claude.</p>
     <div id="cmdrhome"><div id="cmdrrow" class="cmdr">
         <p id="cmdrask" class="cmdrask">Who's your commander?</p>
         <span class="cmdrlabel">Commander</span>
         <span id="cmdrpick" class="cmdrpick" hidden>
           <span id="cmdrart" class="cmdrart"></span>
           <span id="cmdrchip" class="chip"></span>
+          <button id="cmdrchange" class="linkbtn" type="button">change</button>
           <button id="cmdrclear" class="linkbtn" type="button">remove</button>
         </span>
         <button id="cmdrpair" class="linkbtn" type="button" hidden></button>
@@ -1050,7 +1069,6 @@ html.mobile body:not(.home) .starters .startor { display: none; }
           <datalist id="cmdrlist"></datalist>
           <button class="btn small" type="submit">Set</button>
         </form>
-        <button id="cmdrskip" class="linkbtn" type="button">or just search</button>
         <button id="topcmdrbtn" class="linkbtn" type="button">or browse the most played</button>
         <span id="cmdrnote" class="hint"></span>
         <label id="compwrap" class="compwrap" hidden><span class="cmdrlabel">Companion</span>
@@ -1068,12 +1086,11 @@ html.mobile body:not(.home) .starters .startor { display: none; }
     <div id="toolbar" class="toolbar strip">
       <div class="stripinfo">
         <h1 id="rtitle" class="rtitle"></h1>
-        <span class="countline"><span id="count" class="count"></span><span id="qchips" class="fchips qchips" role="group" aria-label="What was searched for"></span><span id="fchips" class="fchips"></span></span>
+        <span class="countline"><span id="count" class="count"></span><span id="qchips" class="fchips qchips" role="group" aria-label="What was searched for"></span></span>
         <span id="uitleg" class="explain"></span>
       </div>
       <button id="optstoggle" class="btn small optstoggle" type="button" aria-expanded="false" aria-controls="optspanel">Filters &amp; sort</button>
     </div>
-    <div id="cmdrresults" class="cmdrresults"></div>
     <div id="optspanel" class="optspanel">
       <div class="optsrow">
         <div id="filterbar" class="filterbar" hidden></div>
@@ -1397,7 +1414,7 @@ const savedView = store.get("view", null);   // "mobile" or "desktop" when the v
 const isMobile = savedView ? savedView === "mobile" : looksLikePhone();
 document.documentElement.classList.toggle("mobile", isMobile);
 // a placeholder that fits on a phone
-if (isMobile) document.getElementById("zin").placeholder = "e.g. cheap removal in black";
+if (isMobile) document.getElementById("zin").placeholder = "e.g. cheap black removal";
 
 // ---------- built-in translator (to be replaced by Claude later) ----------
 const COLORS = { white: "w", blue: "u", black: "b", red: "r", green: "g" };
@@ -1847,8 +1864,6 @@ function withFilters(query) {
   }
   // the companion's deck rule, not when looking for commanders
   if (companionRule() && !/is:commander/i.test(query)) extra += " " + companionRule();
-  const f = filterTerms();
-  if (f) extra += " " + f;
   // a loose OR would split the search in two and the filters above would only reach the last part
   let flat = query.replace(/"[^"]*"/g, '""');
   while (/\([^()]*\)/.test(flat)) flat = flat.replace(/\([^()]*\)/g, "");
@@ -1865,63 +1880,57 @@ const FILTER_TYPES = ["Creature", "Instant", "Sorcery", "Artifact", "Enchantment
 const FILTER_MV = new Map([["0–1", "mv<=1"], ["2", "mv=2"], ["3", "mv=3"], ["4", "mv=4"], ["5", "mv=5"], ["6+", "mv>=6"]]);
 const FILTER_PRICE = { "< €1": "eur<1", "< €2 (budget)": "eur<2", "< €5": "eur<5" };
 
-function filterTerms() {
-  const f = state.filters;
-  const or = terms => terms.length > 1 ? `(${terms.join(" OR ")})` : terms[0];
-  const parts = [];
-  if (f.types.size) parts.push(or([...f.types].map(t => "t:" + t.toLowerCase())));
-  if (f.mv.size) parts.push(or([...FILTER_MV.keys()].filter(k => f.mv.has(k)).map(k => FILTER_MV.get(k))));
-  if (f.price) parts.push(FILTER_PRICE[f.price]);
-  return parts.join(" ");
+// Each dropdown shows and changes the matching terms of the search itself, so the chips and the dropdowns always agree.
+const FILTER_KINDS = [
+  { title: "Type", options: FILTER_TYPES.map(x => [x, "t:" + x.toLowerCase()]),
+    match: t => /^t:(creature|instant|sorcery|artifact|enchantment|land|planeswalker)$/i.test(t) || /^\(t:\w+( OR t:\w+)+\)$/i.test(t) },
+  { title: "Mana value", options: [...FILTER_MV], match: t => /^(mv|cmc|manavalue)(<=|>=|<|>|=|:)\d+$/i.test(t) },
+  { title: "Price", options: Object.entries(FILTER_PRICE), match: t => /^(eur|usd)(<=|>=|<|>|=|:)[\d.]+$/i.test(t) },
+];
+const searchTerms = () => state.search ? splitQuery(state.search.query) : [];
+const filterCount = () => FILTER_KINDS.filter(k => searchTerms().some(k.match)).length;
+// The search with one kind of filter set to a new value (or taken out), as a new step.
+function setFilter(kind, term, label) {
+  const terms = searchTerms();
+  const rest = terms.filter(t => !kind.match(t));
+  if (term) rest.push(term);
+  const title = $("rtitle").dataset.text || "";
+  if (!rest.length) { stepSearch("f:commander", "All cards"); return; }
+  stepSearch(rest.join(" "), term ? `${title || remainingTitle(terms)} → ${label}` : remainingTitle(rest));
 }
 
-function resetFilters() {
-  state.filters = { types: new Set(), mv: new Set(), price: "" };
-  renderFilterbar();
-}
-
-// Active filters shown next to the count, each removable with one click.
-function renderFilterChips() {
-  const f = state.filters;
-  const chips = [];
-  const chip = (label, clear) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.setAttribute("aria-label", `Remove filter ${label}`);
-    b.innerHTML = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6"/></svg>';
-    b.prepend(label);
-    b.addEventListener("click", () => { clear(); renderFilterbar(); if (state.search) runSearch(state.search.query); });
-    chips.push(b);
-  };
-  for (const t of f.types) chip(t, () => f.types.delete(t));
-  for (const k of f.mv) chip(`mana value ${k}`, () => f.mv.delete(k));
-  if (f.price) chip(f.price, () => { f.price = ""; });
-  $("fchips").replaceChildren(...chips);
-}
+// Kept for the places that start afresh: the dropdowns follow the search, so there is nothing else to clear.
+function resetFilters() { renderFilterbar(); }
 
 function renderFilterbar() {
   renderOptsToggle();
-  renderFilterChips();
   const bar = $("filterbar");
   bar.replaceChildren();
   bar.hidden = !state.search;
-  const f = state.filters;
-  // one small dropdown per kind of filter
-  const choose = (title, keys, current, set) => {
+  const terms = searchTerms();
+  for (const kind of FILTER_KINDS) {
+    const found = terms.filter(kind.match);
     const label = document.createElement("label");
     label.className = "fsel";
     const sel = document.createElement("select");
     sel.add(new Option("any", ""));
-    for (const k of keys) sel.add(new Option(k, k));
-    sel.value = current || "";
-    sel.addEventListener("change", () => { set(sel.value); renderFilterbar(); if (state.search) runSearch(state.search.query); });
-    label.append(title + " ", sel);
+    for (const [text, term] of kind.options) sel.add(new Option(text, term));
+    const same = found.length === 1 && kind.options.find(([, term]) => term.toLowerCase() === found[0].toLowerCase());
+    if (same) sel.value = same[1];
+    else if (found.length) {
+      // a value of the search that isn't one of the choices, like "mana value ≤ 2": shown as it is
+      const own = new Option(found.map(termLabel).join(", "), "__own");
+      sel.add(own, 1);
+      sel.value = "__own";
+    } else sel.value = "";
+    sel.addEventListener("change", () => {
+      if (sel.value === "__own") return;
+      const chosen = kind.options.find(([, term]) => term === sel.value);
+      setFilter(kind, sel.value, chosen ? termLabel(chosen[1]) : "");
+    });
+    label.append(kind.title + " ", sel);
     bar.append(label);
-  };
-  const one = set => v => { set.clear(); if (v) set.add(v); };
-  choose("Type", FILTER_TYPES, [...f.types][0], one(f.types));
-  choose("Mana value", [...FILTER_MV.keys()], [...f.mv][0], one(f.mv));
-  choose("Price", Object.keys(FILTER_PRICE), f.price, v => { f.price = v; });
+  }
   if (state.deck.size) {
     const label = document.createElement("label");
     label.className = "ownedtoggle";
@@ -1931,14 +1940,6 @@ function renderFilterbar() {
     box.addEventListener("change", () => { state.hideOwned = box.checked; store.set("hideowned", state.hideOwned); applyHideOwned(); });
     label.append(box, "Hide cards in my deck");
     bar.append(label);
-  }
-  if (filterTerms()) {
-    const clear = document.createElement("button");
-    clear.type = "button";
-    clear.className = "linkbtn";
-    clear.textContent = "Clear filters";
-    clear.addEventListener("click", () => { resetFilters(); if (state.search) runSearch(state.search.query); });
-    bar.append(clear);
   }
 }
 
@@ -1962,7 +1963,7 @@ function renderIdentity() {
 function renderHero() {
   const c = state.commander, root = document.documentElement, art = $("heroart");
   const arts = ((c && c.arts) || []).filter(Boolean);
-  art.hidden = !c || pairing;
+  art.hidden = !c || pairing || !document.body.classList.contains("home");   // the art belongs to the start screen; results come first
   art.classList.toggle("two", arts.length > 1);
   if (arts[0]) art.style.setProperty("--art", `url("${arts[0]}")`); else art.style.removeProperty("--art");
   if (arts[1]) art.style.setProperty("--art2", `url("${arts[1]}")`); else art.style.removeProperty("--art2");
@@ -2034,6 +2035,7 @@ function renderCommander() {
     loadCommanderEdh();
   }
   renderStarters();
+  placeCmdrRow();
   if (c) {
     // the colors as Scryfall's own mana symbols
     const pips = document.createElement("span");
@@ -2117,7 +2119,7 @@ function renderDeckProgress() {
   $("deckprogress").hidden = !c;
   if (!c) return;
   const total = state.list.filter(x => !c.names.includes(x.name)).reduce((n, x) => n + x.qty, 0);
-  $("deckprogress").textContent = `${total} / ${100 - c.names.length} in your deck`;
+  $("deckprogress").textContent = `${total} of ${100 - c.names.length} cards in your list`;
 }
 
 // The commander card for a (partial) name; ambiguous names ("atraxa") give the most played commander containing it.
@@ -2221,7 +2223,10 @@ async function setCommander(name) {
     clearTimeout(suggestTimer);
     renderCommander();
     if (pairing) $("cmdrinput").focus();
-    else rerunForCommander();
+    else {
+      if ($("cmdrresults").matches(":popover-open")) $("cmdrresults").hidePopover();
+      rerunForCommander();
+    }
     return true;
   } catch (err) {
     $("cmdrnote").textContent = err.message;
@@ -2543,8 +2548,6 @@ function renderDeck() {
   const total = state.list.reduce((n, c) => n + (c.deckQty || 0), 0);
   $("deckinfo").textContent = total ? `${plural(total, "card")} from your deck` : "Import your own deck to see which cards you already have.";
   $("importdeck").textContent = total ? "Edit deck" : "Import deck";
-  $("deckbutton").textContent = $("deckmenu").textContent = total ? `Your deck · ${total}` : "Import deck";
-  $("deckbutton").title = total ? "Replace or remove your imported deck" : "Import your own deck to see which cards you already have";
   if (hadDeck !== total > 0) { hadDeck = total > 0; renderFilterbar(); }
   refreshOwned();
   renderDeckProgress();
@@ -2947,8 +2950,7 @@ function emptyResults(search) {
   const box = document.createElement("div");
   box.className = "empty";
   const p = document.createElement("p");
-  const limits = [filterTerms() && "the filters", state.commander && `${commanderShort()}'s colors`,
-    companionRule() && "the companion's rule"].filter(Boolean);
+  const limits = [state.commander && `${commanderShort()}'s colors`, companionRule() && "the companion's rule"].filter(Boolean);
   p.textContent = "No cards match this search" + (limits.length ? `, within ${limits.join(" and ")}.` : ".");
   const ways = document.createElement("div");
   ways.className = "ways";
@@ -2960,7 +2962,12 @@ function emptyResults(search) {
     b.addEventListener("click", run);
     ways.append(b);
   };
-  if (filterTerms()) way("Clear the filters", () => { resetFilters(); runSearch(search.query); });
+  // the last part added is usually what made it too narrow
+  const terms = splitQuery(search.query).filter(t => !/^(order|dir|direction|unique|prefer):/i.test(t));
+  if (terms.length > 1) {
+    const last = terms[terms.length - 1], rest = terms.slice(0, -1);
+    way(`Without ${termLabel(last)}`, () => stepSearch(rest.join(" "), remainingTitle(rest)));
+  }
   const chain = state.previous && state.previous.zin;
   const cut = chain ? chain.lastIndexOf(" → ") : -1;
   const back = cut > 0 && state.history.find(h => h.zin === chain.slice(0, cut));
@@ -3376,7 +3383,9 @@ function setView(home) {
   if (home && refining) setRefining(false);
   $("start").hidden = !home;
   $("results").hidden = home;
-  (home ? $("cmdrtop") : $("cmdrresults")).append($("cmdrrow"));
+  if ($("cmdrresults").matches(":popover-open")) $("cmdrresults").hidePopover();
+  placeCmdrRow();
+  renderHero();
   renderStarters();
   sizeHero();
 }
@@ -3599,8 +3608,8 @@ function setRefining(on) {
   $("refinechain").hidden = !(on && chain);
   $("refinechain").textContent = shown ? shown + " →" : "";
   $("refinechain").title = chain || "";
-  const examples = chain ? "e.g. " + refineExamples(state.previous.query) : "";
-  $("zin").placeholder = on && chain ? (isMobile ? `${chain} → ${examples}` : examples) : NEW_SEARCH_HINT;
+  const examples = chain ? "Narrow these results, e.g. " + refineExamples(state.previous.query) : "";
+  $("zin").placeholder = on && chain ? (isMobile ? examples.replace("Narrow these results, ", "") : examples) : NEW_SEARCH_HINT;
   renderStarters();
 }
 
@@ -3630,14 +3639,56 @@ function setTitle(text) {
   const syntax = /\w:\S|[<>=]/.test(t);
   h.classList.toggle("syntax", syntax);
   h.dataset.text = t;   // kept with the last search, so a reload shows the same words
-  h.replaceChildren(t && !syntax ? t[0].toUpperCase() + t.slice(1) : t);
+  if (syntax) {
+    const code = document.createElement("code");
+    code.className = "q";
+    code.textContent = t;
+    h.replaceChildren("Scryfall search ", code);
+  } else h.replaceChildren(t ? t[0].toUpperCase() + t.slice(1) : t);
   const c = state.commander;
-  if (c && t && !/is:commander|commanders?\b/i.test(t)) {
+  if (t && !/is:commander|commanders?\b/i.test(t)) {
     const span = document.createElement("span");
     span.className = "for";
-    span.textContent = ` for ${c.names.map(n => n.split(",")[0]).join(" + ")}`;
+    span.append(" for ", commanderButton(c));
     h.append(span);
   }
+}
+// The commander row is the banner on the start screen once a commander is set; otherwise it lives in the
+// setup panel, which opens from the heading in the results or from "Choose your commander" on the start screen.
+let setupAnchor = null;
+function placeCmdrRow() {
+  const home = document.body.classList.contains("home");
+  const open = $("cmdrresults").matches(":popover-open");
+  const target = home && state.commander && !open ? $("cmdrtop") : $("cmdrresults");
+  if ($("cmdrrow").parentElement !== target) target.append($("cmdrrow"));
+  $("setuphead").textContent = state.commander ? "Deck setup" : "Your commander";
+  const showChoose = home && !state.commander;
+  $("homecmdr").hidden = !showChoose;
+  if (showChoose && !$("homecmdr").firstChild) $("homecmdr").append(commanderButton(null, "Choose your commander (optional)"));
+}
+// The commander in the results heading: its art, short name and colors. It opens Deck setup.
+function commanderButton(c, emptyText = "any commander") {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "forcmdr" + (c ? "" : " none");
+  b.setAttribute("aria-haspopup", "dialog");
+  b.setAttribute("aria-expanded", "false");
+  b.popoverTargetElement = $("cmdrresults");
+  if (c) {
+    const thumbs = document.createElement("span");
+    thumbs.className = "thumbs";
+    thumbs.append(...(c.arts || []).filter(Boolean).map(src => Object.assign(document.createElement("img"), { src, alt: "" })));
+    const nm = Object.assign(document.createElement("span"), { className: "nm", textContent: c.names.map(n => isMobile ? n.split(/[ ,]/)[0] : n.split(",")[0]).join(" + ") });   // a phone: "Tymna + Kraum"
+    b.title = c.names.join(" + ");
+    b.append(thumbs, nm, manaPips(c.colors));
+  } else b.append(Object.assign(document.createElement("span"), { className: "nm", textContent: emptyText }));
+  b.addEventListener("click", () => { setupAnchor = b; });
+  const chev = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  chev.setAttribute("viewBox", "0 0 16 16");
+  chev.setAttribute("aria-hidden", "true");
+  chev.innerHTML = '<path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>';
+  b.append(chev);
+  return b;
 }
 
 // What to say under the count: a warning, an error or fallback, combos, or words the built-in translator skipped.
@@ -3645,8 +3696,11 @@ function setTitle(text) {
 function shownUitleg(r) {
   const u = r.uitleg || "";
   if (r.warn || (r.combos && r.combos.length) || /built-in translator|isn.t a search|not a search|can.t be/i.test(u)) return u;
-  const skipped = u.match(/Not used: [^.]*\./);
-  return skipped ? skipped[0] : "";
+  const skipped = u.match(/Not used: ([^.]*)\./);
+  // little words like "only" or "some" change nothing: no need to mention them
+  const filler = /^(only|just|a|an|the|some|any|all|with|that|which|and|or|for|in|of|to|cards?|me|my|please|good|nice|great|alleen|wat|een|de|het|met|die|en|of|voor|kaarten)$/i;
+  if (skipped && skipped[1].split(/[\s,]+/).filter(Boolean).every(w => filler.test(w))) return "";
+  return skipped ? `Searched without "${skipped[1].trim()}": those words didn't match a card property. Try other words, like "flying" or "draws cards".` : "";
 }
 
 // ---------- wiring ----------
@@ -3722,6 +3776,7 @@ async function refineSearch(text) {
   pushSearchUrl(result.query, zin);
   addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
   setPrevious(result.combos && result.combos.length ? null : { zin, query: result.query });
+  setRefining(false);   // narrowing is one step; the next search starts afresh unless Refine is chosen again
   resetFilters();
   // narrowing a ranked search keeps it ranked
   state.rankNext = result.rank || !!(settings.code && state.search && state.search.rank);
@@ -3786,8 +3841,7 @@ document.addEventListener("keydown", e => {
 });
 function renderOptsToggle() {
   const open = $("results").classList.contains("opts");
-  const f = state.filters;
-  const n = f.types.size + f.mv.size + (f.price ? 1 : 0);
+  const n = filterCount();
   $("optstoggle").setAttribute("aria-expanded", String(open));
   $("optstoggle").textContent = "Filters & sort";
   $("optstoggle").classList.toggle("on", open);
@@ -3865,7 +3919,6 @@ applyCardSize();
 
 // settings: access code for the translator
 function renderCodeState() {
-  $("nokey").hidden = !!settings.code;
 }
 function openSettings() {
   $("accesscode").value = settings.code;
@@ -4006,7 +4059,7 @@ function currentTheme() {
 }
 function renderThemeButton() {
   const dark = currentTheme() === "dark";
-  $("themetoggle").textContent = dark ? "Theme: dark" : "Theme: light";
+  $("themetoggle").textContent = dark ? "Light theme" : "Dark theme";
   $("themetoggle").setAttribute("aria-label", dark ? "Switch to the light theme" : "Switch to the dark theme");
 }
 $("themetoggle").addEventListener("click", () => {
@@ -4031,7 +4084,6 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeMore();
 $("opensettings").addEventListener("click", closeMore);
 
 // commander first: skipping it just goes to the search bar; the progress opens the list
-$("cmdrskip").addEventListener("click", () => $("zin").focus());
 $("topcmdrbtn").addEventListener("click", openCommanderList);
 $("cmdrsclose").addEventListener("click", () => $("cmdrsdialog").close());
 $("cmdrsdialog").addEventListener("close", () => { hidePreview(); document.body.append($("preview"), $("preview2")); });
@@ -4070,6 +4122,17 @@ $("cmdrpair").addEventListener("click", () => {
   renderCommander();
   $("cmdrinput").focus();
 });
+$("cmdrchange").addEventListener("click", openCommanderList);
+$("cmdrresults").addEventListener("toggle", placeCmdrRow);
+$("cmdrresults").addEventListener("beforetoggle", e => {
+  const b = setupAnchor && setupAnchor.isConnected ? setupAnchor : document.querySelector("#rtitle .forcmdr");
+  if (b) b.setAttribute("aria-expanded", String(e.newState === "open"));
+  if (e.newState !== "open" || !b) return;
+  const p = $("cmdrresults"), r = b.getBoundingClientRect(), w = Math.min(440, innerWidth - 16);
+  p.style.left = Math.round(Math.min(Math.max(8, r.left), innerWidth - w - 8)) + "px";
+  p.style.top = Math.round(Math.min(r.bottom + 8, innerHeight - 120)) + "px";
+});
+addEventListener("scroll", () => { if ($("cmdrresults").matches(":popover-open")) $("cmdrresults").hidePopover(); }, { passive: true });
 $("cmdrclear").addEventListener("click", () => {
   pairing = false;
   state.commander = null;
@@ -4084,8 +4147,6 @@ function currentDeckText() {
 }
 function openDeckImport() { $("decktext").value = currentDeckText(); $("deckdialog").showModal(); $("decktext").focus(); }
 $("importdeck").addEventListener("click", openDeckImport);
-$("deckbutton").addEventListener("click", openDeckImport);
-$("deckmenu").addEventListener("click", () => { closeMore(); openDeckImport(); });
 $("deckform").addEventListener("submit", e => {
   if (!e.submitter || e.submitter.value !== "save") return;
   const { counts, prints } = parseDeck($("decktext").value);
