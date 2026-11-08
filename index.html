@@ -181,7 +181,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 
 .foot { padding: 0 max(16px, 3vw) 20px; color: var(--muted); font-size: 12px; }
 
-#preview { position: fixed; z-index: 41; width: 300px; pointer-events: none; border-radius: 14px; box-shadow: 0 8px 30px var(--float-shadow); }
+#preview, #preview2 { position: fixed; z-index: 41; width: 300px; pointer-events: none; border-radius: 14px; box-shadow: 0 8px 30px var(--float-shadow); }
 .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 4px; font-size: 14px; z-index: 30; }
 
 .settings { width: min(460px, calc(100% - 32px)); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--fg); padding: 18px; box-shadow: var(--shadow); }
@@ -483,19 +483,24 @@ body:not(.home) #topcmdrbtn, .cmdr:is(.has, .pairing) #topcmdrbtn { display: non
 .cmdrscolors button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .cmdrscolors .hint { margin-left: 4px; }
 @media (prefers-reduced-motion: reduce) { .cmdrscolors button { transition: none; } }
-.cmdrslist .nm .pips { margin-left: 6px; }
-.cmdrslist .nm .mana { width: 14px; height: 14px; vertical-align: -2px; margin-left: 1px; }
+
 .cmdrslist { list-style: none; margin: 0; padding: 6px 10px 10px; }
 .cmdrslist button { display: grid; grid-template-columns: 3.4em 72px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 6px 8px; border: 0; border-radius: 6px; background: none; color: var(--fg); font: inherit; font-size: 14.5px; text-align: left; cursor: pointer; }
 .cmdrslist button:hover { background: var(--bg); }
 .cmdrslist button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .cmdrslist .rank { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
-.cmdrslist img { display: block; width: 72px; height: 53px; object-fit: cover; border-radius: 5px; background: var(--line); }
-.cmdrslist .nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmdrslist .art { display: flex; gap: 2px; width: 72px; height: 53px; border-radius: 5px; overflow: hidden; background: var(--line); }
+.cmdrslist .art img { display: block; flex: 1 1 0; min-width: 0; height: 100%; object-fit: cover; }
+.cmdrslist .nm { display: grid; gap: 2px; min-width: 0; }
+.cmdrslist .line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cmdrslist .first { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmdrslist .second { color: var(--muted); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmdrslist .pips { display: inline-flex; flex: none; gap: 2px; }
+.cmdrslist .mana { width: 15px; height: 15px; }
 .cmdrslist .decks { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 html.mobile .cmdrslist button { grid-template-columns: 2.6em 56px minmax(0, 1fr); gap: 10px; }
-html.mobile .cmdrslist img { width: 56px; height: 41px; }
-html.mobile .cmdrslist .decks { grid-column: 3; margin-top: -8px; }
+html.mobile .cmdrslist .art { width: 56px; height: 41px; }
+html.mobile .cmdrslist .decks { grid-column: 3; margin-top: -8px; display: flex; align-items: center; gap: 8px; }
 #cmdrrow.pairing .cmdrform { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; width: min(440px, 100%); flex: none; }
 #cmdrrow.pairing .cmdrform input { width: 100%; font-size: 16px; padding: 9px 12px; }
 #cmdrfirst { grid-column: 1 / -1; }
@@ -1153,6 +1158,7 @@ html.mobile body:not(.home) .starters .startor { display: none; }
 </div>
 
 <img id="preview" alt="" hidden>
+<img id="preview2" alt="" hidden>
 <div id="toast" class="toast" role="status" hidden></div>
 
 <script>
@@ -2307,19 +2313,30 @@ function cmdrsMore() {
     const b = document.createElement("button");
     b.type = "button";
     const rank = Object.assign(document.createElement("span"), { className: "rank", textContent: "#" + c.rank });
-    const img = document.createElement("img");
-    if (c.art) img.src = c.art;
-    img.alt = "";
-    img.loading = "lazy";
-    const nm = Object.assign(document.createElement("span"), { className: "nm", textContent: c.name, title: c.name });
-    if (c.colors !== "?") nm.append(manaPips(c.colors));
+    // a pair shows both arts, each half of the picture
+    const art = document.createElement("span");
+    art.className = "art" + (c.arts.length > 1 ? " two" : "");
+    art.append(...c.arts.map(src => Object.assign(document.createElement("img"), { src, alt: "", loading: "lazy" })));
+    // the first name with its colors; a partner goes on its own line beneath it
+    const [first, second] = c.name.split(" // ");
+    const nm = document.createElement("span");
+    nm.className = "nm";
+    const line = Object.assign(document.createElement("span"), { className: "line" });
+    line.append(Object.assign(document.createElement("span"), { className: "first", textContent: first }));
+    // on a phone the colors go with the deck count, so the name keeps the room
+    const phone = document.documentElement.classList.contains("mobile");
+    if (c.colors !== "?" && !phone) line.append(manaPips(c.colors));
+    nm.append(line);
+    if (second) nm.append(Object.assign(document.createElement("span"), { className: "second", textContent: "+ " + second }));
+    if (!canHover) b.title = c.name;   // the preview shows the whole card; without one the full name is a tap away
     if (c.large) {
-      b.addEventListener("mouseenter", e => showPreview({ name: c.name, large: c.large }, e));
+      b.addEventListener("mouseenter", e => showPreview({ name: c.name, large: c.large, large2: c.large2 }, e));
       b.addEventListener("mousemove", movePreview);
       b.addEventListener("mouseleave", hidePreview);
     }
     const decks = Object.assign(document.createElement("span"), { className: "decks", textContent: c.decks.toLocaleString("en") + (c.decks === 1 ? " deck" : " decks") });
-    b.append(rank, img, nm, decks);
+    if (c.colors !== "?" && phone) decks.prepend(manaPips(c.colors));
+    b.append(rank, art, nm, decks);
     b.addEventListener("click", () => pickListedCommander(c.name));
     li.append(b);
     return li;
@@ -2344,14 +2361,15 @@ async function pickListedCommander(name) {
 }
 async function openCommanderList() {
   $("cmdrsdialog").showModal();
-  $("cmdrsdialog").append($("preview"));
+  $("cmdrsdialog").append($("preview"), $("preview2"));
   renderColorFilter();
   if (!allCommanders) {
     $("cmdrsnote").textContent = "Loading…";
     try {
       const data = await fetch("commanders.json", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error(); return r.json(); });
-      allCommanders = data.list.map(([name, decks, id, v, colors = "?"], i) => ({ name, decks, rank: i + 1, art: cmdrArt(id, v), colors,
-        large: id ? `https://cards.scryfall.io/large/front/${id[0]}/${id[1]}/${id}.jpg?${v}` : "",
+      const large = (id, v) => id ? `https://cards.scryfall.io/large/front/${id[0]}/${id[1]}/${id}.jpg?${v}` : "";
+      allCommanders = data.list.map(([name, decks, id, v, colors = "?", id2, v2], i) => ({ name, decks, rank: i + 1, colors,
+        arts: [cmdrArt(id, v), cmdrArt(id2, v2)].filter(Boolean), large: large(id, v), large2: large(id2, v2),
         key: foldName(name) }));
       $("cmdrsnote").textContent = "";
       renderColorFilter();
@@ -3031,26 +3049,41 @@ function showPreview(card, e) {
   p.src = card.flipped && card.backLarge ? card.backLarge : card.large;
   p.alt = card.name;
   p.hidden = false;
+  const p2 = $("preview2");
+  p2.hidden = !card.large2;
+  if (card.large2) p2.src = card.large2;
   movePreview(e);
 }
 function movePreview(e) {
-  const p = $("preview");
+  const p = $("preview"), p2 = $("preview2");
   if (p.hidden) return;
-  const w = 300, h = 418, pad = 18;
-  let x = e.clientX + pad;
-  if (x + w > innerWidth - 8) x = e.clientX - w - pad;
-  // beside the list instead of over the rows around the one pointed at
-  if (e.currentTarget.closest && e.currentTarget.closest("#drawer")) x = $("drawer").getBoundingClientRect().left - w - pad;
-  if (e.currentTarget.closest && e.currentTarget.closest("#cmdrsdialog")) {
+  const pair = !p2.hidden, gap = 10, pad = 18;
+  let cw = 300, x;
+  const inside = id => e.currentTarget.closest && e.currentTarget.closest(id);
+  if (inside("#cmdrsdialog")) {
+    // beside the commander list, on the side with the most room; the cards shrink a little rather than cover the list
     const box = $("cmdrsdialog").getBoundingClientRect();
-    if (box.right + pad + w <= innerWidth - 8) x = box.right + pad;
-    else if (box.left - pad - w >= 8) x = box.left - pad - w;
+    const right = innerWidth - 8 - (box.right + pad), left = box.left - pad - 8, room = Math.max(right, left);
+    const fit = Math.min(300, Math.floor((room - (pair ? gap : 0)) / (pair ? 2 : 1)));
+    if (fit >= 170) {
+      cw = fit;
+      const total = pair ? 2 * cw + gap : cw;
+      x = right >= left ? box.right + pad : box.left - pad - total;
+    }
   }
+  const total = pair ? 2 * cw + gap : cw, h = Math.round(cw * 1.395);
+  if (x === undefined) {
+    x = e.clientX + pad;
+    if (x + total > innerWidth - 8) x = e.clientX - total - pad;
+    // beside the list instead of over the rows around the one pointed at
+    if (inside("#drawer")) x = $("drawer").getBoundingClientRect().left - total - pad;
+  }
+  x = Math.max(8, x);
   const y = Math.min(Math.max(8, e.clientY - h / 2), innerHeight - h - 8);
-  p.style.left = Math.max(8, x) + "px";
-  p.style.top = y + "px";
+  Object.assign(p.style, { left: x + "px", top: y + "px", width: cw + "px" });
+  if (pair) Object.assign(p2.style, { left: x + cw + gap + "px", top: y + "px", width: cw + "px" });
 }
-function hidePreview() { $("preview").hidden = true; }
+function hidePreview() { $("preview").hidden = true; $("preview2").hidden = true; }
 
 // ---------- card list ----------
 function saveList() { store.set("list", state.list); renderList(); refreshBadges(); renderDeck(); }
@@ -4001,7 +4034,7 @@ $("opensettings").addEventListener("click", closeMore);
 $("cmdrskip").addEventListener("click", () => $("zin").focus());
 $("topcmdrbtn").addEventListener("click", openCommanderList);
 $("cmdrsclose").addEventListener("click", () => $("cmdrsdialog").close());
-$("cmdrsdialog").addEventListener("close", () => { hidePreview(); document.body.append($("preview")); });
+$("cmdrsdialog").addEventListener("close", () => { hidePreview(); document.body.append($("preview"), $("preview2")); });
 let cmdrsTimer;
 $("cmdrsfilter").addEventListener("input", () => { clearTimeout(cmdrsTimer); cmdrsTimer = setTimeout(() => { $("cmdrsdialog").scrollTop = 0; cmdrsRender(); }, 150); });
 // more rows as the end of the list comes near: scrolls on to the last commander
