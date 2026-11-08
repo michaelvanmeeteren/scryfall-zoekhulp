@@ -467,6 +467,24 @@ html.mobile #results:not(.opts) .cmdrresults .cmdr:not(.has):not(.pairing) { dis
 body:not(.home) #cmdrrow.pairing .cmdrask { display: block; }
 #cmdrrow.pairing { justify-content: center; }
 #cmdrrow.pairing #cmdrskip { display: none; }
+/* every commander on EDHREC, most played first, to start from */
+body:not(.home) #topcmdrbtn, .cmdr:is(.has, .pairing) #topcmdrbtn { display: none; }
+.cmdrsdialog { width: min(640px, calc(100% - 24px)); height: min(820px, calc(100vh - 32px)); padding: 0; overflow: auto; overscroll-behavior: contain; }
+.cmdrshead { position: sticky; top: 0; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 16px 18px 12px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.cmdrshead h2 { font-family: var(--serif); font-size: 20px; }
+.cmdrshead input { grid-column: 1 / -1; font-family: var(--font); font-size: 16px; }
+.cmdrshead .hint { grid-column: 1 / -1; }
+.cmdrslist { list-style: none; margin: 0; padding: 6px 10px 10px; }
+.cmdrslist button { display: grid; grid-template-columns: 3.4em 72px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 6px 8px; border: 0; border-radius: 6px; background: none; color: var(--fg); font: inherit; font-size: 14.5px; text-align: left; cursor: pointer; }
+.cmdrslist button:hover { background: var(--bg); }
+.cmdrslist button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.cmdrslist .rank { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+.cmdrslist img { display: block; width: 72px; height: 53px; object-fit: cover; border-radius: 5px; background: var(--line); }
+.cmdrslist .nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmdrslist .decks { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+html.mobile .cmdrslist button { grid-template-columns: 2.6em 56px minmax(0, 1fr); gap: 10px; }
+html.mobile .cmdrslist img { width: 56px; height: 41px; }
+html.mobile .cmdrslist .decks { grid-column: 3; margin-top: -8px; }
 #cmdrrow.pairing .cmdrform { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; width: min(440px, 100%); flex: none; }
 #cmdrrow.pairing .cmdrform input { width: 100%; font-size: 16px; padding: 9px 12px; }
 #cmdrfirst { grid-column: 1 / -1; }
@@ -906,6 +924,16 @@ html.mobile body:not(.home) .starters .startor { display: none; }
   </form>
 </dialog>
 
+<dialog id="cmdrsdialog" class="settings cmdrsdialog" aria-labelledby="cmdrstitle">
+  <div class="cmdrshead">
+    <h2 id="cmdrstitle">Most played commanders</h2>
+    <button id="cmdrsclose" class="btn small" type="button">Close</button>
+    <input id="cmdrsfilter" type="search" autocomplete="off" spellcheck="false" placeholder="Filter by name" aria-label="Filter commanders by name">
+    <p id="cmdrsnote" class="hint"></p>
+  </div>
+  <ol id="cmdrslist" class="cmdrslist"></ol>
+</dialog>
+
 <dialog id="deckdialog" class="settings" aria-labelledby="decktitle">
   <form method="dialog" id="deckform">
     <h2 id="decktitle">Import your deck</h2>
@@ -1006,6 +1034,7 @@ html.mobile body:not(.home) .starters .startor { display: none; }
           <button class="btn small" type="submit">Set</button>
         </form>
         <button id="cmdrskip" class="linkbtn" type="button">or just search</button>
+        <button id="topcmdrbtn" class="linkbtn" type="button">or browse the most played</button>
         <span id="cmdrnote" class="hint"></span>
         <label id="compwrap" class="compwrap" hidden><span class="cmdrlabel">Companion</span>
           <select id="compselect" aria-label="Companion"><option value="">none</option></select>
@@ -2205,6 +2234,70 @@ function suggestCommanders(input, list) {
       }));
     } catch { /* no suggestions this time */ }
   }, 300);
+}
+
+// Every commander on EDHREC, most played first: commanders.json, made once a month by tools/update-commanders.mjs.
+// The art comes straight from Scryfall's image server (no API request).
+let allCommanders = null, cmdrsRows = [], cmdrsShown = 0;
+const cmdrArt = (id, v) => id ? `https://cards.scryfall.io/art_crop/front/${id[0]}/${id[1]}/${id}.jpg?${v}` : "";
+// lower case without accents, so "dul" finds "Lim-Dûl"
+const foldName = text => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+function cmdrsMatches() {
+  const words = foldName($("cmdrsfilter").value).split(/\s+/).filter(Boolean);
+  return allCommanders.filter(c => words.every(w => c.key.includes(w)));
+}
+function cmdrsMore() {
+  const next = cmdrsRows.slice(cmdrsShown, cmdrsShown + 60);
+  cmdrsShown += next.length;
+  $("cmdrslist").append(...next.map(c => {
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.type = "button";
+    const rank = Object.assign(document.createElement("span"), { className: "rank", textContent: "#" + c.rank });
+    const img = document.createElement("img");
+    if (c.art) img.src = c.art;
+    img.alt = "";
+    img.loading = "lazy";
+    const nm = Object.assign(document.createElement("span"), { className: "nm", textContent: c.name, title: c.name });
+    const decks = Object.assign(document.createElement("span"), { className: "decks", textContent: c.decks.toLocaleString("en") + (c.decks === 1 ? " deck" : " decks") });
+    b.append(rank, img, nm, decks);
+    b.addEventListener("click", () => pickListedCommander(c.name));
+    li.append(b);
+    return li;
+  }));
+}
+function cmdrsRender() {
+  cmdrsRows = cmdrsMatches();
+  cmdrsShown = 0;
+  $("cmdrslist").replaceChildren();
+  $("cmdrsnote").textContent = cmdrsRows.length ? "" : "No commander with that name.";
+  cmdrsMore();
+}
+// A pair from the list ("A // B") is set as both commanders.
+async function pickListedCommander(name) {
+  $("cmdrsdialog").close();
+  const [first, second] = name.split(" // ");
+  pairing = false;
+  if (!await setCommander(first)) return;
+  if (second && pairing) await setCommander(second);
+}
+async function openCommanderList() {
+  $("cmdrsdialog").showModal();
+  if (!allCommanders) {
+    $("cmdrsnote").textContent = "Loading…";
+    try {
+      const data = await fetch("commanders.json").then(r => { if (!r.ok) throw new Error(); return r.json(); });
+      allCommanders = data.list.map(([name, decks, id, v], i) => ({ name, decks, rank: i + 1, art: cmdrArt(id, v),
+        key: foldName(name) }));
+      $("cmdrsnote").textContent = "";
+      $("cmdrstitle").title = `EDHREC, decks of the past two years. Updated ${data.updated}.`;
+    } catch {
+      $("cmdrsnote").textContent = "Couldn't load the list. Try again later.";
+      return;
+    }
+    cmdrsRender();
+  }
+  $("cmdrsfilter").focus();
 }
 
 // The results view without results, e.g. for a request that isn't a card search.
@@ -3836,6 +3929,16 @@ $("opensettings").addEventListener("click", closeMore);
 
 // commander first: skipping it just goes to the search bar; the progress opens the list
 $("cmdrskip").addEventListener("click", () => $("zin").focus());
+$("topcmdrbtn").addEventListener("click", openCommanderList);
+$("cmdrsclose").addEventListener("click", () => $("cmdrsdialog").close());
+let cmdrsTimer;
+$("cmdrsfilter").addEventListener("input", () => { clearTimeout(cmdrsTimer); cmdrsTimer = setTimeout(() => { $("cmdrsdialog").scrollTop = 0; cmdrsRender(); }, 150); });
+// more rows as the end of the list comes near: scrolls on to the last commander
+$("cmdrsdialog").addEventListener("scroll", () => {
+  const d = $("cmdrsdialog");
+  if (cmdrsShown < cmdrsRows.length && d.scrollTop + d.clientHeight > d.scrollHeight - 1200) cmdrsMore();
+}, { passive: true });
+$("cmdrsdialog").addEventListener("click", e => { if (e.target === $("cmdrsdialog")) $("cmdrsdialog").close(); });
 $("deckprogress").addEventListener("click", () => openList());
 
 // help window
