@@ -183,7 +183,9 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .copybtn .ico { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .copybtn.done .ico { display: none; }
 .copybtn.copied { animation: pop 0.22s ease-out; }
-.listactions { display: flex; gap: 8px; flex-wrap: wrap; }
+.listactions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.listactions .clearbtn { margin-left: auto; padding: 8px 4px; color: var(--muted); }
+html.mobile .listactions .clearbtn { flex: none; min-height: 44px; }
 .confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
 .confirm .btn.danger { border-color: var(--danger); color: var(--danger); }
 .list textarea { width: 100%; min-height: 140px; font-family: var(--mono); font-size: 12.5px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); padding: 8px; }
@@ -283,6 +285,13 @@ html.mobile .cmdrpick .chip, html.mobile #cmdrchip { max-width: none; white-spac
 html.mobile body.home .topbar .cmdrtop { order: 0; flex-basis: 100%; }
 .help ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 14px; }
 .help code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+.help details { border-top: 1px solid var(--line); }
+.help details:last-of-type { border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+.help summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; font-size: 15px; font-weight: 600; }
+.help details ul { margin: 0 0 12px; }
+.help summary::-webkit-details-marker { display: none; }
+.help summary::after { content: "+"; margin-left: auto; padding-left: 12px; color: var(--muted); font-size: 20px; font-weight: 400; }
+.help details[open] > summary::after { content: "−"; }
 
 /* commander, deck and result filters */
 .cmdr { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 13.5px; }
@@ -505,11 +514,14 @@ html.mobile .forcmdr .thumbs img:only-child { width: 22px; }
 .cmdrresults .setuphead { margin: 0 0 12px; font-size: 15px; font-weight: 400; color: var(--muted); }
 #cmdrresults #cmdrrow, #cmdrresults #cmdrrow.has { --bg: inherit; --surface: inherit; --fg: inherit; --muted: inherit; --accent: inherit; --accent-fg: inherit; --line: inherit;
   position: static; isolation: auto; overflow: visible; display: grid; justify-items: start; align-content: start; gap: 12px; width: 100%; min-height: 0; margin: 0; padding: 0; background: none; color: var(--fg); text-align: left; }
-#cmdrresults #cmdrrow.has .cmdrpick { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 4px 14px; width: 100%; }
+#cmdrresults #cmdrrow.has .cmdrpick { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 14px; width: 100%; }
 #cmdrresults #cmdrrow.has .cmdrart { grid-row: 1 / 3; }
 #cmdrresults #cmdrrow.has #cmdrchip { grid-column: 2 / -1; }
 #cmdrresults #cmdrrow.has #cmdrclear { justify-self: start; }
-#cmdrrow.pairing :is(#cmdrchange, #cmdrclear) { display: none; }
+#cmdrrow.pairing :is(#cmdrchange, #cmdrclear, #cmdrones) { display: none; }
+.cmdrlinks, .cmdrones { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; min-width: 0; }
+#cmdrresults #cmdrrow.has .cmdrlinks { grid-column: 2; }
+#cmdrrow .linkbtn[hidden], #cmdrrow .cmdrones[hidden] { display: none; }
 #cmdrresults #cmdrrow.has .cmdrart { display: inline-flex; }
 #cmdrresults #cmdrrow.has #cmdrchip { flex: 1 1 auto; min-width: 0; max-width: 100%; color: var(--fg); font-family: var(--font); font-size: 19px; font-weight: 400; line-height: 1.25; letter-spacing: 0; text-shadow: none; white-space: normal; }
 #cmdrresults #cmdrrow.has .mana { width: 16px; height: 16px; vertical-align: -2px; }
@@ -621,6 +633,11 @@ html.mobile .toast button { min-height: 44px; padding: 0 6px; }
 
 /* no cards: the ways out */
 .empty p { margin: 0 0 14px; color: var(--fg); }
+.narrowbtn { margin-left: 4px; font-size: 13px; white-space: nowrap; }
+.narrowbtn[hidden] { display: none; }
+html.mobile .narrowbtn { min-height: 36px; }
+/* while narrowing on a phone the switch stays in the folded bar: it says what the field does */
+html.mobile body.scrolled:not(.home) .topbar #modeswitch.refining:not([hidden]) { display: grid; }
 .empty .ways { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 
 /* computer: the open list sits beside the results instead of over them */
@@ -826,7 +843,7 @@ body:not(.home) .homecmdr { display: none; }
 /* adding a partner inside the banner: left-aligned like the banner, the field on its own row */
 #cmdrrow.has.pairing { justify-content: flex-start; }
 #cmdrrow.has:is(.pairing, .changing) .cmdrform { flex: 1 1 100%; width: min(440px, 100%); }
-#cmdrrow.changing :is(#cmdrchange, #cmdrpair) { display: none; }
+#cmdrrow.changing :is(#cmdrchange, #cmdrpair, #cmdrones) { display: none; }
 body.home .topbar .searchrow, body.home .starters { width: min(760px, calc(100% - 32px)); }
 html:not(.mobile) body.home .topbar > :not(.topbuttons), html:not(.mobile) body.home main, html:not(.mobile) .topbuttons > * { zoom: 1; }
 body.home .cmdr { margin-bottom: 0; }
@@ -953,38 +970,46 @@ html.mobile body:not(.home) .starters .startor { display: none; }
   <form method="dialog">
     <h2 id="helptitle">How to use SpellSeekr</h2>
 
-    <h3>Searching</h3>
-    <ul>
-      <li>Describe what you need: <i>cheap removal in black</i>, <i>blue instants that draw a card</i>. Dutch works with the access code.</li>
-      <li><b>Cheap</b> = mana value 2 or less, <b>expensive</b> = 6 or more. For price: <i>budget</i> (under €2) or <i>under 1 euro</i>.</li>
-      <li>Know Scryfall's syntax? Start with <code>/s</code>: <code>/s t:elf mv=1</code>. Only Commander-legal paper cards are shown.</li>
-      <li>To narrow the results instead of searching again, switch the search bar from <b>New</b> to <b>Refine</b> (or start with <b>+</b>): <i>only instants</i>, <i>under 1 euro</i>. After that search it goes back to <b>New</b>.</li>
-      <li>The chips under the heading show what your words were translated into. Take one out with its <b>×</b> to widen the search.</li>
-      <li><b>Filters &amp; sort</b> sets the type, mana value and price of the search; what you choose shows up as a chip. Card size and cards per page are under <b>Settings</b>.</li>
-      <li>With the access code you can ask for combos: <i>2 card combos in dimir</i>.</li>
-    </ul>
-
-    <h3>Commander</h3>
-    <ul>
-      <li>Choose it under the search bar on the start screen, or from the heading of the results (<i>… for Tymna</i>): every search stays in its colors. A color outside them is left out (in red).</li>
-      <li>Partner, Background or Doctor? <b>+ add partner</b> adds the second one.</li>
-      <li>A <b>Companion</b> adds its deck rule to every search, e.g. Lurrus: permanents of 2 mana or less.</li>
-      <li>Every card in the results also shows how many of its decks play it.</li>
-    </ul>
-
-    <h3>Your list and deck</h3>
-    <ul>
-      <li>Click a card or its <b>+</b> to add it (a mistake? <b>Undo</b>); the <b>✓</b> takes it out again. On a phone, tap <b>+</b> to add; tapping the card shows it. <b>List</b> (top right) shows your cards grouped by type, with a mana curve.</li>
-      <li><b>Copy decklist</b> puts it on the clipboard for Moxfield, Archidekt and other deck sites.</li>
-      <li><b>Import deck</b> in the list marks the cards you already have (<b>In deck</b>), and you can hide them.</li>
-      <li>The <i>i</i> on a card shows its details; <b>⟲</b> turns a double-faced card over.</li>
-    </ul>
-
-    <h3>Access code</h3>
-    <p>Without it a simple built-in translator is used; with it, Claude understands you much better. Enter it under <b>Settings</b>.</p>
-
-    <h3>Your other devices</h3>
-    <p>Turn on <b>Sync</b> under <b>Settings</b> and enter the sync code on your other device. No account needed.</p>
+    <details open>
+      <summary>Search in plain words</summary>
+      <ul>
+        <li>Describe what you need: <i>cheap removal in black</i>, <i>blue instants that draw a card</i>. Dutch works with the access code.</li>
+        <li><b>Cheap</b> is mana value 2 or less, <b>expensive</b> 6 or more, <b>budget</b> under €2.</li>
+        <li>The chips under the heading show how your words were read. Remove one with its <b>×</b>.</li>
+        <li>Know Scryfall's syntax? Start with <code>/s</code>: <code>/s t:elf mv=1</code>. Only Commander-legal paper cards are shown.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>Narrow the results</summary>
+      <ul>
+        <li><b>+ narrow down</b> after the chips (or <b>Refine</b> in the search bar) adds your next words to the search on screen: <i>only instants</i>, <i>under 1 euro</i>.</li>
+        <li><b>Filters &amp; sort</b> sets the type, mana value, price and order.</li>
+        <li>With the access code you can ask for combos: <i>2 card combos in dimir</i>.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>Your commander</summary>
+      <ul>
+        <li>Every search stays in your commander's colors. Choose it on the start screen or from the heading of the results (<i>… for Tymna</i>).</li>
+        <li>Partner, Background or Doctor? <b>+ add partner</b>. With two, the <b>change</b> beside each name swaps only that one.</li>
+        <li>A <b>Companion</b> adds its deck rule, e.g. Lurrus: permanents of 2 mana or less.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>Your list and deck</summary>
+      <ul>
+        <li>Click a card or its <b>+</b> to add it; the <b>✓</b> takes it out. On a phone, tap <b>+</b> to add and the card to see it.</li>
+        <li><b>List</b> (top right) groups your cards by type, with a mana curve. <b>Copy decklist</b> is for Moxfield, Archidekt and other deck sites.</li>
+        <li><b>Import deck</b> marks the cards you already have, and you can hide them.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>Access code and other devices</summary>
+      <ul>
+        <li>Without the code a simple built-in translator is used; with it, Claude understands you much better. Enter it under <b>Settings</b>.</li>
+        <li><b>Sync</b> under <b>Settings</b> gives a code for your other device. No account needed.</li>
+      </ul>
+    </details>
 
     <div class="listactions"><button class="btn primary" type="submit">Got it</button></div>
   </form>
@@ -1091,8 +1116,9 @@ html.mobile body:not(.home) .starters .startor { display: none; }
         <span id="cmdrpick" class="cmdrpick" hidden>
           <span id="cmdrart" class="cmdrart"></span>
           <span id="cmdrchip" class="chip"></span>
-          <button id="cmdrchange" class="linkbtn" type="button">change</button>
-          <button id="cmdrclear" class="linkbtn" type="button">remove</button>
+          <span class="cmdrlinks"><button id="cmdrchange" class="linkbtn" type="button">change</button>
+          <span id="cmdrones" class="cmdrones" hidden></span>
+          <button id="cmdrclear" class="linkbtn" type="button">remove</button></span>
         </span>
         <button id="cmdrpair" class="linkbtn" type="button" hidden></button>
         <form id="cmdrform" class="cmdrform">
@@ -1120,7 +1146,7 @@ html.mobile body:not(.home) .starters .startor { display: none; }
     <div id="toolbar" class="toolbar strip">
       <div class="stripinfo">
         <h1 id="rtitle" class="rtitle"></h1>
-        <span class="countline"><span id="count" class="count"></span><span id="qchips" class="fchips qchips" role="group" aria-label="What was searched for"></span></span>
+        <span class="countline"><span id="count" class="count"></span><span id="qchips" class="fchips qchips" role="group" aria-label="What was searched for"></span><button id="narrowbtn" class="linkbtn narrowbtn" type="button" hidden>+ narrow down</button></span>
         <span id="uitleg" class="explain"></span>
         <p id="addhint" class="addhint" hidden></p>
       </div>
@@ -1184,7 +1210,7 @@ html.mobile body:not(.home) .starters .startor { display: none; }
     </div>
     <div class="listactions">
       <button id="copy" class="btn primary copybtn" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg><span>Copy decklist</span></button>
-      <button id="clear" class="btn" type="button">Clear list</button>
+      <button id="clear" class="linkbtn clearbtn" type="button">Clear list</button>
     </div>
     <div id="confirm" class="confirm" hidden>
       <span>Remove the whole list?</span>
@@ -1913,8 +1939,8 @@ function withFilters(query) {
 
 // ---------- filter buttons beside the results ----------
 const FILTER_TYPES = ["Creature", "Instant", "Sorcery", "Artifact", "Enchantment", "Land", "Planeswalker"];
-// a Map, because an object would put the number-like keys "2"…"5" before "0–1"
-const FILTER_MV = new Map([["0–1", "mv<=1"], ["2", "mv=2"], ["3", "mv=3"], ["4", "mv=4"], ["5", "mv=5"], ["6+", "mv>=6"]]);
+// the way deck builders think of it: "2 or less" for the cheap end, "6 or more" for the top of the curve
+const FILTER_MV = new Map([["1 or less", "mv<=1"], ["2 or less", "mv<=2"], ["3 or less", "mv<=3"], ["4 or less", "mv<=4"], ["5 or more", "mv>=5"], ["6 or more", "mv>=6"]]);
 const FILTER_PRICE = { "under €1": "eur<1", "under €2 (budget)": "eur<2", "under €5": "eur<5" };
 
 // Each dropdown shows and changes the matching terms of the search itself, so the chips and the dropdowns always agree.
@@ -2093,6 +2119,20 @@ function renderCommander() {
     $("cmdrchip").replaceChildren(c.names.map(n => n.split(",")[0]).join(" + "), pips);
     $("cmdrchip").title = c.names.join(" + ");
   }
+  // two commanders: each gets its own "change", and "remove" says it takes both
+  const isPair = !!c && c.names.length === 2;
+  $("cmdrchange").hidden = isPair;
+  $("cmdrones").hidden = !isPair;
+  $("cmdrclear").textContent = isPair ? "remove both" : "remove";
+  $("cmdrones").replaceChildren(...(isPair ? c.names.map((n, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "linkbtn";
+    b.textContent = "change " + shortCardName(n);
+    b.setAttribute("aria-label", "Change " + n + ", keep " + c.names[1 - i]);
+    b.addEventListener("click", () => changeOne(i));
+    return b;
+  }) : []));
 }
 
 // The rules text of a card, all faces together.
@@ -2231,13 +2271,16 @@ async function settlePairing(firstName, secondName) {
 // Going on without a second commander.
 function finishPairing() {
   pairing = false;
+  undoCommander = null;
   store.set("commander", state.commander);
   $("cmdrinput").value = "";
   $("cmdrlist").replaceChildren();
   renderCommander();
 }
 function rerunForCommander() {
-  if (state.search && !document.body.classList.contains("home")) runSearch(state.search.query);
+  if (!state.search || document.body.classList.contains("home")) return;
+  setTitle($("rtitle").dataset.text || "");
+  runSearch(state.search.query);
 }
 
 async function setCommander(name) {
@@ -2260,6 +2303,7 @@ async function setCommander(name) {
       pairing = !!state.commander.pair;   // wait for the second commander; it is saved once that is settled
     }
     changing = false;
+    undoCommander = null;
     if (!pairing) store.set("commander", state.commander);
     // close the suggestion list first: the browser may leave it floating where the (now hidden) field was
     $("cmdrinput").blur();
@@ -2812,10 +2856,18 @@ async function runSearch(query, page = 1) {
   query = query.trim();
   if (!query) return;
   const { full, extra } = withFilters(query);
-  const outside = colorsOutsideCommander(query);
+  const outside = colorsOutsideCommander(query), u = $("uitleg");
+  if (u.dataset.outside && u.textContent === u.dataset.outside) {
+    u.textContent = u.dataset.before || "";
+    u.classList.toggle("warn", u.dataset.beforewarn === "1");
+  }
+  delete u.dataset.outside;
   if (outside) {
-    $("uitleg").textContent = `${outside} ${outside.includes(" and ") ? "are" : "is"} outside ${commanderShort()}'s colors, so only cards your deck can play are shown. Remove the commander under Deck setup to search beyond them.`;
-    $("uitleg").classList.add("warn");
+    u.dataset.before = u.textContent;
+    u.dataset.beforewarn = u.classList.contains("warn") ? "1" : "";
+    u.textContent = `${outside} ${outside.includes(" and ") ? "are" : "is"} outside ${commanderShort()}'s colors, so only cards your deck can play are shown. Remove the commander under Deck setup to search beyond them.`;
+    u.classList.add("warn");
+    u.dataset.outside = u.textContent;
   }
   $("filters").textContent = extra ? "+ " + extra : "own filters";
   $("scryfalllink").href = "https://scryfall.com/search?" + new URLSearchParams({ q: full, ...sortParams(state.order) });
@@ -3038,7 +3090,7 @@ function emptyResults(search) {
   const way = (label, run) => {
     const b = document.createElement("button");
     b.type = "button";
-    b.className = "btn small";
+    b.className = "btn small" + (ways.childElementCount ? "" : " primary");   // the likeliest way out comes first and stands out
     b.textContent = label;
     b.addEventListener("click", run);
     ways.append(b);
@@ -3638,6 +3690,7 @@ function renderHistory() {
     q.className = "q";
     q.textContent = h.query;
     b.append(zin, q);
+    b.setAttribute("aria-label", "Search again: " + h.zin);
     b.addEventListener("click", () => runHistory(h));
     li.append(b);
     ul.append(li);
@@ -3700,6 +3753,7 @@ function setRefining(on) {
   $("refinechain").hidden = !(on && chain);
   $("refinechain").textContent = shown ? shown + " →" : "";
   $("refinechain").title = chain || "";
+  $("narrowbtn").hidden = !state.previous || on;
   const examples = chain ? "Narrow these results, e.g. " + refineExamples(state.previous.query) : "";
   $("zin").placeholder = on && chain ? (isMobile ? examples.replace("Narrow these results, ", "") : examples) : NEW_SEARCH_HINT;
   renderStarters();
@@ -3891,12 +3945,20 @@ async function refineSearch(text) {
   setPrevious(result.combos && result.combos.length ? null : { zin, query: result.query });
   setRefining(false);   // narrowing is one step; the next search starts afresh unless Refine is chosen again
   $("zin").value = fieldWords(zin);
-  toast("Results narrowed. Your next search starts fresh.");
+  toast("Results narrowed. Your next search starts fresh.", { label: "Narrow further", run: startNarrowing });
   resetFilters();
   // narrowing a ranked search keeps it ranked
   state.rankNext = result.rank || !!(settings.code && state.search && state.search.rank);
   runSearch(result.query);
 }
+function startNarrowing() {
+  if (!state.previous) return;
+  $("zin").value = "";
+  setRefining(true);
+  if (isMobile) scrollTo({ top: 0 });   // the switch and its hint are folded away further down
+  $("zin").focus();
+}
+$("narrowbtn").addEventListener("click", startNarrowing);
 for (const b of $("modeswitch").querySelectorAll("button")) b.addEventListener("click", () => {
   const on = b.dataset.mode === "refine";
   // Refine starts with an empty field for the extra words; back on New it shows the search on screen again
@@ -3961,12 +4023,8 @@ function renderOptsToggle() {
   $("optstoggle").setAttribute("aria-expanded", String(open));
   $("optstoggle").textContent = "Filters & sort";
   $("optstoggle").classList.toggle("on", open);
-  if (n) {
-    const badge = document.createElement("span");
-    badge.className = "optcount";
-    badge.textContent = n;
-    $("optstoggle").append(badge);
-  }
+  // what is set shows as chips; the button only says how many of them its dropdowns set
+  $("optstoggle").setAttribute("aria-label", n ? `Filters & sort, ${n} set` : "Filters & sort");
 }
 $("optstoggle").addEventListener("click", () => {
   $("results").classList.toggle("opts");
@@ -4170,7 +4228,7 @@ $("cmdrform").addEventListener("submit", e => {
 });
 $("cmdrinput").addEventListener("input", () => suggestCommanders($("cmdrinput"), $("cmdrlist")));
 // Escape while changing the commander keeps the current one
-$("cmdrinput").addEventListener("keydown", e => { if (e.key === "Escape" && changing) { e.preventDefault(); changing = false; $("cmdrinput").value = ""; renderCommander(); } });
+$("cmdrinput").addEventListener("keydown", e => { if (e.key === "Escape" && undoCommander) { e.preventDefault(); undoChangeOne(); return; } if (e.key === "Escape" && changing) { e.preventDefault(); changing = false; $("cmdrinput").value = ""; renderCommander(); } });
 $("cmdrfirst").addEventListener("input", () => suggestCommanders($("cmdrfirst"), $("cmdrfirstlist")));
 // light / dark switch: follows the device until clicked, then remembers the choice
 function currentTheme() {
@@ -4242,6 +4300,27 @@ $("cmdrpair").addEventListener("click", () => {
   renderCommander();
   $("cmdrinput").focus();
 });
+// "Tymna the Weaver" → "Tymna", "Kraum, Ludevic's Opus" → "Kraum", "Raised by Giants" stays as it is
+const shortCardName = n => n.split(",")[0].replace(/\s+(the|of)\s.*$/i, "");
+// Change one commander of a pair: the other one stays, and the field asks for the new second one.
+// Escape (or closing the panel) brings the pair back as it was.
+let undoCommander = null;
+async function changeOne(i) {
+  const before = state.commander, gone = before.names[i], kept = before.names[1 - i];
+  pairing = false;
+  if (!await setCommander(kept)) { state.commander = before; renderCommander(); return; }
+  if (!pairing) return;
+  undoCommander = before;
+  $("cmdrnote").textContent = `Leave it empty to keep only ${shortCardName(kept)}${isMobile ? "." : ", or press Esc to keep " + shortCardName(gone) + "."}`;
+}
+function undoChangeOne() {
+  if (!undoCommander) return;
+  state.commander = undoCommander;
+  undoCommander = null;
+  pairing = false;
+  $("cmdrinput").value = "";
+  renderCommander();
+}
 $("cmdrchange").addEventListener("click", () => {
   changing = true;
   renderCommander();
@@ -4249,6 +4328,7 @@ $("cmdrchange").addEventListener("click", () => {
 });
 $("cmdrresults").addEventListener("toggle", e => {
   if (e.newState === "closed" && changing) { changing = false; renderCommander(); }
+  if (e.newState === "closed" && undoCommander) undoChangeOne();
   placeCmdrRow();
 });
 // The panel hangs under the button that opened it (a visible one), and follows it when the page around it changes.
@@ -4270,6 +4350,7 @@ $("cmdrresults").addEventListener("beforetoggle", e => {
 addEventListener("resize", placeSetup);
 $("cmdrclear").addEventListener("click", () => {
   pairing = false;
+  undoCommander = null;
   state.commander = null;
   store.set("commander", null);
   $("cmdrinput").value = "";
