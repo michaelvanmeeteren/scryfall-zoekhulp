@@ -336,8 +336,8 @@ html.mobile .card .name { font-size: 15px; }
 html.mobile .card .meta { font-size: 13.5px; }
 html.mobile .card:hover img { transform: none; }
 html.mobile .tile.picked .card img { outline-width: 4px; outline-offset: 2px; }
-html.mobile .picker, html.mobile .addbtn { top: 12%; right: 6%; }
-html.mobile .addbtn { width: 44px; height: 44px; opacity: 1; }
+html.mobile .picker { top: 12%; left: 6%; right: auto; }
+html.mobile .addbtn { display: none; }
 html.mobile .addbtn svg, html.mobile .picker svg { width: 20px; height: 20px; }
 html.mobile .picker .more1 { width: 48px; height: 44px; }
 html.mobile .picker .minus { width: 48px; height: 44px; font-size: 26px; }
@@ -485,7 +485,7 @@ html.mobile #listtoggle { display: none; }
 .optsmore { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: baseline; padding-top: 10px; border-top: 1px solid var(--line); }
 .optsmore:not(:has(> :not([hidden]))) { display: none; }
 .optstoggle .optcount { margin-left: 6px; padding: 0 6px; border-radius: 8px; background: var(--accent); color: var(--accent-fg); font-weight: 700; }
-html.mobile .infobtn { display: none; }   /* a phone: the card itself opens its details */
+html.mobile .infobtn { left: auto; right: 6%; top: 12%; width: 44px; height: 44px; font-size: 22px; box-shadow: 0 2px 8px var(--float-shadow); }   /* a phone: the card adds, this shows it */
 /* nothing to search: keep the explanation, hide the result controls */
 #results.nosearch .optstoggle, #results.nosearch #optspanel { display: none !important; }
 /* the results: the commander is part of the heading ("… for Tymna + Kraum"); its setup opens from there */
@@ -999,7 +999,7 @@ html.mobile body:not(.home) .starters .startor { display: none; }
     <details>
       <summary>Your list and deck</summary>
       <ul>
-        <li>Click a card or its <b>+</b> to add it; the <b>✓</b> takes it out. On a phone, tap <b>+</b> to add and the card to see it.</li>
+        <li>Click a card or its <b>+</b> to add it; the <b>✓</b> takes it out. On a phone the <i>i</i> in its corner shows the card large.</li>
         <li><b>List</b> (top right) groups your cards by type, with a mana curve. <b>Copy decklist</b> is for Moxfield, Archidekt and other deck sites.</li>
         <li><b>Import deck</b> marks the cards you already have, and you can hide them.</li>
       </ul>
@@ -2979,8 +2979,8 @@ function render(cards, page, pages) {
       btn.append(why);
     }
     tile.card = card;
-    // a phone: tapping a card shows it (scrolling past is never an add); the + adds. A computer: clicking adds, as before
-    btn.addEventListener("click", () => isMobile ? openCard(card) : addToList(card));
+    // clicking or tapping a card adds it; on a phone the "i" in its corner shows it
+    btn.addEventListener("click", () => addToList(card));
     const add = document.createElement("button");
     add.type = "button";
     add.className = "addbtn";
@@ -3123,7 +3123,7 @@ function markPicked(tile, qty) {
   tile.querySelector(".picker").hidden = !qty;
   tile.querySelector(".addbtn").hidden = qty > 0;
   if (multi) tile.querySelector(".badge").textContent = qty || "";
-  if (!isMobile) tile.querySelector(".card").setAttribute("aria-label",
+  tile.querySelector(".card").setAttribute("aria-label",
     qty && !multi ? `${name} is in the list; select to take it out` : multi && qty ? `Add another ${name}` : `Add ${name} to the list`);
 }
 
@@ -3235,7 +3235,7 @@ let justAdded = "";   // name of the card added by the last click, animated once
 function showAddHint(any) {
   const show = any && !state.list.length && !store.get("addhinted", false);
   $("addhint").hidden = !show;
-  if (show) $("addhint").textContent = isMobile ? "Tap + to add a card to your list, or tap the card to see it." : "Click a card or its + to add it to your list.";
+  if (show) $("addhint").textContent = isMobile ? "Tap a card to add it to your list. The i shows it large." : "Click a card or its + to add it to your list.";
 }
 function addToList(card) {
   if (!store.get("addhinted", false)) { store.set("addhinted", true, true); $("addhint").hidden = true; }
