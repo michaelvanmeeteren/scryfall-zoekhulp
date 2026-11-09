@@ -128,11 +128,20 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .card:hover img { transform: translateY(-2px); }
 .tile { position: relative; min-width: 0; }
 .tile.picked .card img { outline: 3px solid var(--accent); outline-offset: 1px; }
-.picker { position: absolute; top: 6px; right: 6px; display: flex; align-items: center; border-radius: 3px; background: var(--accent); color: var(--accent-fg); box-shadow: var(--shadow); overflow: hidden; }
+.addbtn { position: absolute; top: 13%; right: 7%; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 1px solid var(--gold); border-radius: 50%;
+  background: var(--badge-bg); color: var(--gold); box-shadow: 0 2px 8px var(--float-shadow); opacity: 0.85; transition: opacity 0.12s, background-color 0.12s, color 0.12s; }
+.addbtn svg, .picker .more1 svg, .picker .check svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.tile:hover .addbtn, .addbtn:hover { opacity: 1; background: var(--gold); color: var(--ink-on-gold); }
+.addbtn:focus-visible, .picker button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; opacity: 1; }
+.addbtn[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .addbtn { transition: none; } }
+.picker { position: absolute; top: 13%; right: 7%; display: flex; align-items: center; border-radius: 3px; background: var(--accent); color: var(--accent-fg); box-shadow: var(--shadow); overflow: hidden; }
 .picker .minus { width: 30px; height: 28px; padding: 0; border: 0; border-right: 1px solid color-mix(in srgb, var(--accent-fg) 30%, transparent); background: transparent; color: inherit; font-size: 17px; font-weight: 700; line-height: 1; }
 .picker .minus:hover { background: var(--overlay-soft); }
 .picker .badge { min-width: 28px; height: 28px; padding: 0 9px 0 7px; font-weight: 700; display: grid; place-items: center; font-variant-numeric: tabular-nums; }
-.picker .check { min-width: 30px; height: 28px; padding: 0 8px; font-weight: 700; display: grid; place-items: center; }
+.picker .check, .picker .more1 { min-width: 30px; height: 28px; padding: 0 8px; border: 0; background: transparent; color: inherit; display: grid; place-items: center; }
+.picker .more1 { border-left: 1px solid color-mix(in srgb, var(--accent-fg) 30%, transparent); }
+.picker .check:hover, .picker .more1:hover { background: var(--overlay-soft); }
 .list li.single { grid-template-columns: minmax(0, 1fr) auto; }
 .card .name { font-size: 13px; font-weight: 600; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -247,6 +256,8 @@ body.home #cmdrchip { font-size: 18px; }
 .rtitle .q { font-family: var(--mono); font-size: 0.55em; font-weight: 400; color: var(--muted); letter-spacing: 0; overflow-wrap: anywhere; }
 .countline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .stripinfo .countline .count { font-family: var(--font); font-size: 13.5px; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+.addhint { margin: 2px 0 0; font-size: 13.5px; color: var(--muted); }
+.addhint[hidden] { display: none; }
 .fchips { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 .fchips button { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px 2px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--fg); font-size: 12.5px; }
 .fchips button:hover { border-color: var(--accent); }
@@ -311,7 +322,10 @@ html.mobile .card .name { font-size: 15px; }
 html.mobile .card .meta { font-size: 13.5px; }
 html.mobile .card:hover img { transform: none; }
 html.mobile .tile.picked .card img { outline-width: 4px; outline-offset: 2px; }
-html.mobile .picker { top: 5px; right: 5px; }
+html.mobile .picker, html.mobile .addbtn { top: 12%; right: 6%; }
+html.mobile .addbtn { width: 44px; height: 44px; opacity: 1; }
+html.mobile .addbtn svg, html.mobile .picker svg { width: 20px; height: 20px; }
+html.mobile .picker .more1 { width: 48px; height: 44px; }
 html.mobile .picker .minus { width: 48px; height: 44px; font-size: 26px; }
 html.mobile .picker .badge { min-width: 42px; height: 44px; padding: 0 12px 0 8px; font-size: 19px; }
 html.mobile .picker .check { min-width: 44px; height: 44px; font-size: 22px; }
@@ -389,7 +403,7 @@ section.home { max-width: 760px; margin: 0 auto; display: grid; gap: 22px; }
 @media (prefers-reduced-motion: reduce) { .drawer { transition: none; } }
 
 /* "i" button on a card, and the card page */
-.infobtn { position: absolute; left: 6px; bottom: 30%; width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 1px solid var(--gold);
+.infobtn { position: absolute; left: 7%; top: 13%; width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 1px solid var(--gold);
   background: var(--badge-bg); color: var(--accent); font-family: var(--serif); font-weight: 700; font-style: italic; font-size: 15px; line-height: 1;
   opacity: 0; transition: opacity 0.12s; }
 .tile:hover .infobtn, .infobtn:focus-visible, html.mobile .infobtn { opacity: 1; }
@@ -454,7 +468,7 @@ html.mobile #listtoggle { display: none; }
 .optsmore { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: baseline; padding-top: 10px; border-top: 1px solid var(--line); }
 .optsmore:not(:has(> :not([hidden]))) { display: none; }
 .optstoggle .optcount { margin-left: 6px; padding: 0 6px; border-radius: 8px; background: var(--accent); color: var(--accent-fg); font-weight: 700; }
-html.mobile .infobtn { width: 34px; height: 34px; font-size: 18px; }
+html.mobile .infobtn { display: none; }   /* a phone: the card itself opens its details */
 /* nothing to search: keep the explanation, hide the result controls */
 #results.nosearch .optstoggle, #results.nosearch #optspanel { display: none !important; }
 /* the results: the commander is part of the heading ("… for Tymna + Kraum"); its setup opens from there */
@@ -478,7 +492,7 @@ html.mobile .forcmdr .pips { display: none; }
 html.mobile .forcmdr { gap: 6px; padding-right: 8px; }
 html.mobile .forcmdr .thumbs img { width: 26px; height: 22px; }
 html.mobile .forcmdr .thumbs img:only-child { width: 22px; }
-.cmdrresults[popover] { position: fixed; inset: auto; margin: 0; width: min(440px, calc(100vw - 16px)); max-height: calc(100vh - 24px); overflow: auto; padding: 16px 18px 18px;
+.cmdrresults[popover] { position: absolute; inset: auto; margin: 0; width: min(440px, calc(100vw - 16px)); overflow: visible; padding: 16px 18px 18px;
   border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--fg); box-shadow: 0 14px 36px var(--float-shadow); }
 .cmdrresults .setuphead { margin: 0 0 12px; font-size: 15px; font-weight: 400; color: var(--muted); }
 #cmdrresults #cmdrrow, #cmdrresults #cmdrrow.has { --bg: inherit; --surface: inherit; --fg: inherit; --muted: inherit; --accent: inherit; --accent-fg: inherit; --line: inherit;
@@ -487,14 +501,15 @@ html.mobile .forcmdr .thumbs img:only-child { width: 22px; }
 #cmdrresults #cmdrrow.has .cmdrart { grid-row: 1 / 3; }
 #cmdrresults #cmdrrow.has #cmdrchip { grid-column: 2 / -1; }
 #cmdrresults #cmdrrow.has #cmdrclear { justify-self: start; }
+#cmdrrow.pairing :is(#cmdrchange, #cmdrclear) { display: none; }
 #cmdrresults #cmdrrow.has .cmdrart { display: inline-flex; }
 #cmdrresults #cmdrrow.has #cmdrchip { flex: 1 1 auto; min-width: 0; max-width: 100%; color: var(--fg); font-family: var(--font); font-size: 19px; font-weight: 400; line-height: 1.25; letter-spacing: 0; text-shadow: none; white-space: normal; }
 #cmdrresults #cmdrrow.has .mana { width: 16px; height: 16px; vertical-align: -2px; }
 #cmdrresults #cmdrrow :is(.linkbtn, .deckprogress, .cmdrlabel, .hint) { text-shadow: none; }
 #cmdrresults #cmdrrow.has :is(.linkbtn, .deckprogress) { color: var(--accent); }
 #cmdrresults #cmdrrow.has :is(.cmdrlabel, .hint) { color: var(--muted); }
-#cmdrresults #cmdrrow .compwrap { width: 100%; }
-#cmdrresults #cmdrrow .compwrap select { flex: 1; min-width: 0; min-height: 36px; }
+#cmdrresults #cmdrrow .compwrap { display: flex; width: 100%; min-width: 0; }
+#cmdrresults #cmdrrow .compwrap select { flex: 1 1 0; width: 0; min-width: 0; min-height: 36px; }
 #cmdrresults #cmdrrow .cmdrform { width: 100%; }
 #cmdrresults #cmdrrow .cmdrform input { flex: 1; min-width: 0; font-size: 16px; padding: 8px 10px; }
 body:not(.home) #cmdrrow.pairing .cmdrask { display: block; }
@@ -695,6 +710,11 @@ html.mobile .topbuttons > [data-openhelp] { display: none; }
 html.mobile .menuonly { display: block; }
 html.mobile .moremenu .btn { min-height: 44px; font-size: 15px; }
 html.mobile body:not(.home) .topbar { padding-top: 8px; padding-bottom: 8px; row-gap: 8px; }
+body:not(.home) #starters { display: none !important; }
+/* a phone, scrolled down the results: the bar stays on top, folded to just the search field */
+html.mobile body:not(.home) .topbar { position: sticky; top: 0; z-index: 30; background: var(--bar); }
+html.mobile body.scrolled:not(.home) .topbar :is(.brandbtn, .topbuttons, #modeswitch, #refinechain) { display: none; }
+html.mobile body.scrolled:not(.home) .topbar { padding-top: 6px; padding-bottom: 6px; box-shadow: 0 6px 16px var(--float-shadow); }
 html.mobile .qchips { gap: 4px; }
 html.mobile .qchips button { padding: 2px 6px 2px 9px; }
 @media (prefers-reduced-motion: reduce) { .card img { transition: none; } .card:hover img, .card:active img { transform: none; } .btn:active, .pager button:active, .fchips button:active, .qty button:active, .remove:active, .sizer button:active, .modeswitch button:active { transform: none; } }
@@ -788,12 +808,16 @@ body.home .topbuttons { z-index: 2; }
 body.home:has(#cmdrrow.has) .topbuttons .btn { color: var(--on-deep); border-color: var(--on-deep-line); background: var(--on-deep-well); }
 body.home .cmdr:not(.has) { padding: 88px 16px 8px; margin: 0; }
 .homeask { display: none; }
-body.home:not(:has(#cmdrrow.has)) .homeask { display: block; padding: 96px 16px 4px; margin: 0; }
+body.home:not(:has(#cmdrtop #cmdrrow.has)) .homeask { display: block; padding: 96px 16px 4px; margin: 0; }
 .homecmdr { display: flex; justify-content: center; }
+.homecmdr .forcmdr { min-height: 38px; padding: 4px 12px 4px 14px; color: var(--fg); font-size: 15px; }
+.homecmdr .forcmdr svg { color: var(--fg); }
 .homecmdr[hidden] { display: none; }
 body:not(.home) .homecmdr { display: none; }
 #cmdrresults .cmdrask { display: none; }
-#cmdrresults #cmdrrow.pairing .cmdrask { display: block; font-size: 19px; text-align: left; }
+/* adding a partner inside the banner: left-aligned like the banner, the field on its own row */
+#cmdrrow.has.pairing { justify-content: flex-start; }
+#cmdrrow.has.pairing .cmdrform { flex: 1 1 100%; width: min(440px, 100%); }
 body.home .topbar .searchrow, body.home .starters { width: min(760px, calc(100% - 32px)); }
 html:not(.mobile) body.home .topbar > :not(.topbuttons), html:not(.mobile) body.home main, html:not(.mobile) .topbuttons > * { zoom: 1; }
 body.home .cmdr { margin-bottom: 0; }
@@ -941,7 +965,7 @@ html.mobile body:not(.home) .starters .startor { display: none; }
 
     <h3>Your list and deck</h3>
     <ul>
-      <li>Click a card to add it (a mistake? <b>Undo</b>), click again to remove it. <b>List</b> (top right) shows it grouped by type, with a mana curve.</li>
+      <li>Click a card or its <b>+</b> to add it (a mistake? <b>Undo</b>); the <b>✓</b> takes it out again. On a phone, tap <b>+</b> to add; tapping the card shows it. <b>List</b> (top right) shows your cards grouped by type, with a mana curve.</li>
       <li><b>Copy decklist</b> puts it on the clipboard for Moxfield, Archidekt and other deck sites.</li>
       <li><b>Import deck</b> in the list marks the cards you already have (<b>In deck</b>), and you can hide them.</li>
       <li>The <i>i</i> on a card shows its details; <b>⟲</b> turns a double-faced card over.</li>
@@ -1067,7 +1091,7 @@ html.mobile body:not(.home) .starters .startor { display: none; }
           <datalist id="cmdrfirstlist"></datalist>
           <input id="cmdrinput" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. Atraxa" aria-label="Commander name" list="cmdrlist">
           <datalist id="cmdrlist"></datalist>
-          <button class="btn small" type="submit">Set</button>
+          <button id="cmdrset" class="btn small" type="submit">Set</button>
         </form>
         <button id="topcmdrbtn" class="linkbtn" type="button">or browse the most played</button>
         <span id="cmdrnote" class="hint"></span>
@@ -1088,6 +1112,7 @@ html.mobile body:not(.home) .starters .startor { display: none; }
         <h1 id="rtitle" class="rtitle"></h1>
         <span class="countline"><span id="count" class="count"></span><span id="qchips" class="fchips qchips" role="group" aria-label="What was searched for"></span></span>
         <span id="uitleg" class="explain"></span>
+        <p id="addhint" class="addhint" hidden></p>
       </div>
       <button id="optstoggle" class="btn small optstoggle" type="button" aria-expanded="false" aria-controls="optspanel">Filters &amp; sort</button>
     </div>
@@ -1963,7 +1988,8 @@ function renderIdentity() {
 function renderHero() {
   const c = state.commander, root = document.documentElement, art = $("heroart");
   const arts = ((c && c.arts) || []).filter(Boolean);
-  art.hidden = !c || pairing || !document.body.classList.contains("home");   // the art belongs to the start screen; results come first
+  // the art belongs to the start screen (results come first); while the setup panel is open the page stays as it was
+  art.hidden = !c || !document.body.classList.contains("home") || $("cmdrrow").parentElement === $("cmdrresults");
   art.classList.toggle("two", arts.length > 1);
   if (arts[0]) art.style.setProperty("--art", `url("${arts[0]}")`); else art.style.removeProperty("--art");
   if (arts[1]) art.style.setProperty("--art2", `url("${arts[1]}")`); else art.style.removeProperty("--art2");
@@ -2007,15 +2033,16 @@ function renderCommander() {
   const c = state.commander;
   const canPair = !!(c && c.pair && c.names.length === 1);
   if (!canPair) pairing = false;
-  $("cmdrpick").hidden = !c || pairing;
+  $("cmdrpick").hidden = !c;
   $("cmdrform").hidden = !!c && !pairing;
   $("cmdrpair").hidden = !canPair || pairing;
   $("cmdrpair").textContent = `+ add ${c && c.pair ? c.pair.label : "partner"}`;
   $("cmdrinput").placeholder = pairing ? `${c.pair.label[0].toUpperCase()}${c.pair.label.slice(1)} (optional)` : "e.g. Atraxa";
-  $("cmdrfirst").hidden = !pairing;
+  $("cmdrfirst").hidden = true;   // the first commander stays shown above; change it with "change"
+  $("cmdrset").textContent = pairing ? "Done" : "Set";
   if (pairing && document.activeElement !== $("cmdrfirst")) $("cmdrfirst").value = c.names[0];
   $("cmdrnote").textContent = "";
-  $("cmdrrow").classList.toggle("has", !!c && !pairing);
+  $("cmdrrow").classList.toggle("has", !!c);
   $("cmdrrow").classList.toggle("pairing", pairing);
   $("cmdrask").textContent = pairing ? "Who are your commanders?" : "Who's your commander?";
   $("cmdrart").replaceChildren(...((c && c.arts) || []).filter(Boolean).map(src => {
@@ -2745,7 +2772,7 @@ function remainingTitle(terms) {
 }
 // A changed search that needs no translating, like taking a term out or undoing that.
 function stepSearch(query, zin) {
-  $("zin").value = "";   // the words typed earlier no longer describe this search
+  $("zin").value = refining ? "" : fieldWords(zin);   // the field always says what is searched for now
   showQuery(query, "");
   setTitle(zin);
   pushSearchUrl(query, zin);
@@ -2846,6 +2873,7 @@ function render(cards, page, pages) {
   if (search.warnings.length) notes.push("Scryfall: " + search.warnings.join(" "));
   if (notes.length) message(notes.join(" "));
 
+  showAddHint(cards.length > 0);
   const counts = new Map(state.list.map(c => [c.name, c.qty]));
   for (const card of cards) {
     const tile = document.createElement("div");
@@ -2855,7 +2883,7 @@ function render(cards, page, pages) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "card";
-    btn.setAttribute("aria-label", `Add ${card.name} to the list`);
+    btn.setAttribute("aria-label", isMobile ? `Details of ${card.name}` : `Add ${card.name} to the list`);
     const img = document.createElement("img");
     img.loading = "lazy";
     img.alt = card.name;
@@ -2875,7 +2903,15 @@ function render(cards, page, pages) {
       btn.append(why);
     }
     tile.card = card;
-    btn.addEventListener("click", () => addToList(card));
+    // a phone: tapping a card shows it (scrolling past is never an add); the + adds. A computer: clicking adds, as before
+    btn.addEventListener("click", () => isMobile ? openCard(card) : addToList(card));
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "addbtn";
+    add.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg>';
+    add.title = "Add to list";
+    add.setAttribute("aria-label", `Add ${card.name} to the list`);
+    add.addEventListener("click", () => addToList(card));
     const info = document.createElement("button");
     info.type = "button";
     info.className = "infobtn";
@@ -2901,17 +2937,27 @@ function render(cards, page, pages) {
       minus.addEventListener("click", () => changeQty(card.name, -1));
       const badge = document.createElement("span");
       badge.className = "badge";
-      picker.append(minus, badge);
+      const more = document.createElement("button");
+      more.type = "button";
+      more.className = "more1";
+      more.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg>';
+      more.title = "Add one";
+      more.setAttribute("aria-label", `Add another ${card.name}`);
+      more.addEventListener("click", () => addToList(card));
+      picker.append(minus, badge, more);
     } else {
-      // singleton: the card is either in the list or not; clicking it again takes it out
-      const check = document.createElement("span");
+      // singleton: the card is either in the list or not; the check takes it out again
+      const check = document.createElement("button");
+      check.type = "button";
       check.className = "check";
-      check.textContent = "✓";
-      check.setAttribute("aria-hidden", "true");
+      check.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>';
+      check.title = "In your list. Take it out";
+      check.setAttribute("aria-label", `Take ${card.name} out of the list`);
+      check.addEventListener("click", () => addToList(card));
       picker.append(check);
     }
 
-    tile.append(btn, info, picker);
+    tile.append(btn, add, info, picker);
     if (card.back) {
       const flip = document.createElement("button");
       flip.type = "button";
@@ -2987,8 +3033,9 @@ function markPicked(tile, qty) {
   const multi = tile.dataset.multi === "1";
   tile.classList.toggle("picked", qty > 0);
   tile.querySelector(".picker").hidden = !qty;
+  tile.querySelector(".addbtn").hidden = qty > 0;
   if (multi) tile.querySelector(".badge").textContent = qty || "";
-  tile.querySelector(".card").setAttribute("aria-label",
+  if (!isMobile) tile.querySelector(".card").setAttribute("aria-label",
     qty && !multi ? `${name} is in the list; select to take it out` : multi && qty ? `Add another ${name}` : `Add ${name} to the list`);
 }
 
@@ -3097,7 +3144,13 @@ function saveList() { store.set("list", state.list); renderList(); refreshBadges
 
 // The list is keyed by card name, so another printing of a card already in the list counts as the same card.
 let justAdded = "";   // name of the card added by the last click, animated once
+function showAddHint(any) {
+  const show = any && !state.list.length && !store.get("addhinted", false);
+  $("addhint").hidden = !show;
+  if (show) $("addhint").textContent = isMobile ? "Tap + to add a card to your list, or tap the card to see it." : "Click a card or its + to add it to your list.";
+}
 function addToList(card) {
+  if (!store.get("addhinted", false)) { store.set("addhinted", true, true); $("addhint").hidden = true; }
   const found = state.list.find(c => c.name === card.name);
   const before = state.list.map(c => ({ ...c }));
   justAdded = found && !found.multi ? "" : card.name;
@@ -3577,9 +3630,11 @@ function repairedQuery(query, zin) {
   return grouped.join(" ");
 }
 // A search from the history again, without asking Claude.
+// The search in the field as plain words: the steps "a → b" become "a, b", which can be searched again as they are.
+const fieldWords = zin => String(zin || "").replace(/\s*→\s*/g, ", ");
 function runHistory(h) {
   const query = repairedQuery(h.query, h.zin);
-  $("zin").value = refining ? "" : h.zin;   // when refining, the steps are already shown before the field
+  $("zin").value = refining ? "" : fieldWords(h.zin);   // when refining, the steps are already shown before the field
   showQuery(query, "", h.combos);
   setTitle(h.zin);
   setPrevious(h.combos && h.combos.length ? null : { zin: h.zin, query });
@@ -3662,9 +3717,10 @@ function placeCmdrRow() {
   const target = home && state.commander && !open ? $("cmdrtop") : $("cmdrresults");
   if ($("cmdrrow").parentElement !== target) target.append($("cmdrrow"));
   $("setuphead").textContent = state.commander ? "Deck setup" : "Your commander";
-  const showChoose = home && !state.commander;
+  const showChoose = home && (!state.commander || target === $("cmdrresults"));
   $("homecmdr").hidden = !showChoose;
-  if (showChoose && !$("homecmdr").firstChild) $("homecmdr").append(commanderButton(null, "Choose your commander (optional)"));
+  if (showChoose && !$("homecmdr").firstChild) $("homecmdr").append(commanderButton(null, "Choose your commander"));
+  requestAnimationFrame(placeSetup);
 }
 // The commander in the results heading: its art, short name and colors. It opens Deck setup.
 function commanderButton(c, emptyText = "any commander") {
@@ -3777,6 +3833,8 @@ async function refineSearch(text) {
   addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
   setPrevious(result.combos && result.combos.length ? null : { zin, query: result.query });
   setRefining(false);   // narrowing is one step; the next search starts afresh unless Refine is chosen again
+  $("zin").value = fieldWords(zin);
+  toast("Results narrowed. Your next search starts fresh.");
   resetFilters();
   // narrowing a ranked search keeps it ranked
   state.rankNext = result.rank || !!(settings.code && state.search && state.search.rank);
@@ -3784,7 +3842,8 @@ async function refineSearch(text) {
 }
 for (const b of $("modeswitch").querySelectorAll("button")) b.addEventListener("click", () => {
   const on = b.dataset.mode === "refine";
-  if (on !== refining) $("zin").value = "";
+  // Refine starts with an empty field for the extra words; back on New it shows the search on screen again
+  if (on !== refining) $("zin").value = on ? "" : fieldWords(state.previous && state.previous.zin);
   setRefining(on);
   $("zin").focus();
 });
@@ -3879,7 +3938,7 @@ function searchFromUrl() {
   const params = new URLSearchParams(location.search);
   if (!params.get("q")) return false;
   const query = repairedQuery(params.get("q"), params.get("s"));
-  $("zin").value = params.get("s") || query;
+  $("zin").value = fieldWords(params.get("s") || query);
   showQuery(query, "");
   setTitle((params.get("s") || query).replace(/^(\/s|!)\s*/i, ""));
   setPrevious({ zin: params.get("s") || query, query });
@@ -4123,16 +4182,24 @@ $("cmdrpair").addEventListener("click", () => {
   $("cmdrinput").focus();
 });
 $("cmdrchange").addEventListener("click", openCommanderList);
-$("cmdrresults").addEventListener("toggle", placeCmdrRow);
+$("cmdrresults").addEventListener("toggle", () => { placeCmdrRow(); renderHero(); });
+// The panel hangs under the button that opened it (a visible one), and follows it when the page around it changes.
+function setupButton() {
+  const visible = el => el && el.isConnected && el.getClientRects().length;
+  return [setupAnchor, document.querySelector("#rtitle .forcmdr"), document.querySelector("#homecmdr .forcmdr"), $("cmdrpair")].find(visible) || null;
+}
+function placeSetup() {
+  const p = $("cmdrresults"), b = setupButton();
+  if (!p.matches(":popover-open") || !b) return;
+  const r = b.getBoundingClientRect(), w = Math.min(440, innerWidth - 16);
+  p.style.left = Math.round(Math.min(Math.max(8, r.left), innerWidth - w - 8) + scrollX) + "px";
+  p.style.top = Math.round(r.bottom + 8 + scrollY) + "px";
+}
 $("cmdrresults").addEventListener("beforetoggle", e => {
-  const b = setupAnchor && setupAnchor.isConnected ? setupAnchor : document.querySelector("#rtitle .forcmdr");
+  const b = setupButton();
   if (b) b.setAttribute("aria-expanded", String(e.newState === "open"));
-  if (e.newState !== "open" || !b) return;
-  const p = $("cmdrresults"), r = b.getBoundingClientRect(), w = Math.min(440, innerWidth - 16);
-  p.style.left = Math.round(Math.min(Math.max(8, r.left), innerWidth - w - 8)) + "px";
-  p.style.top = Math.round(Math.min(r.bottom + 8, innerHeight - 120)) + "px";
 });
-addEventListener("scroll", () => { if ($("cmdrresults").matches(":popover-open")) $("cmdrresults").hidePopover(); }, { passive: true });
+addEventListener("resize", placeSetup);
 $("cmdrclear").addEventListener("click", () => {
   pairing = false;
   state.commander = null;
