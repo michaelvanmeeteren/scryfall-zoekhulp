@@ -216,10 +216,11 @@ h2, .help h3 { font-family: var(--serif); font-weight: 700; letter-spacing: 0.01
 .modeswitch { position: relative; flex: none; display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border: 1px solid var(--bar-line); border-radius: 6px; }
 .modeswitch[hidden], body.home .modeswitch { display: none; }
 .modeswitch::before { content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); border-radius: 4px;
-  background: var(--gold); transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  background: color-mix(in srgb, var(--bar-fg) 18%, transparent); transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .modeswitch.refining::before { transform: translateX(100%); }
 .modeswitch button { position: relative; padding: 0 12px; border: 0; background: none; color: var(--bar-fg); font-weight: 600; font-size: 13px; transition: color 0.22s; }
-.modeswitch button[aria-pressed="true"] { color: var(--ink-on-gold); }
+.modeswitch button { color: color-mix(in srgb, var(--bar-fg) 70%, transparent); }
+.modeswitch button[aria-pressed="true"] { color: var(--bar-fg); }
 @media (prefers-reduced-motion: reduce) { .modeswitch::before { transition: none; } }
 .refinechain { align-self: center; flex: 0 1 auto; max-width: 45%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
   color: var(--gold); font-size: 14px; font-weight: 600; }
@@ -248,6 +249,10 @@ body.home .cmdrart img { width: 76px; height: 56px; border-radius: 8px; }
 #cmdrchip { padding: 0; background: none; font-family: var(--font); font-size: 15px; font-weight: 700; }
 body.home #cmdrchip { font-size: 18px; }
 .cmdrpick { gap: 10px; }
+.deckrow2 { display: inline-flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
+.deckrow2[hidden] { display: none; }
+#cmdrrow.has #setupimport { color: var(--on-deep); }
+#cmdrresults #cmdrrow.has #setupimport { color: var(--accent); }
 .deckprogress { font-variant-numeric: tabular-nums; color: var(--muted); text-decoration: none; }
 .deckprogress:hover { color: var(--accent); }
 /* results: the question leads, the count follows */
@@ -423,6 +428,9 @@ html.mobile .flipbtn { width: 36px; height: 36px; font-size: 20px; }
 .cardpage .face + .face { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); }
 .cardpage .meta2 { color: var(--muted); font-size: 13.5px; margin-top: 10px; }
 .cardpage .links { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 14px; align-items: center; }
+/* a phone: the card fits the screen with its text, and its actions stay in reach at the bottom */
+html.mobile .cardpage .cd-imgbox img { max-width: 240px; margin: 0 auto; }
+html.mobile .cardpage .links { position: sticky; bottom: -18px; margin: 14px -18px -18px; padding: 12px 18px; background: var(--surface); border-top: 1px solid var(--line); }
 .cardpage .links a { color: var(--accent); }
 
 html.mobile .topbar { flex-wrap: wrap; }
@@ -515,7 +523,7 @@ html.mobile .forcmdr .thumbs img:only-child { width: 22px; }
 body:not(.home) #cmdrrow.pairing .cmdrask { display: block; }
 #cmdrrow.pairing { justify-content: center; }
 /* every commander on EDHREC, most played first, to start from */
-.cmdr:is(.has, .pairing) #topcmdrbtn { display: none; }
+.cmdr:is(.has, .pairing):not(.changing) #topcmdrbtn { display: none; }
 .cmdrsdialog { width: min(640px, calc(100% - 24px)); height: min(820px, calc(100vh - 32px)); padding: 0; overflow: auto; overscroll-behavior: contain; }
 .cmdrshead { position: sticky; top: 0; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 16px 18px 12px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .cmdrshead h2 { font-family: var(--serif); font-size: 20px; }
@@ -600,7 +608,7 @@ html.mobile body.home .cmdrart img { width: 92px; height: 68px; }
 .cd-status:empty { display: none; }
 .cd-status span { padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); font-size: 13px; }
 .cardpage .cost { font-family: var(--font); }
-.cardpage .mana { width: 1.1em; height: 1.1em; vertical-align: -0.18em; margin: 0 1px; }
+.cardpage .mana { display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -0.18em; margin: 0 1px; }
 .cardpage mark { background: color-mix(in srgb, var(--gold) 34%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
 
 /* added or removed: the message offers Undo */
@@ -817,7 +825,8 @@ body:not(.home) .homecmdr { display: none; }
 #cmdrresults .cmdrask { display: none; }
 /* adding a partner inside the banner: left-aligned like the banner, the field on its own row */
 #cmdrrow.has.pairing { justify-content: flex-start; }
-#cmdrrow.has.pairing .cmdrform { flex: 1 1 100%; width: min(440px, 100%); }
+#cmdrrow.has:is(.pairing, .changing) .cmdrform { flex: 1 1 100%; width: min(440px, 100%); }
+#cmdrrow.changing :is(#cmdrchange, #cmdrpair) { display: none; }
 body.home .topbar .searchrow, body.home .starters { width: min(760px, calc(100% - 32px)); }
 html:not(.mobile) body.home .topbar > :not(.topbuttons), html:not(.mobile) body.home main, html:not(.mobile) .topbuttons > * { zoom: 1; }
 body.home .cmdr { margin-bottom: 0; }
@@ -1102,7 +1111,8 @@ html.mobile body:not(.home) .starters .startor { display: none; }
             <option>instant</option><option>sorcery</option><option>planeswalker</option><option>battle</option>
           </select></label>
         <span id="compnote" class="hint"></span>
-        <button id="deckprogress" class="linkbtn deckprogress" type="button" hidden></button>
+        <span id="deckrow" class="deckrow2" hidden><button id="deckprogress" class="linkbtn deckprogress" type="button"></button>
+          <button id="setupimport" class="linkbtn" type="button">Import deck</button></span>
       </div></div>
   </section>
 
@@ -1903,7 +1913,7 @@ function withFilters(query) {
 const FILTER_TYPES = ["Creature", "Instant", "Sorcery", "Artifact", "Enchantment", "Land", "Planeswalker"];
 // a Map, because an object would put the number-like keys "2"…"5" before "0–1"
 const FILTER_MV = new Map([["0–1", "mv<=1"], ["2", "mv=2"], ["3", "mv=3"], ["4", "mv=4"], ["5", "mv=5"], ["6+", "mv>=6"]]);
-const FILTER_PRICE = { "< €1": "eur<1", "< €2 (budget)": "eur<2", "< €5": "eur<5" };
+const FILTER_PRICE = { "under €1": "eur<1", "under €2 (budget)": "eur<2", "under €5": "eur<5" };
 
 // Each dropdown shows and changes the matching terms of the search itself, so the chips and the dropdowns always agree.
 const FILTER_KINDS = [
@@ -2034,7 +2044,9 @@ function renderCommander() {
   const canPair = !!(c && c.pair && c.names.length === 1);
   if (!canPair) pairing = false;
   $("cmdrpick").hidden = !c;
-  $("cmdrform").hidden = !!c && !pairing;
+  if (!c) changing = false;
+  $("cmdrform").hidden = !!c && !pairing && !changing;
+  $("cmdrrow").classList.toggle("changing", changing);
   $("cmdrpair").hidden = !canPair || pairing;
   $("cmdrpair").textContent = `+ add ${c && c.pair ? c.pair.label : "partner"}`;
   $("cmdrinput").placeholder = pairing ? `${c.pair.label[0].toUpperCase()}${c.pair.label.slice(1)} (optional)` : "e.g. Atraxa";
@@ -2054,7 +2066,7 @@ function renderCommander() {
   if (pairing) {
     $("compwrap").hidden = true;
     $("compnote").textContent = "";
-    $("deckprogress").hidden = true;
+    $("deckrow").hidden = true;
   } else {
     renderCompanion();
     renderDeckProgress();
@@ -2143,8 +2155,9 @@ async function fillCommanderArt() {
 // How full the deck is: the list against the 99 (or 98 with two commanders).
 function renderDeckProgress() {
   const c = state.commander;
-  $("deckprogress").hidden = !c;
+  $("deckrow").hidden = !c;
   if (!c) return;
+  $("setupimport").textContent = state.deck.size ? "Edit deck" : "Import deck";
   const total = state.list.filter(x => !c.names.includes(x.name)).reduce((n, x) => n + x.qty, 0);
   $("deckprogress").textContent = `${total} of ${100 - c.names.length} cards in your list`;
 }
@@ -2242,6 +2255,7 @@ async function setCommander(name) {
       state.commander = { name: card.name, names: [card.name], colors, pair: pairFor(card), arts: [art], text, cards: [cardFacts(card)] };
       pairing = !!state.commander.pair;   // wait for the second commander; it is saved once that is settled
     }
+    changing = false;
     if (!pairing) store.set("commander", state.commander);
     // close the suggestion list first: the browser may leave it floating where the (now hidden) field was
     $("cmdrinput").blur();
@@ -3512,6 +3526,7 @@ function renderCardButton() {
   if (!shownCard) return;
   const item = state.list.find(c => c.name === shownCard.name);
   $("cd-add").textContent = !item ? "Add to list" : shownCard.multi ? `Add another (${item.qty} in list)` : "Remove from list";
+  $("cd-add").classList.toggle("primary", !item || !!shownCard.multi);
   // where the card stands for this deck
   const st = edhFor(shownCard.name);
   const who = commanderShort();
@@ -3687,6 +3702,18 @@ function refineExamples(query) {
 }
 
 // The heading of the results: what was asked, and for which commander.
+// The words of a search without the ones the translator couldn't use, so the heading never promises a filter
+// that wasn't applied ("green instants that cost 9 or more" with "cost 9 or more" unused becomes "green instants").
+function appliedWords(zin, uitleg) {
+  const skipped = String(uitleg || "").match(/Not used: ([^.]*)\./);
+  if (!skipped) return zin;
+  let t = zin;
+  for (const w of skipped[1].split(/[\s,]+/).filter(Boolean)) t = t.replace(new RegExp(`(^|\\s)${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\s|$|,)`, "i"), " ");
+  t = t.replace(/\s+/g, " ").trim();
+  // words left dangling at the end
+  for (let i = 0; i < 3; i++) t = t.replace(/[\s,]*\b(that|which|with|and|or|for|in|of|to|the|a|an|die|met|en|voor)$/i, "").trim();
+  return t || zin;
+}
 function setTitle(text) {
   const t = String(text || "").trim();
   const h = $("rtitle");
@@ -3699,7 +3726,10 @@ function setTitle(text) {
     code.className = "q";
     code.textContent = t;
     h.replaceChildren("Scryfall search ", code);
-  } else h.replaceChildren(t ? t[0].toUpperCase() + t.slice(1) : t);
+  } else {
+    const shown = t.replace(/\s*→\s*/g, ", ");   // the steps of a refined search read as one list, like the field
+    h.replaceChildren(shown ? shown[0].toUpperCase() + shown.slice(1) : shown);
+  }
   const c = state.commander;
   if (t && !/is:commander|commanders?\b/i.test(t)) {
     const span = document.createElement("span");
@@ -3719,7 +3749,12 @@ function placeCmdrRow() {
   $("setuphead").textContent = state.commander ? "Deck setup" : "Your commander";
   const showChoose = home && (!state.commander || target === $("cmdrresults"));
   $("homecmdr").hidden = !showChoose;
-  if (showChoose && !$("homecmdr").firstChild) $("homecmdr").append(commanderButton(null, "Choose your commander"));
+  if (showChoose) {
+    const b = commanderButton(state.commander, "Choose your commander");
+    if (setupAnchor && setupAnchor.parentElement === $("homecmdr")) setupAnchor = b;
+    $("homecmdr").replaceChildren(b);
+  }
+  renderHero();
   requestAnimationFrame(placeSetup);
 }
 // The commander in the results heading: its art, short name and colors. It opens Deck setup.
@@ -3791,7 +3826,7 @@ $("searchform").addEventListener("submit", async e => {
     return;
   }
   showQuery(result.query, shownUitleg(result), result.combos, result.warn);
-  setTitle(zin.replace(/^(\/s|!)\s*/i, ""));
+  setTitle(appliedWords(zin.replace(/^(\/s|!)\s*/i, ""), result.uitleg));
   pushSearchUrl(result.query, zin);
   addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
   // a combo result is a list of card names, which makes no sense to refine; anything else can be
@@ -3828,7 +3863,7 @@ async function refineSearch(text) {
   const zin = `${prev.zin} → ${text}`;
   $("zin").value = "";
   showQuery(result.query, shownUitleg(result), result.combos, result.warn);
-  setTitle(zin);
+  setTitle(appliedWords(zin, result.uitleg));
   pushSearchUrl(result.query, zin);
   addHistory({ zin, query: result.query, uitleg: result.uitleg, combos: result.combos });
   setPrevious(result.combos && result.combos.length ? null : { zin, query: result.query });
@@ -3981,6 +4016,7 @@ function renderCodeState() {
 }
 function openSettings() {
   $("accesscode").value = settings.code;
+  $("removecode").hidden = !settings.code;
   $("settings").showModal();
   $("accesscode").focus();
 }
@@ -4111,6 +4147,8 @@ $("cmdrform").addEventListener("submit", e => {
   if (name) setCommander(name);
 });
 $("cmdrinput").addEventListener("input", () => suggestCommanders($("cmdrinput"), $("cmdrlist")));
+// Escape while changing the commander keeps the current one
+$("cmdrinput").addEventListener("keydown", e => { if (e.key === "Escape" && changing) { e.preventDefault(); changing = false; $("cmdrinput").value = ""; renderCommander(); } });
 $("cmdrfirst").addEventListener("input", () => suggestCommanders($("cmdrfirst"), $("cmdrfirstlist")));
 // light / dark switch: follows the device until clicked, then remembers the choice
 function currentTheme() {
@@ -4155,6 +4193,7 @@ $("cmdrsdialog").addEventListener("scroll", () => {
 }, { passive: true });
 $("cmdrsdialog").addEventListener("click", e => { if (e.target === $("cmdrsdialog")) $("cmdrsdialog").close(); });
 $("deckprogress").addEventListener("click", () => openList());
+$("setupimport").addEventListener("click", () => { if ($("cmdrresults").matches(":popover-open")) $("cmdrresults").hidePopover(); openDeckImport(); });
 
 // help window
 document.querySelectorAll("[data-openhelp]").forEach(b => b.addEventListener("click", () => {
@@ -4181,8 +4220,16 @@ $("cmdrpair").addEventListener("click", () => {
   renderCommander();
   $("cmdrinput").focus();
 });
-$("cmdrchange").addEventListener("click", openCommanderList);
-$("cmdrresults").addEventListener("toggle", () => { placeCmdrRow(); renderHero(); });
+let changing = false;
+$("cmdrchange").addEventListener("click", () => {
+  changing = true;
+  renderCommander();
+  $("cmdrinput").focus();
+});
+$("cmdrresults").addEventListener("toggle", e => {
+  if (e.newState === "closed" && changing) { changing = false; renderCommander(); }
+  placeCmdrRow();
+});
 // The panel hangs under the button that opened it (a visible one), and follows it when the page around it changes.
 function setupButton() {
   const visible = el => el && el.isConnected && el.getClientRects().length;
@@ -4212,7 +4259,7 @@ $("cmdrclear").addEventListener("click", () => {
 function currentDeckText() {
   return state.list.filter(c => c.deckQty).map(c => `${c.deckQty} ${c.name}${c.set ? ` (${c.set.toUpperCase()}) ${c.cn}` : ""}`).join("\n");
 }
-function openDeckImport() { $("decktext").value = currentDeckText(); $("deckdialog").showModal(); $("decktext").focus(); }
+function openDeckImport() { $("removedeck").hidden = !state.deck.size; $("decktext").value = currentDeckText(); $("deckdialog").showModal(); $("decktext").focus(); }
 $("importdeck").addEventListener("click", openDeckImport);
 $("deckform").addEventListener("submit", e => {
   if (!e.submitter || e.submitter.value !== "save") return;
@@ -4247,7 +4294,7 @@ setView(true);
 // on the start screen the search bar should be empty, so it is cleared once that has happened.
 window.addEventListener("pageshow", () => { if (document.body.classList.contains("home")) $("zin").value = ""; });
 if (searchFromUrl()) { /* the link decides */ }
-else if (last) { showQuery(last.query, ""); setTitle(last.zin); setPrevious({ zin: last.zin, query: last.query }); runSearch(last.query); }
+else if (last) { $("zin").value = fieldWords(last.zin); showQuery(last.query, ""); setTitle(last.zin); setPrevious({ zin: last.zin, query: last.query }); runSearch(last.query); }
 watchHero();
 moveOldDeck();
 runSync();
