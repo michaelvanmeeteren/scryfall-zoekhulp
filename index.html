@@ -338,6 +338,7 @@ html.mobile .card:hover img { transform: none; }
 html.mobile .tile.picked .card img { outline-width: 4px; outline-offset: 2px; }
 html.mobile .picker { top: 12%; left: 6%; right: auto; }
 html.mobile .addbtn { display: none; }
+html.mobile .picker:not(:has(.minus)) { display: none; }   /* the red edge says it's in the list; only copies keep their − n + */
 html.mobile .addbtn svg, html.mobile .picker svg { width: 20px; height: 20px; }
 html.mobile .picker .more1 { width: 48px; height: 44px; }
 html.mobile .picker .minus { width: 48px; height: 44px; font-size: 26px; }
@@ -999,7 +1000,7 @@ html.mobile body:not(.home) .starters .startor { display: none; }
     <details>
       <summary>Your list and deck</summary>
       <ul>
-        <li>Click a card or its <b>+</b> to add it; the <b>✓</b> takes it out. On a phone the <i>i</i> in its corner shows the card large.</li>
+        <li>Click or tap a card to add it; once more takes it out. On a phone the <i>i</i> in its corner shows the card large.</li>
         <li><b>List</b> (top right) groups your cards by type, with a mana curve. <b>Copy decklist</b> is for Moxfield, Archidekt and other deck sites.</li>
         <li><b>Import deck</b> marks the cards you already have, and you can hide them.</li>
       </ul>
