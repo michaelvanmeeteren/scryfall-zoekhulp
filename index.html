@@ -1860,12 +1860,14 @@ function renderCompanion() {
     : cards.findIndex(f => COMPANIONS[n].fits && !COMPANIONS[n].fits(f));
   const legal = inColors.filter(n => misfit(n) < 0);
   const sel = $("compselect");
-  sel.replaceChildren(new Option("none", ""), ...inColors.map(n => {
-    const i = misfit(n), short = n.split(",")[0];
-    const o = new Option(i < 0 ? short : `${short} (not with ${c.names[i].split(",")[0]})`, n);
-    o.disabled = i >= 0;
-    return o;
-  }));
+  const misfits = inColors.filter(n => misfit(n) >= 0);
+  const blocked = [...new Set(misfits.map(n => c.names[misfit(n)].split(",")[0]))];
+  const group = document.createElement("optgroup");
+  group.label = `Can't be used with ${blocked.join(" or ")}`;
+  group.disabled = true;
+  group.append(...misfits.map(n => new Option(n.split(",")[0], n)));
+  sel.replaceChildren(new Option("none", ""), ...legal.map(n => new Option(n.split(",")[0], n)), ...(misfits.length ? [group] : []));
+  $("compwrap").hidden = !legal.length;   // nothing that can be chosen: no choice to show
   if (state.companion && inColors.includes(state.companion) && !legal.includes(state.companion)) {
     toast(`${state.companion.split(",")[0]} doesn't fit your commander, so it was removed`);
   }
@@ -1893,8 +1895,8 @@ function withFilters(query) {
   if (!query.includes("prefer:")) extra += " prefer:eur-low";
   // the cheapest printing can be a foreign one, so stick to English unless the query asks for a language
   if (!/(^|[\s(-])(lang|language):/i.test(query)) extra += " lang:en";
-  // the chosen commander's colors, unless the query sets colors itself or looks for commanders
-  if (state.commander && !/(^|[\s(-])(id|identity|ci)(:|<|>|=)/i.test(query) && !/is:commander/i.test(query)) {
+  // the chosen commander's colors, always (a color in the query narrows within them), unless the query looks for commanders
+  if (state.commander && !/is:commander/i.test(query)) {
     extra += " id<=" + (state.commander.colors || "c");
   }
   // the companion's deck rule, not when looking for commanders
@@ -1979,7 +1981,8 @@ function renderFilterbar() {
 }
 
 // ---------- commander as the starting point ----------
-let pairing = false;   // the commander field is open for a partner, background or companion
+let pairing = false;    // the commander field is open for a partner, background or companion
+let changing = false;   // "change": the name field is open to pick another commander
 // The page in the commander's colors: a band of its mana on top, its first color as a trace in the ground.
 function renderIdentity() {
   const c = state.commander;
@@ -2050,6 +2053,7 @@ function renderCommander() {
   $("cmdrpair").hidden = !canPair || pairing;
   $("cmdrpair").textContent = `+ add ${c && c.pair ? c.pair.label : "partner"}`;
   $("cmdrinput").placeholder = pairing ? `${c.pair.label[0].toUpperCase()}${c.pair.label.slice(1)} (optional)` : "e.g. Atraxa";
+  $("cmdrinput").setAttribute("aria-label", pairing ? `${c.pair.label[0].toUpperCase()}${c.pair.label.slice(1)} name` : changing ? "New commander name" : "Commander name");
   $("cmdrfirst").hidden = true;   // the first commander stays shown above; change it with "change"
   $("cmdrset").textContent = pairing ? "Done" : "Set";
   if (pairing && document.activeElement !== $("cmdrfirst")) $("cmdrfirst").value = c.names[0];
@@ -2808,6 +2812,11 @@ async function runSearch(query, page = 1) {
   query = query.trim();
   if (!query) return;
   const { full, extra } = withFilters(query);
+  const outside = colorsOutsideCommander(query);
+  if (outside) {
+    $("uitleg").textContent = `${outside} ${outside.includes(" and ") ? "are" : "is"} outside ${commanderShort()}'s colors, so only cards your deck can play are shown. Remove the commander under Deck setup to search beyond them.`;
+    $("uitleg").classList.add("warn");
+  }
   $("filters").textContent = extra ? "+ " + extra : "own filters";
   $("scryfalllink").href = "https://scryfall.com/search?" + new URLSearchParams({ q: full, ...sortParams(state.order) });
   state.search = { query, full, order: state.order, size: state.size, total: null, cache: new Map(), page: 1, rank: !!state.rankNext };
@@ -2994,6 +3003,18 @@ function render(cards, page, pages) {
   renderPager($("pagerbottom"), page, pages);
 }
 
+// Colors a search asks for that the commander can't play, in words ("Green"), or "" when there are none.
+function colorsOutsideCommander(query) {
+  const c = state.commander;
+  if (!c || /is:commander/i.test(query)) return "";
+  const own = c.colors || "";
+  const names = { w: "White", u: "Blue", b: "Black", r: "Red", g: "Green" };
+  const asked = new Set();
+  for (const m of query.matchAll(/(?:^|[\s(])(?:id|identity|ci|c|color)(?:<=|>=|:|=|<|>)([wubrg]+)(?=[\s)]|$)/gi))
+    for (const x of m[1].toLowerCase()) asked.add(x);
+  const out = [...asked].filter(x => !own.includes(x)).map(x => names[x]);
+  return out.length > 1 ? out.slice(0, -1).join(", ") + " and " + out[out.length - 1] : out[0] || "";
+}
 const commanderShort = () => state.commander ? state.commander.names.map(n => n.split(",")[0]).join(" + ") : "";
 
 // Under a card: set, price, and how often decks with this commander play it (EDHREC).
@@ -3451,6 +3472,7 @@ function setView(home) {
   $("start").hidden = !home;
   $("results").hidden = home;
   if ($("cmdrresults").matches(":popover-open")) $("cmdrresults").hidePopover();
+  if (changing) { changing = false; renderCommander(); }
   placeCmdrRow();
   renderHero();
   renderStarters();
@@ -4220,7 +4242,6 @@ $("cmdrpair").addEventListener("click", () => {
   renderCommander();
   $("cmdrinput").focus();
 });
-let changing = false;
 $("cmdrchange").addEventListener("click", () => {
   changing = true;
   renderCommander();
