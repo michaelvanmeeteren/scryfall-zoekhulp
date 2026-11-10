@@ -908,6 +908,82 @@ html.mobile body:not(.home) .starters .startor { display: none; }
 /* The accent marks what is chosen or filled; it stays crimson even though --accent itself is neutral in the dark theme. */
 .tile.picked .card img { outline-color: var(--fill); }
 .list.withdeck li.addedcard, .keyadded { box-shadow: inset 2px 0 0 var(--fill); }
+
+/* ---------- Refresh: the start screen reads as one finished piece ---------- */
+/* The banner's controls are quiet round buttons instead of a row of underlined links. In the popover of the results they stay links. */
+#cmdrrow.has:not(#cmdrresults *) .cmdrlinks { flex: 1 1 100%; gap: 8px; margin-top: 6px; }
+#cmdrrow.has:not(#cmdrresults *) .cmdrones { gap: 8px; }
+#cmdrrow.has:not(#cmdrresults *) .deckrow2 { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+#cmdrrow.has:not(#cmdrresults *) .deckrow2[hidden] { display: none; }
+#cmdrrow.has:not(#cmdrresults *) :is(.linkbtn, .deckprogress),
+#cmdrrow.has:not(#cmdrresults *) .compwrap select {
+  min-height: 32px; padding: 0 13px; line-height: 30px;
+  border: 1px solid var(--on-deep-line); border-radius: 999px;
+  background-color: color-mix(in srgb, var(--on-deep-well) 64%, transparent);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  color: var(--on-deep); font-size: 13.5px; font-weight: 400; text-decoration: none; text-shadow: none; white-space: nowrap;
+  transition: border-color 0.12s, background-color 0.12s; }
+#cmdrrow.has:not(#cmdrresults *) :is(.linkbtn, .deckprogress):hover,
+#cmdrrow.has:not(#cmdrresults *) .compwrap select:hover { border-color: var(--on-deep); background-color: color-mix(in srgb, var(--on-deep-well) 82%, transparent); }
+/* taking the commander away is the quiet one of the row */
+#cmdrrow.has:not(#cmdrresults *) #cmdrclear { padding: 0 6px; border-color: transparent; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--on-deep-2); text-shadow: 0 1px 12px var(--on-deep-well); }
+#cmdrrow.has:not(#cmdrresults *) #cmdrclear:hover { border-color: transparent; background: none; color: var(--on-deep); text-decoration: underline; }
+#cmdrrow.has:not(#cmdrresults *) .compwrap select {
+  -webkit-appearance: none; appearance: none; padding-right: 32px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23999' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 11px center; background-size: 12px; }
+#cmdrrow.has:not(#cmdrresults *) .compwrap select option { background: var(--on-deep-well); color: var(--on-deep); }
+html.mobile #cmdrrow.has:not(#cmdrresults *) :is(.linkbtn, .deckprogress),
+html.mobile #cmdrrow.has:not(#cmdrresults *) .compwrap select { min-height: 40px; padding: 0 11px; font-size: 14px; }
+html.mobile #cmdrrow.has:not(#cmdrresults *) .compwrap select { padding-right: 34px; font-size: 16px; }
+html.mobile #cmdrrow.has:not(#cmdrresults *) #cmdrclear { padding: 0 4px; }
+html.mobile #cmdrrow.has:not(#cmdrresults *) :is(.cmdrlinks, .cmdrones) { gap: 6px; }
+html.mobile #cmdrrow.has:not(#cmdrresults *) { gap: 10px 12px; padding-bottom: 24px; }
+
+/* In the popover of the results the same controls are the same round buttons, on the panel's own colors. */
+#cmdrresults #cmdrrow.has :is(.cmdrlinks, .cmdrones) { gap: 8px; }
+#cmdrresults #cmdrrow.has .cmdrlinks { margin-top: 6px; }
+#cmdrresults #cmdrrow.has .deckrow2 { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+#cmdrresults #cmdrrow.has .deckrow2[hidden] { display: none; }
+#cmdrresults #cmdrrow.has :is(.linkbtn, .deckprogress), #cmdrresults #cmdrrow.has #setupimport {
+  min-height: 32px; padding: 0 12px; line-height: 30px; border: 1px solid var(--field-line); border-radius: 999px;
+  color: var(--fg); font-size: 13.5px; text-decoration: none; white-space: nowrap; transition: border-color 0.12s; }
+#cmdrresults #cmdrrow.has :is(.linkbtn, .deckprogress):hover { border-color: var(--fg); }
+#cmdrresults #cmdrrow.has #cmdrclear { border-color: transparent; color: var(--muted); }
+#cmdrresults #cmdrrow.has #cmdrclear:hover { border-color: transparent; color: var(--fg); text-decoration: underline; }
+html.mobile #cmdrresults #cmdrrow.has :is(.linkbtn, .deckprogress), html.mobile #cmdrresults #cmdrrow.has #setupimport { min-height: 40px; line-height: 38px; font-size: 14px; }
+
+/* Two commanders: their art runs into each other instead of meeting at a hard line. */
+.heroart.two i { width: 42%; -webkit-mask-image: linear-gradient(90deg, transparent, #000 26%); mask-image: linear-gradient(90deg, transparent, #000 26%); }
+.heroart.two i + i { right: 32%; width: 42%; -webkit-mask-image: linear-gradient(90deg, transparent, #000 42%, #000 74%, transparent); mask-image: linear-gradient(90deg, transparent, #000 42%, #000 74%, transparent); }
+html.mobile .heroart.two i { width: 56%; }
+html.mobile .heroart.two i + i { right: 40%; width: 56%; -webkit-mask-image: linear-gradient(90deg, transparent, #000 30%, #000 72%, transparent); mask-image: linear-gradient(90deg, transparent, #000 30%, #000 72%, transparent); }
+/* The art gets darker (lighter in the light theme) toward the foot, where the name and the controls stand. */
+.heroart::before { background:
+  linear-gradient(color-mix(in srgb, var(--on-deep-well) 68%, transparent), transparent 130px),
+  linear-gradient(to top, color-mix(in srgb, var(--on-deep-well) 88%, transparent), color-mix(in srgb, var(--on-deep-well) 46%, transparent) 46%, color-mix(in srgb, var(--on-deep-well) 16%, transparent) 78%); }
+html.mobile .heroart::before { background:
+  linear-gradient(to top, color-mix(in srgb, var(--on-deep-well) 94%, transparent), color-mix(in srgb, var(--on-deep-well) 74%, transparent) 50%, color-mix(in srgb, var(--on-deep-well) 44%, transparent) 78%, color-mix(in srgb, var(--on-deep-well) 62%, transparent)); }
+
+/* One red button at a time: with nothing to copy, "Copy decklist" is an outline. */
+.mobilebar .btn.primary.copybtn:disabled, .mobilebar .btn.primary.copybtn:disabled:hover { color: var(--on-deep-2); background: transparent; border-color: var(--deep-line); opacity: 1; }
+
+/* The start screen fills the window: the credits sit at its foot, not halfway down. */
+body.home, html:not(.mobile) body.home { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; box-sizing: border-box; min-height: 100dvh; }
+body.home .foot, html:not(.mobile) body.home .foot { position: static; margin-top: auto; padding-top: 28px; }
+html.mobile body.home .foot { padding-top: 12px; padding-bottom: 12px; }
+/* without a commander there is no banner: the search stands in the middle of the window */
+html:not(.mobile) body.home:not(:has(#cmdrrow.has)) .topbar { flex: 1 1 auto; justify-content: center; padding-bottom: 6vh; }
+/* a phone: the quick searches are four even buttons under their label */
+html.mobile body.home .starters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+html.mobile body.home .starters[hidden] { display: none; }
+html.mobile body.home .starters .startor { grid-column: 1 / -1; margin: 0; font-size: 14px; }
+html.mobile body.home .starters .startchip { min-height: 46px; justify-content: center; }
+
+/* "+ narrow down" is the open place in the row of what was searched for */
+.narrowbtn { margin-left: 6px; padding: 2px 10px; border: 1px dashed var(--field-line); border-radius: 999px; color: var(--fg); font-size: 12.5px; text-decoration: none; transition: border-color 0.12s; }
+.narrowbtn:hover { border-style: solid; border-color: var(--accent); }
+html.mobile .narrowbtn { min-height: 34px; padding: 2px 12px; }
 </style>
 </head>
 <body>
