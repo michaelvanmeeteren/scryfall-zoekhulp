@@ -10,7 +10,7 @@ once(`family=Noto+Sans+JP:wght@100..900&display=swap`, `family=Fraunces:opsz,wgh
 once(`const t = JSON.parse(localStorage.getItem("szh.theme")); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }`,
   `document.documentElement.dataset.theme = "light"; if (JSON.parse(localStorage.getItem("szh.v2theme")) === "dark") document.documentElement.dataset.theme = "dark"; } catch { /* storage unavailable */ }`);
 once(`store.set("theme", next);`, `store.set("v2theme", next);`);
-once(`</head>`, `<style id="v2css">\n${fs.readFileSync("v2/v2.css", "utf8")}</style>\n</head>`);
+once(`</head>`, `<style id="v2css">\n${fs.readFileSync("v2/v2.css", "utf8")}${fs.readFileSync("v2/board.css", "utf8")}</style>\n</head>`);
 once(`</body>`, `<script id="v2js">\n${fs.readFileSync("v2/v2.js", "utf8")}</script>\n</body>`);
 fs.writeFileSync("v2.html", s);
 console.log("v2.html", s.length);

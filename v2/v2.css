@@ -119,12 +119,12 @@ html.v2 .list .emptylist { padding: 18px 16px; border: 1.5px dashed var(--field-
 
 /* a computer with room: the sheet always lies beside the results */
 @media (min-width: 1100px) {
-  html.v2:not(.mobile) body.listopen:not(.home) .drawer { top: 0; width: var(--rail); visibility: visible; transform: none; box-shadow: none; z-index: 31; transition: none; }
-  html.v2:not(.mobile) body.listopen:not(.home) .layout { padding-right: calc(var(--rail) + var(--gutter)); }
-  html.v2:not(.mobile) body.listopen:not(.home) .topbar { padding-right: calc(var(--rail) + var(--gutter)); }
-  html.v2:not(.mobile) body.listopen:not(.home) :is(#closelist, #listtoggle, .mobilebar) { display: none !important; }
-  html.v2:not(.mobile) body.listopen:not(.home) { padding-bottom: 0; }
-  html.v2:not(.mobile) body.listopen:not(.home) .foot { padding-right: var(--rail); }
+  html.v2:not(.mobile) body.listopen .drawer { top: 0; width: var(--rail); visibility: visible; transform: none; box-shadow: none; z-index: 31; transition: none; }
+  html.v2:not(.mobile) body.listopen .layout { padding-right: calc(var(--rail) + var(--gutter)); }
+  html.v2:not(.mobile) body.listopen .topbar { padding-right: calc(var(--rail) + var(--gutter)); }
+  html.v2:not(.mobile) body.listopen :is(#closelist, #listtoggle, .mobilebar) { display: none !important; }
+  html.v2:not(.mobile) body.listopen { padding-bottom: 0; }
+  html.v2:not(.mobile) body.listopen .foot { padding-right: var(--rail); }
   html.v2:not(.mobile) .drawer .list { zoom: 1; }
 }
 
